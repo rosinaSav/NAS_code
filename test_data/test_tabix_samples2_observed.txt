@@ -250,7 +250,7 @@
 ##INFO=<ID=VT,Number=.,Type=String,Description="indicates what type of variant the line represents">
 ##INFO=<ID=EX_TARGET,Number=0,Type=Flag,Description="indicates whether a variant is within the exon pull down target boundaries">
 ##INFO=<ID=MULTI_ALLELIC,Number=0,Type=Flag,Description="indicates whether a site is multi-allelic">
-##source_20180125.1=vcf-subset(v0.1.14-12-gcdb80b8) -c NA18917,NA19024 temp_data/temp_vcf0.2053647842303553.vcf
+##source_20180125.1=vcf-subset(v0.1.14-12-gcdb80b8) -c NA18917,NA19024 temp_data/temp_vcf0.9080569583913833.vcf
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA18917	NA19024
 16	3204457	rs577471334	G	A	100	PASS	AA=G|||;AC=0;AF=0.00259585;AFR_AF=0;AMR_AF=0;AN=4;DP=26992;EAS_AF=0.0109;EUR_AF=0;NS=2504;SAS_AF=0.002;VT=SNP	GT	0|0	0|0
 16	3204461	rs546047418	C	G	100	PASS	AA=C|||;AC=0;AF=0.00259585;AFR_AF=0;AMR_AF=0;AN=4;DP=26819;EAS_AF=0.0109;EUR_AF=0;NS=2504;SAS_AF=0.002;VT=SNP	GT	0|0	0|0
