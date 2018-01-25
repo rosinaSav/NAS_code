@@ -4,6 +4,21 @@ import multiprocessing
 import os
 import subprocess
 
+def get_extension(file_name, extension_length, valid_list = None):
+    '''
+    Determine the extension at the end of a file name.
+    file_name: name of the file
+    extension_length: expected length of extension
+    valid_list: if supplied, the extension must be one of the ones specified in this list
+    EX: get_extension("test.jpg", 3, valid_list = ["jpg", "gif", "png"]) would return "jpg"
+    '''
+    extension = file_name[-extension_length:]
+    if valid_list:
+        if extension not in valid_list:
+            print("File format must be included in {0}!".format(valid_list))
+            raise Exception
+    return(extension)
+
 def line_count(file):
     '''
     Count the number of lines in a file.
