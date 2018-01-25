@@ -57,3 +57,110 @@ def group_flags(input_bed, output_bed, flag_start):
             new_row = i[0:flag_start]
             new_row.append(flags)
             writer.writerow(new_row)
+
+def intersect_bed(bed_file1, bed_file2, output_file = None, use_bedops = False, overlap = False, write_both = False, sort = False, output_file = None,
+                             force_strand = False, no_name_check = False, no_dups = True, chrom = None, bed_input = False, intersect = False, hit_count = False):
+    '''Use bedtools/bedops to intersect coordinates from two bed files.
+    Return those lines in bed file 1 that overlap with intervals in bed file 2.
+    OPTIONS
+    output_file: write output to this file
+    use_bedops: use bedops rather than bedtools. Certain options are only valid with one of the two, see below.
+    overlap: minimum overlap required as a fraction of the intervals in bed file 1 (EX: 0.8 means that the
+    overlap has to be at least 80% of the intervals in bed file 1).
+    write_both: if True, return not only the interval from bed file 1 but, tagged onto the end, also the
+    interval from bed file 2 that it overlaps (only
+    valid when using bedtools).
+    sort: sort bed files before taking the intersection
+    force_strand: check that the feature and the bed interval are on the same strand (only valid with bedtools)
+    no_name_check: if set to False, checks whether the chromosome names are the same in the too bed files (only valid with bedtools)
+    no_dups: if True, only returns each interval once. If set to false, intervals in bed file 1 that overlap several intervals in
+    bed file 2 will be returned several times (as many times as there are overlaps with different elements in bed file 2)
+    chrom: limit search to a specific chromosome (only valid with bedops, can help in terms of efficiency)
+    intersect: rather than returning the entire interval, only return the part of the interval that overlaps an interval in bed file 2.
+    hit_count: for each element in bed file 1, return the number of elements it overlaps in bed file 2 (only valid with bedtools)'''
+    temp_file_name = "temp_data/temp_bed_file{0}.bed".format(random.random())
+    #have it write the output to a temporary file
+    if use_bedops:
+        bedtools_output = run_bedops(bed_file1, bed_file2, force_strand, write_both, chrom, overlap, sort, output_file = temp_file_name, intersect = intersect, hit_number = hit_count)
+    else:
+        bedtools_output = run_bedtools(bed_file1, bed_file2, force_strand, write_both, chrom, overlap, sort, no_name_check, no_dups, output_file = temp_file_name, intersect = intersect, hit_number = hit_number)
+    #move it to a permanent location only if you want to keep it
+    if output_file:
+        gen.run_process(["mv", temp_file_name, output_file])
+    else:
+        bedtools_output = bedtools_output.splitlines()
+        bedtools_output = [i.split("\t") for i in bedtools_output]
+    gen.remove_file(temp_file_name)
+    return(bedtools_output)
+
+def run_bedops(A_file, B_file, force_strand = False, write_both = False, chrom = None, overlap = None, sort = False, output_file = None, intersect = False, hit_number = hit_number):
+    '''
+    See intersect_bed for details.
+    '''
+    if intersect:
+        command = "--intersect"
+    else:
+        command = "--element-of"
+    if sort:
+        sorting_temp_file_name = "temp_data/temp_sort_{1}.bed".format(random.random())
+        sorting_temp_file_name2 = "temp_data/temp_sort2_{1}.bed".format(random.random())
+        gen.run_process(["sort-bed", A_file], file_for_output = sorting_temp_file_name)
+        gen.run_process(["sort-bed", B_file], file_for_output = sorting_temp_file_name2)
+        bedops_args = ["bedops", "--chrom", "foo", command, "1", sorting_temp_file_name, sorting_temp_file_name2]
+    else:
+        bedops_args = ["bedops", "--chrom", "foo", command, "1", A_file, B_file]
+    if overlap:
+        bedops_args[4] = overlap
+    if chrom:
+        bedops_args[2] = chrom
+    else:
+        del bedops_args[1:3]
+    if intersect:
+        del bedops_args[4]
+    if force_strand:
+        print("Bedops can't search by strand! Either use bedtools or separate input data by strand!")
+        raise Exception
+    if write_both:
+        print("Bedops can't write both features!")
+        raise Exception
+    if hit_number:
+        print("Bedops hasn't been set up to count the number of overlapping elements. Use bedtools!")
+    bedops_output = gen.run_process(bedops_args, file_for_output = output_file)
+    if sort:
+        gen.remove_file(sorting_temp_file_name)
+        gen.remove_file(sorting_temp_file_name2)
+    return(bedops_output)
+
+def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom = None, overlap = None, sort = False, no_name_check = False, no_dups = True, hit_number = False, output_file = None, intersect = False):
+    '''
+    See intersect_bed for details.
+    '''
+    if write_both:
+        write_option = "-wo"
+    elif hit_number:
+        write_option = "-c"
+    else:
+        write_option = "-wa"
+    if sort:
+        sorting_temp_file_name = "temp_data/temp_sort_{1}.bed".format(random.random())
+        sorting_temp_file_name2 = "temp_data/temp_sort2_{1}.bed".format(random.random())
+        gen.run_process(["sort-bed", A_file], file_for_output = sorting_temp_file_name)
+        gen.run_process(["sort-bed", B_file], file_for_output = sorting_temp_file_name2)
+        bedtools_args = ["intersectBed", "-a", sorting_temp_file_name,"-b", sorting_temp-file_name2, write_option]
+    else:
+        bedtools_args = ["intersectBed", "-a", A_file,"-b", B_file, write_option]
+    if overlap:
+        bedtools_args.extend(["-f", str(overlap)])
+    if force_strand:
+        bedtools_args.append("-s")
+    if no_name_check:
+        bedtools_args.append("-nonamecheck")
+    if no_dups:
+        bedtools_args.append("-u")
+    if chrom:
+        print("Bedtools cannot be restricted to a single chromosome. Use bedops!")
+        raise Exception
+    if intersect:
+        print("Bedtools has not been set up to take intersections. Either implement it or use bedops!")
+    bedtools_output = gen.run_process(bedtools_args, file_for_output = output_file)
+    return(bedtools_output)
