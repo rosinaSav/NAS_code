@@ -24,12 +24,31 @@ class Test_SNP_ops(unittest.TestCase):
         gen.remove_file(observed + ".gz")
         vcf_folder = "../../general/1000genomes/per_sample_vcfs"
         panel_file = "../../general/1000genomes/integrated_call_samples_v3.20130502.ALL.panel"
-        tabix_samples(bed_file, observed + ".gz", panel_file, vcf_folder, superpop = "AFR", vcftools_path = "../../../Software/vcftools")
+        tabix_samples(bed_file, observed + ".gz", panel_file, vcf_folder, superpop = "AFR")
         gen.run_process(["bgzip", "-d", observed + ".gz"])
         with open(observed) as file:
             observed = "".join(file)
         expected = re.sub("0\.[0-9]*\.vcf", "N.vcf", expected)
         observed = re.sub("0\.[0-9]*\.vcf", "N.vcf", observed)
+        expected = re.sub("source_[0-9]*\.[0-9]*", "source_N", expected)
+        observed = re.sub("source_[0-9]*\.[0-9]*", "source_N", observed)
         self.assertEqual(observed, expected)
 
-        #tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop = None, subpop = None, samples = None, downsample_by = None, exclude_xy = False)        
+    def test_tabix_samples2(self):
+        bed_file = "test_data/test_tabix_bed.txt"
+        with open("test_data/test_tabix_samples2_expected.txt") as file:
+            expected = "".join(file)
+        observed = "test_data/test_tabix_samples2_observed.txt"
+        gen.remove_file(observed)
+        gen.remove_file(observed + ".gz")
+        vcf_folder = "../../general/1000genomes/per_sample_vcfs"
+        panel_file = "../../general/1000genomes/integrated_call_samples_v3.20130502.ALL.panel"
+        tabix_samples(bed_file, observed + ".gz", panel_file, vcf_folder, samples = ["NA18917", "NA19024"])
+        gen.run_process(["bgzip", "-d", observed + ".gz"])
+        with open(observed) as file:
+            observed = "".join(file)
+        expected = re.sub("0\.[0-9]*\.vcf", "N.vcf", expected)
+        observed = re.sub("0\.[0-9]*\.vcf", "N.vcf", observed)
+        expected = re.sub("source_[0-9]*\.[0-9]*", "source_N", expected)
+        observed = re.sub("source_[0-9]*\.[0-9]*", "source_N", observed)
+        self.assertEqual(observed, expected)

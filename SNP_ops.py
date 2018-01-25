@@ -152,7 +152,7 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
     samples = ",".join(samples)
 
     if not vcftools_path:
-        vcftools_path = "../Software/vcftools"
+        vcftools_path = ""
         
     #get a list of all the files in the VCF folder
     vcf_files = os.listdir(vcf_folder)
@@ -196,7 +196,7 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
                 sample_output_file = "temp_data/temp_sample_tabix{0}.txt".format(random.random())
                 sample_files.append(sample_output_file)
                 #filter the file you made with all the SNPs to only leave the SNPs that appear in your samples
-                gen.run_process(["perl", "{0}/src/perl/vcf-subset".format(vcftools_path), "-c", samples, temp_output_file], file_for_output = sample_output_file)
+                gen.run_process(["perl", "{0}vcf-subset".format(vcftools_path), "-c", samples, temp_output_file], file_for_output = sample_output_file)
                 gen.remove_file(temp_output_file)
 
     #you want to concatenate the sample files you made (one file per bed interval) but you can't in one go cause there's too many
@@ -207,7 +207,7 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
     concat_files = ["temp_data/temp_concat_file{0}.vcf".format(random.random()), "temp_data/temp_concat_file{0}.vcf".format(random.random())]
     current_sample_files = sample_files[-10:]
     del sample_files[-10:]
-    gen.run_process(["perl", "{0}/src/perl/vcf-concat".format(vcftools_path)] + current_sample_files, file_for_output = concat_files[0])
+    gen.run_process(["perl", "{0}vcf-concat".format(vcftools_path)] + current_sample_files, file_for_output = concat_files[0])
     local_counter = 0
     files_left = True
     while files_left:
@@ -222,10 +222,10 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
         else:
             current_concat_file = concat_files[1]
             previous_concat_file = concat_files[0]
-        gen.run_process(["perl", "{0}/src/perl/vcf-concat".format(vcftools_path)] + current_sample_files + [previous_concat_file], file_for_output = current_concat_file)
+        gen.run_process(["perl", "{0}vcf-concat".format(vcftools_path)] + current_sample_files + [previous_concat_file], file_for_output = current_concat_file)
     sort_file = "temp_data/temp_sort_file{0}.vcf".format(random.random())
     #once everything is concatenated, sort the SNPs, make a compressed version of the file and make an index for tabix
-    gen.run_process(["{0}/src/perl/vcf-sort".format(vcftools_path), current_concat_file], file_for_output = sort_file)
+    gen.run_process(["{0}vcf-sort".format(vcftools_path), current_concat_file], file_for_output = sort_file)
     gen.run_process(["bgzip", "-c", sort_file], file_for_output = output_file_name)
     gen.run_process(["tabix", "-f", "-p", "vcf", output_file_name])
     #clean up
