@@ -26,4 +26,3 @@ def extract_exons(gtf, bed):
         for exon in exons:
             file.write("{0}\n".format("\t".join([str(i) for i in exon])))
         
-
