@@ -6,7 +6,7 @@ import numpy as np
 def get_datasets():
 
     '''
-    Extact the ESEs from the data files
+    Extract the ESEs from the data files
     '''
 
     ese_motifs = {}
