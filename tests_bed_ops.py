@@ -12,4 +12,21 @@ class Test_bed_ops(unittest.TestCase):
         expected = gen.read_many_fields("test_data/test_extract_exons_expected.bed", "\t")
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(expected, observed)
-        
+
+    def test_extract_exon_junctions(self):
+        exons = "test_data/test_extract_exon_junctions.bed"
+        observed = "test_data/test_extract_exon_junctions_observed.bed"
+        gen.remove_file(observed)
+        extract_exon_junctions(exons, observed)
+        expected = gen.read_many_fields("test_data/test_extract_exon_junctions_expected.bed", "\t")
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(expected, observed)
+
+    def test_extract_exon_junctions_window(self):
+        exons = "test_data/test_extract_exon_junctions.bed"
+        observed = "test_data/test_extract_exon_window_junctions_observed.bed"
+        gen.remove_file(observed)
+        extract_exon_junctions(exons, observed, 30)
+        expected = gen.read_many_fields("test_data/test_extract_exon_window_junctions_expected.bed", "\t")
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(expected, observed)
