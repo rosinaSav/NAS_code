@@ -17,7 +17,7 @@ def convert2bed(input_file_name, output_file_name, group_flags = None):
         temp_file_name = "temp_data/temp_bed_file{0}.bed".format(random.random())
         group_flags(output_file_name, temp_file_name, group_flags)
         gen.run_process(["mv", temp_file_name, output_file_name])
-        print("Grouped flags.")      
+        print("Grouped flags.")
     print("Converted data from {0} to bed.".format(extension))
 
 def extract_exons(gtf, bed):
@@ -58,8 +58,8 @@ def group_flags(input_bed, output_bed, flag_start):
             new_row.append(flags)
             writer.writerow(new_row)
 
-def intersect_bed(bed_file1, bed_file2, output_file = None, use_bedops = False, overlap = False, write_both = False, sort = False, output_file = None,
-                             force_strand = False, no_name_check = False, no_dups = True, chrom = None, bed_input = False, intersect = False, hit_count = False):
+def intersect_bed(bed_file1, bed_file2, use_bedops = False, overlap = False, write_both = False, sort = False, output_file = None,
+                             force_strand = False, no_name_check = False, no_dups = True, chrom = None, intersect = False, hit_count = False):
     '''Use bedtools/bedops to intersect coordinates from two bed files.
     Return those lines in bed file 1 that overlap with intervals in bed file 2.
     OPTIONS
@@ -72,7 +72,7 @@ def intersect_bed(bed_file1, bed_file2, output_file = None, use_bedops = False, 
     valid when using bedtools).
     sort: sort bed files before taking the intersection
     force_strand: check that the feature and the bed interval are on the same strand (only valid with bedtools)
-    no_name_check: if set to False, checks whether the chromosome names are the same in the too bed files (only valid with bedtools)
+    no_name_check: if set to False, checks whether the chromosome names are the same in the two bed files (only valid with bedtools)
     no_dups: if True, only returns each interval once. If set to false, intervals in bed file 1 that overlap several intervals in
     bed file 2 will be returned several times (as many times as there are overlaps with different elements in bed file 2)
     chrom: limit search to a specific chromosome (only valid with bedops, can help in terms of efficiency)
@@ -83,7 +83,7 @@ def intersect_bed(bed_file1, bed_file2, output_file = None, use_bedops = False, 
     if use_bedops:
         bedtools_output = run_bedops(bed_file1, bed_file2, force_strand, write_both, chrom, overlap, sort, output_file = temp_file_name, intersect = intersect, hit_number = hit_count)
     else:
-        bedtools_output = run_bedtools(bed_file1, bed_file2, force_strand, write_both, chrom, overlap, sort, no_name_check, no_dups, output_file = temp_file_name, intersect = intersect, hit_number = hit_number)
+        bedtools_output = run_bedtools(bed_file1, bed_file2, force_strand, write_both, chrom, overlap, sort, no_name_check, no_dups, output_file = temp_file_name, intersect = intersect, hit_number = hit_count)
     #move it to a permanent location only if you want to keep it
     if output_file:
         gen.run_process(["mv", temp_file_name, output_file])
@@ -93,7 +93,7 @@ def intersect_bed(bed_file1, bed_file2, output_file = None, use_bedops = False, 
     gen.remove_file(temp_file_name)
     return(bedtools_output)
 
-def run_bedops(A_file, B_file, force_strand = False, write_both = False, chrom = None, overlap = None, sort = False, output_file = None, intersect = False, hit_number = hit_number):
+def run_bedops(A_file, B_file, force_strand = False, write_both = False, chrom = None, overlap = None, sort = False, output_file = None, intersect = False, hit_number = None):
     '''
     See intersect_bed for details.
     '''
@@ -135,6 +135,9 @@ def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom
     '''
     See intersect_bed for details.
     '''
+    if write_both and no_dups:
+        print("Cannot run write both (-wo) and no duplicates (-u) at the same time. Run one or the other.")
+        raise Exception
     if write_both:
         write_option = "-wo"
     elif hit_number:
@@ -162,5 +165,8 @@ def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom
         raise Exception
     if intersect:
         print("Bedtools has not been set up to take intersections. Either implement it or use bedops!")
+    if hit_number and no_dups:
+        print("When counting hits, each interval in the first bed file is only reported once by default. Set no_dups to False!")
+        raise(Exception)
     bedtools_output = gen.run_process(bedtools_args, file_for_output = output_file)
     return(bedtools_output)

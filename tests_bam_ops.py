@@ -23,4 +23,20 @@ class Test_bam_ops(unittest.TestCase):
         expected = gen.read_many_fields("test_data/test_group_flags_expected.bed", "\t")
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(expected, observed)
+
+    def test_intersect_bed_default(self):
+        A_file = "test_data/test_intersect_bed_A_file.bed"
+        B_file = "test_data/test_intersect_bed_A_file.bed"
+        expected_file = "test_data/test_intersect_bed_default_expected.bed"
+        observed_file = "test_data/test_intersect_bed_default_observed.bed"
+        gen.remove_file(observed_file)
+        intersect_bed(A_file, B_file, output_file = observed_file, no_dups = False)
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = gen.read_many_fields(observed_file, "\t")
+        for pos, i in enumerate(expected):
+            print("\n")
+            print(expected[pos])
+            print(observed[pos])
+        self.assertEqual(expected, observed)
+
         

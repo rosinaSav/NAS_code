@@ -1,5 +1,8 @@
 import generic as gen
+from bam_ops import *
 import re
+import collections
+import copy
 
 def extract_exons(gtf, bed):
     '''Given a GTF file, extract exon coordinates and write them to .bed.
@@ -26,3 +29,93 @@ def extract_exons(gtf, bed):
         for exon in exons:
             file.write("{0}\n".format("\t".join([str(i) for i in exon])))
         
+def extract_exon_junctions(exons, bed, window_of_interest=None):
+    '''
+    Given the file of extacted exons (generated using extract_exons), extact the coordinates of the junctions and write to .bed
+    Set window_of_interest to a number of nucletides that you wish to examine across the junction
+    EX.: extract_exon_junctions("../source_data/Homo_sapiens.GRCh37.87_exons.bed", "../source_data/Homo_sapiens.GRCh37.87_exon_junctions.bed", 30)
+    '''
+
+    #set up default dict to store info
+    exon_list = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict())))
+    #precompile regex to extact transcript id and exon id
+    trans_exon_regex = re.compile(r"(?<=ENST)([0-9]*)\.([0-9]*)")
+    #iterate over all exons and sort
+    with open(exons, "r") as file:
+        #read the line
+        readLines = file.readlines()
+        #for each exon
+        for line in readLines:
+            #split line and return info
+            splits = line.strip('\n').split("\t")
+            chro = splits[0]
+            start = int(splits[1])
+            stop = int(splits[2])
+            trans = splits[3]
+            strand = splits[5]
+            #extract identifiers
+            trans = re.search(trans_exon_regex, trans)
+            trans_id = trans.group(1)
+            exon_id = int(trans.group(2))
+            #add to the dictionary
+            exon_list[chro][strand][trans_id][exon_id] = [start, stop]
+    #open the output file
+    out_file = open(bed, "w")
+
+    #this is a bit clunky
+    # for each chromosome, strand, transcript, exon, see if there is a 'next' exon
+    # if there is write to file
+    for chr in sorted(exon_list):
+        for strand in sorted(exon_list[chr]):
+            for trans_id in sorted(exon_list[chr][strand]):
+                #create blank transcript output so we arent writing to file twice
+                for exon_id in sorted(exon_list[chr][strand][trans_id]):
+                    if(exon_id+1 in exon_list[chr][strand][trans_id]):
+
+                        #get exons for ease
+                        exon1 = exon_list[chr][strand][trans_id][exon_id]
+                        exon2 = copy.deepcopy(exon_list[chr][strand][trans_id][exon_id+1])
+
+                        #if window is defined, extract junction of size defined
+                        if window_of_interest:
+                            #ensure window is even number
+                            if window_of_interest % 2 != 0:
+                                window_of_interest = window_of_interest +1
+                            #get half the window interval
+                            window_half = int(window_of_interest/2)
+
+                            #if exon1 is bigger than the window interval, redefine window of interest
+                            if(exon1[1] - exon1[0] > window_half):
+                                exon1[0] = exon1[1]-window_half
+                            #if exon1 is bigger than the window interval, redefine window of interest
+                            if(exon2[1] - exon1[0] > window_half):
+                                exon2[1] = exon2[0]+window_half
+
+                        if strand == "+":
+                            exon1_site, exon2_site = 3,5
+                        elif strand == "-":
+                            exon1_site, exon2_site = 5,3
+
+                        #write exon1 window to file
+                        out_file.write('{}\t{}\t{}\tENST{}.{}.{}\t.\t{}\n'.format(chr,exon1[0],exon1[1],trans_id,exon_id,exon1_site,strand))
+                        #write exon2 window to file
+                        out_file.write('{}\t{}\t{}\tENST{}.{}.{}\t.\t{}\n'.format(chr,exon2[0],exon2[1],trans_id,exon_id+1,exon2_site,strand))
+
+    #close file
+    out_file.close()
+
+def fasta_from_intervals(bed_file, fasta_file, genome_fasta, force_strand = True, names = False):
+    '''
+    Takes a bed file and creates a fasta file with the corresponding sequences.
+    If names == False, the fasta record names will be generated from the sequence coordinates.
+    If names == True, the fasta name will correspond to whatever is in the 'name' field of the bed file
+    '''
+    bedtools_args = ["bedtools", "getfasta", "-s", "-fi", genome_fasta, "-bed", bed_file, "-fo", fasta_file]
+    if not force_strand:
+        del bedtools_args[2]
+    if names:
+        bedtools_args.append("-name")
+    gen.run_process(bedtools_args)
+    names, seqs = gen.read_fasta(fasta_file)
+    seqs = [i.upper() for i in seqs]
+    gen.write_to_fasta(names, seqs, fasta_file)
