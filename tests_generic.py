@@ -22,3 +22,11 @@ class Test_generic(unittest.TestCase):
         expected = 646
         observed = line_count(file)
         self.assertEqual(expected, observed)
+
+    def test_read_fasta(self):
+        expected = [[],[]]
+        expected[0] = ["1:17-25(+)", "2:0-12(+)", "1:21-30(-)"]
+        expected[1] = ["CATAGACA", "GTCCCCCCCCAA", "AAATATGTC"]
+        expected = tuple(expected)
+        observed = read_fasta("test_data/test_converted_fasta.fasta")
+        self.assertEqual(expected, observed)

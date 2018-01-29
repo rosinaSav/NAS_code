@@ -103,3 +103,19 @@ def extract_exon_junctions(exons, bed, window_of_interest=None):
 
     #close file
     out_file.close()
+
+def fasta_from_intervals(bed_file, fasta_file, genome_fasta, force_strand = True, names = False):
+    '''
+    Takes a bed file and creates a fasta file with the corresponding sequences.
+    If names == False, the fasta record names will be generated from the sequence coordinates.
+    If names == True, the fasta name will correspond to whatever is in the 'name' field of the bed file
+    '''
+    bedtools_args = ["bedtools", "getfasta", "-s", "-fi", genome_fasta, "-bed", bed_file, "-fo", fasta_file]
+    if not force_strand:
+        del bedtools_args[2]
+    if names:
+        bedtools_args.append("-name")
+    gen.run_process(bedtools_args)
+    names, seqs = gen.read_fasta(fasta_file)
+    seqs = [i.upper() for i in seqs]
+    gen.write_to_fasta(names, seqs, fasta_file)

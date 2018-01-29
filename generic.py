@@ -52,6 +52,26 @@ def parse_arguments(description, arguments, floats = None, flags = None, ints = 
     args = parser.parse_args()
     return(args)
 
+def read_fasta(input_file):
+    '''
+    Given a fasta file return a first lists containing the sequence identifiers and a second list containing teh sequences (in the same order).
+    '''
+    file_to_read = open(input_file)
+    input_lines = file_to_read.readlines()
+    file_to_read.close()
+    input_lines = [i.rstrip("\n") for i in input_lines]
+    names = [i.lstrip(">") for i in input_lines if i[0] == ">"]
+    sequences = [i for i in input_lines if i[0] != ">"]
+    if len(sequences) != len(names):
+        print("Problem extracting data from fasta file!")
+        print(len(sequences))
+        print(len(names))
+        raise Exception
+    if len(sequences) == 0:
+        print("No sequences were extracted!")
+        raise Exception
+    return(names, sequences)
+
 def read_many_fields(input_file, delimiter):
     '''
     Read a csv/tsv/... into a list of lists with each sublist corresponding to one line.
@@ -163,3 +183,12 @@ def update_counter(counter, step):
         print(counter)
     counter = counter + 1
     return(counter)
+
+def write_to_fasta(names, seq, fasta_name):
+    '''
+    Write a set of sequence identifiers and sequences to fasta file.
+    '''
+    with open(fasta_name, "w") as file:
+        for i in range(len(names)):
+            file.write(">{0}\n".format(names[i]))
+            file.write("{0}\n".format(seq[i]))
