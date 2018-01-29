@@ -97,8 +97,6 @@ def run_bedops(A_file, B_file, force_strand = False, write_both = False, chrom =
     '''
     See intersect_bed for details.
     '''
-    print("Bedops is exhibiting strange and inexplainable behaviour! Use bedtools instead!")
-    raise(Exception)
     if intersect:
         command = "--intersect"
     else:
@@ -111,10 +109,12 @@ def run_bedops(A_file, B_file, force_strand = False, write_both = False, chrom =
         bedops_args[4] = overlap
     if chrom:
         bedops_args[2] = chrom
+        if intersect:
+            del bedops_args[4]
     else:
         del bedops_args[1:3]
-    if intersect:
-        del bedops_args[4]
+        if intersect:
+            del bedops_args[2]
     if force_strand:
         print("Bedops can't search by strand! Either use bedtools or separate input data by strand!")
         raise Exception
@@ -125,7 +125,6 @@ def run_bedops(A_file, B_file, force_strand = False, write_both = False, chrom =
         print("Bedops hasn't been set up to count the number of overlapping elements. Use bedtools!")
     if no_dups:
         print("Bedops doesn't print duplicates by default!")
-    print(bedops_args)
     bedops_output = gen.run_process(bedops_args, file_for_output = output_file)
     return(bedops_output)
 
