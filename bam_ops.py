@@ -104,13 +104,9 @@ def run_bedops(A_file, B_file, force_strand = False, write_both = False, chrom =
     else:
         command = "--element-of"
     if sort:
-        sorting_temp_file_name = "temp_data/temp_sort_{1}.bed".format(random.random())
-        sorting_temp_file_name2 = "temp_data/temp_sort2_{1}.bed".format(random.random())
-        gen.run_process(["sort-bed", A_file], file_for_output = sorting_temp_file_name)
-        gen.run_process(["sort-bed", B_file], file_for_output = sorting_temp_file_name2)
-        bedops_args = ["bedops", "--chrom", "foo", command, "1", sorting_temp_file_name, sorting_temp_file_name2]
-    else:
-        bedops_args = ["bedops", "--chrom", "foo", command, "1", A_file, B_file]
+        sort_bed(A_file, A_file)
+        sort_bed(B_file, B_file)
+    bedops_args = ["bedops", "--chrom", "foo", command, "1", A_file, B_file]
     if overlap:
         bedops_args[4] = overlap
     if chrom:
@@ -131,9 +127,6 @@ def run_bedops(A_file, B_file, force_strand = False, write_both = False, chrom =
         print("Bedops doesn't print duplicates by default!")
     print(bedops_args)
     bedops_output = gen.run_process(bedops_args, file_for_output = output_file)
-    if sort:
-        gen.remove_file(sorting_temp_file_name)
-        gen.remove_file(sorting_temp_file_name2)
     return(bedops_output)
 
 def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom = None, overlap = None, sort = False, no_name_check = False, no_dups = True, hit_number = False, output_file = None, intersect = False):
@@ -147,13 +140,9 @@ def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom
     else:
         write_option = "-wa"
     if sort:
-        sorting_temp_file_name = "temp_data/temp_sort_{1}.bed".format(random.random())
-        sorting_temp_file_name2 = "temp_data/temp_sort2_{1}.bed".format(random.random())
-        gen.run_process(["sort-bed", A_file], file_for_output = sorting_temp_file_name)
-        gen.run_process(["sort-bed", B_file], file_for_output = sorting_temp_file_name2)
-        bedtools_args = ["intersectBed", "-a", sorting_temp_file_name,"-b", sorting_temp-file_name2, write_option]
-    else:
-        bedtools_args = ["intersectBed", "-a", A_file,"-b", B_file, write_option]
+        sort_bed(A_file, A_file)
+        sort_bed(B_file, B_file)
+    bedtools_args = ["intersectBed", "-a", A_file,"-b", B_file, write_option]
     if overlap:
         bedtools_args.extend(["-f", str(overlap)])
     if force_strand:
@@ -172,3 +161,14 @@ def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom
         raise(Exception)
     bedtools_output = gen.run_process(bedtools_args, file_for_output = output_file)
     return(bedtools_output)
+
+def sort_bed(input_file_name, output_file_name):
+    '''
+    Sort a bed file.
+    '''
+    #This is done via a temp file because that way you can specify the same file as input and output file and thus
+    #overwrite the unsorted file with the sorted one.
+    temp_file_name = "temp_data/temp_sorted_bed{0}.bed".format(random.random())
+    gen.run_process(["sort-bed", input_file_name], file_for_output = temp_file_name)
+    gen.run_process(["mv", temp_file_name, output_file_name])
+    gen.remove_file(temp_file_name)

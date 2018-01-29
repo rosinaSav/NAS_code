@@ -129,4 +129,14 @@ class Test_bam_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed_file, "\t")
         self.assertEqual(expected, observed)
 
+    def test_sort_bed(self):
+        infile = "test_data/test_intersect_bed_A_file_unsorted.bed"
+        expected_file = "test_data/test_intersect_bed_A_file.bed"
+        observed_file = "test_data/test_sort_bed_observed.bed"
+        gen.remove_file(observed_file)
+        sort_bed(infile, observed_file)
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = gen.read_many_fields(observed_file, "\t")
+        self.assertEqual(expected, observed)       
+
         
