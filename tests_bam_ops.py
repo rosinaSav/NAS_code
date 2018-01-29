@@ -127,12 +127,6 @@ class Test_bam_ops(unittest.TestCase):
         intersect_bed(A_file, B_file, output_file = observed_file, no_dups = False, write_both = True)
         expected = gen.read_many_fields(expected_file, "\t")
         observed = gen.read_many_fields(observed_file, "\t")
-        print("\n")
-        for i in expected:
-            print(i)
-        print("\n")
-        for i in observed:
-            print(i)
         self.assertEqual(expected, observed)
 
         
