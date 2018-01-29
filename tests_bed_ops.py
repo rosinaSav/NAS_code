@@ -30,9 +30,3 @@ class Test_bed_ops(unittest.TestCase):
         expected = gen.read_many_fields("test_data/test_extract_exon_window_junctions_expected.bed", "\t")
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(expected, observed)
-
-    def test_get_exon_junction_read_intersets(self):
-        expected = 1
-        observed = 1
-        get_exon_junction_read_intersets()
-        self.assertEqual(expected, observed)

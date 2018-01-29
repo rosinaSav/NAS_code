@@ -34,7 +34,7 @@ def extract_exon_junctions(exons, bed, window_of_interest=None):
     '''
     Given the file of extacted exons (generated using extract_exons), extact the coordinates of the junctions and write to .bed
     Set window_of_interest to a number of nucletides that you wish to examine across the junction
-    EX.: extract_exon_junctions("../source_data/Homo_sapiens.GRCh37.87_exons.bed", "../source_data/Homo_sapiens.GRCh37.87_exon_junctions.bed")
+    EX.: extract_exon_junctions("../source_data/Homo_sapiens.GRCh37.87_exons.bed", "../source_data/Homo_sapiens.GRCh37.87_exon_junctions.bed", 30)
     '''
 
     #set up default dict to store info
@@ -104,10 +104,3 @@ def extract_exon_junctions(exons, bed, window_of_interest=None):
 
     #close file
     out_file.close()
-
-def get_exon_junction_read_intersets():
-    print('\n\nFunction start')
-
-    readFile = "./test_data/test_exon_read_intersect_reads.bed"
-    intersectFile = "./test_data/test_exon_read_intersect_reads.bed"
-    outFile = "./test_data/test_exon_read_intersects_observed.bed"
