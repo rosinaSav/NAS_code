@@ -165,5 +165,8 @@ def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom
         raise Exception
     if intersect:
         print("Bedtools has not been set up to take intersections. Either implement it or use bedops!")
+    if hit_number and no_dups:
+        print("When counting hits, each interval in the first bed file is only reported once by default. Set no_dups to False!")
+        raise(Exception)
     bedtools_output = gen.run_process(bedtools_args, file_for_output = output_file)
     return(bedtools_output)
