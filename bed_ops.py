@@ -69,7 +69,6 @@ def extract_exon_junctions(exons, bed, window_of_interest=None):
         for strand in sorted(exon_list[chr]):
             for trans_id in sorted(exon_list[chr][strand]):
                 #create blank transcript output so we arent writing to file twice
-                outputs = []
                 for exon_id in sorted(exon_list[chr][strand][trans_id]):
                     if(exon_id+1 in exon_list[chr][strand][trans_id]):
 
@@ -92,13 +91,15 @@ def extract_exon_junctions(exons, bed, window_of_interest=None):
                             if(exon2[1] - exon1[0] > window_half):
                                 exon2[1] = exon2[0]+window_half
 
-                        if(exon1 not in outputs):
-                            #write exon1 window to file
-                            out_file.write('{}\t{}\t{}\tENST{}.{}\t.\t{}\n'.format(chr,exon1[0],exon1[1],trans_id,exon_id,strand))
-                            outputs.append(exon1)
-                        if(exon2 not in outputs):
-                            #write exon2 window to file
-                            out_file.write('{}\t{}\t{}\tENST{}.{}\t.\t{}\n'.format(chr,exon2[0],exon2[1],trans_id,exon_id+1,strand))
-                            outputs.append(exon2)
+                        if strand == "+":
+                            exon1_site, exon2_site = 3,5
+                        elif strand == "-":
+                            exon1_site, exon2_site = 5,3
+
+                        #write exon1 window to file
+                        out_file.write('{}\t{}\t{}\tENST{}.{}.{}\t.\t{}\n'.format(chr,exon1[0],exon1[1],trans_id,exon_id,exon1_site,strand))
+                        #write exon2 window to file
+                        out_file.write('{}\t{}\t{}\tENST{}.{}.{}\t.\t{}\n'.format(chr,exon2[0],exon2[1],trans_id,exon_id+1,exon2_site,strand))
+
     #close file
     out_file.close()
