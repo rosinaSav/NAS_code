@@ -1,4 +1,5 @@
 import generic as gen
+from bam_ops import *
 import re
 import collections
 import copy
@@ -103,3 +104,13 @@ def extract_exon_junctions(exons, bed, window_of_interest=None):
 
     #close file
     out_file.close()
+
+def get_exon_junction_read_intersets():
+    print('\n\nFunction start')
+
+    readFile = "./test_data/test_exon_read_intersect_reads.bed"
+    intersectFile = "./test_data/test_exon_read_intersect_reads.bed"
+    outFile = "./test_data/test_exon_read_intersects_observed.bed"
+
+    intersect_bed(readFile, intersectFile, outFile, True, overlap = False, write_both = False, sort = False, output_file = None,
+                                 force_strand = False, no_name_check = False, no_dups = True, chrom = None, bed_input = False, intersect = False, hit_count = False)
