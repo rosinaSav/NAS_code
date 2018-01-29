@@ -58,7 +58,7 @@ def group_flags(input_bed, output_bed, flag_start):
             new_row.append(flags)
             writer.writerow(new_row)
 
-def intersect_bed(bed_file1, bed_file2, output_file = None, use_bedops = False, overlap = False, write_both = False, sort = False, output_file = None,
+def intersect_bed(bed_file1, bed_file2, use_bedops = False, overlap = False, write_both = False, sort = False, output_file = None,
                              force_strand = False, no_name_check = False, no_dups = True, chrom = None, bed_input = False, intersect = False, hit_count = False):
     '''Use bedtools/bedops to intersect coordinates from two bed files.
     Return those lines in bed file 1 that overlap with intervals in bed file 2.
