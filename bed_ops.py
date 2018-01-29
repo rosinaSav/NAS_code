@@ -91,11 +91,15 @@ def extract_exon_junctions(exons, bed, window_of_interest=None):
                             if(exon2[1] - exon1[0] > window_half):
                                 exon2[1] = exon2[0]+window_half
 
-                        #write exon1 window to file
-                        out_file.write('{}\t{}\t{}\tENST{}.{}.3\t.\t{}\n'.format(chr,exon1[0],exon1[1],trans_id,exon_id,strand))
+                        if strand == "+":
+                            exon1_site, exon2_site = 3,5
+                        elif strand == "-":
+                            exon1_site, exon2_site = 5,3
 
+                        #write exon1 window to file
+                        out_file.write('{}\t{}\t{}\tENST{}.{}.{}\t.\t{}\n'.format(chr,exon1[0],exon1[1],trans_id,exon_id,exon1_site,strand))
                         #write exon2 window to file
-                        out_file.write('{}\t{}\t{}\tENST{}.{}.5\t.\t{}\n'.format(chr,exon2[0],exon2[1],trans_id,exon_id+1,strand))
+                        out_file.write('{}\t{}\t{}\tENST{}.{}.{}\t.\t{}\n'.format(chr,exon2[0],exon2[1],trans_id,exon_id+1,exon2_site,strand))
 
     #close file
     out_file.close()
