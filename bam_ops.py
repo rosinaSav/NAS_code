@@ -93,7 +93,7 @@ def intersect_bed(bed_file1, bed_file2, use_bedops = False, overlap = False, wri
     gen.remove_file(temp_file_name)
     return(bedtools_output)
 
-def run_bedops(A_file, B_file, force_strand = False, write_both = False, chrom = None, overlap = None, sort = False, output_file = None, intersect = False, hit_number = hit_number):
+def run_bedops(A_file, B_file, force_strand = False, write_both = False, chrom = None, overlap = None, sort = False, output_file = None, intersect = False, hit_number = None):
     '''
     See intersect_bed for details.
     '''
