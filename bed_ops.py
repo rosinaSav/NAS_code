@@ -120,3 +120,44 @@ def fasta_from_intervals(bed_file, fasta_file, genome_fasta, force_strand = True
     names, seqs = gen.read_fasta(fasta_file)
     seqs = [i.upper() for i in seqs]
     gen.write_to_fasta(names, seqs, fasta_file)
+
+
+def extract_features(bed_file, out_file, features, list_feature=None, full_chromosome=False):
+
+	feature_list = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: collections.UserList())))
+
+	lines = gen.read_many_fields(bed_file, "\t")
+	#ensure protein coding and not entry meta
+	lines = [line for line in lines if not line[0].startswith("#") and "pseudogene" not in line[-1]]
+	#compile regex to fine transcripts and exons
+	trans_regex = re.compile("(?<=transcript_id \")ENST[0-9]*")
+	exon_no_regex = re.compile("(?<=exon_number \")[0-9]*")
+
+	for line in lines:
+		#if the feature identifier is in the list
+		if line[2] in features:
+			#get entry meta
+			meta = line[-1]
+			trans = re.search(trans_regex, meta).group(0)
+			exon_no = re.search(exon_no_regex, meta).group(0)
+			chr_no = line[0]
+			#if you want the full chromosome name
+			if full_chromosome:
+				chr_regex = re.compile("[XY0-9]*")
+				chr_no = re.search(chr_regex, chr_no).group(0)
+			#if you want to list the feature extracted
+			if list_feature:
+				feature = line[2]
+			else:
+				feature = '.'
+			feature_list[line[2]][chr_no][trans].append('{0}\t{1}\t{2}\t{3}\t{4}\t{5}.{6}\n'.format(chr_no,line[3],line[4],feature,line[6],trans,exon_no))
+
+	#output features sorted by feature, chr, transcript id
+	with open(out_file, 'w') as output:
+		for feature in sorted(feature_list):
+			for chr_no in sorted(feature_list[feature]):
+				for trans in sorted(feature_list[feature][chr_no]):
+					print(feature, chr_no, trans)
+					for item in feature_list[feature][trans][chr_no]:
+						print(item)
+						output.write(item)
