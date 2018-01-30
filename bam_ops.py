@@ -1,3 +1,4 @@
+import bed_ops as bo
 import csv
 import generic as gen
 import random
@@ -171,3 +172,45 @@ def sort_bed(input_file_name, output_file_name):
     gen.run_process(["sort-bed", input_file_name], file_for_output = temp_file_name)
     gen.run_process(["mv", temp_file_name, output_file_name])
     gen.remove_file(temp_file_name)
+
+def write_hits_at_junctions_per_sample(ftp_site, target_directory, exon_junctions_file, subset = None):
+    '''
+    For each .bam file at the ftp site, intersect it with the exon junction intervals and
+    make a file with the number of overlapping reads for each junction interval.
+    subset: only retrieve this many .bam files (useful for testing)
+    '''
+    #create target directory, if it doesn't exist
+    gen.make_dir(target_directory)
+    #split the ftp_site address into host and the path
+    ftp_site = ftp_site.split("/")
+    host = ftp_site[0]
+    ftp_directory = "/".join(ftp_site[1:])
+    user = "anonymous"
+    password = "rs949@bath.ac.uk"
+    #connect to FTP server
+    ftp = gen.ftp_connect(host, user, password, directory = ftp_directory)
+    #get list of all .bam files
+    all_files = ftp.nlst()
+    all_files = [i for i in all_files if i[-4:] == ".bam"]
+    if subset:
+        all_files = all_files[:subset]
+    #loop over .bam files
+    for pos, bam_file in enumerate(all_files):
+        print("{0}/{1}".format(pos, len(all_files)))
+        #retrieve current file
+##        ftp = gen.ftp_retrieve(ftp, host, user, password, ftp_directory, bam_file, destination = target_directory)
+        #note that overlap = 1
+        bed_name = "{0}/{1}.bed".format(target_directory, bam_file[:-4])
+        local_bam_file = "{0}/{1}".format(target_directory, bam_file)
+##        convert2bed("{0}/{1}".format(target_directory, bam_file), bed_name)
+        intersect_bed(exon_junctions_file, local_bam_file, overlap = 1, output_file = "{0}/{1}_junction_hit_count.bed".format(target_directory, bam_file[:-4]),
+                             force_strand = True, no_dups = False, hit_count = True)
+        print("Intersected with exon-exon junctions.\n")
+##        gen.remove_file(local_bam_file)
+        raise(Exception)
+    #end the connection to the FTP server
+    #make sure the connection is live before you do or you might crash
+    ftp = gen.ftp_check(ftp, host, user, password, ftp_directory)
+    ftp.quit()
+
+    

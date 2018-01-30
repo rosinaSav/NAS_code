@@ -30,7 +30,7 @@ def extract_exons(gtf, bed):
             file.write("{0}\n".format("\t".join([str(i) for i in exon])))
 
 
-def extract_exon_junctions(exons, bed, window_of_interest=None):
+def extract_exon_junctions(exons, bed, window_of_interest = None):
     '''
     Given the file of extacted exons (generated using extract_exons), extact the coordinates of the junctions and write to .bed
     Set window_of_interest to a number of nucletides that you wish to examine across the junction
