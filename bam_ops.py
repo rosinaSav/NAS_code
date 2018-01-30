@@ -1,3 +1,4 @@
+import bed_ops as bo
 import csv
 import generic as gen
 import random
@@ -97,28 +98,24 @@ def run_bedops(A_file, B_file, force_strand = False, write_both = False, chrom =
     '''
     See intersect_bed for details.
     '''
-    print("Bedops is exhibiting strange and inexplainable behaviour! Use bedtools instead!")
-    raise(Exception)
     if intersect:
         command = "--intersect"
     else:
         command = "--element-of"
     if sort:
-        sorting_temp_file_name = "temp_data/temp_sort_{1}.bed".format(random.random())
-        sorting_temp_file_name2 = "temp_data/temp_sort2_{1}.bed".format(random.random())
-        gen.run_process(["sort-bed", A_file], file_for_output = sorting_temp_file_name)
-        gen.run_process(["sort-bed", B_file], file_for_output = sorting_temp_file_name2)
-        bedops_args = ["bedops", "--chrom", "foo", command, "1", sorting_temp_file_name, sorting_temp_file_name2]
-    else:
-        bedops_args = ["bedops", "--chrom", "foo", command, "1", A_file, B_file]
+        sort_bed(A_file, A_file)
+        sort_bed(B_file, B_file)
+    bedops_args = ["bedops", "--chrom", "foo", command, "1", A_file, B_file]
     if overlap:
         bedops_args[4] = overlap
     if chrom:
         bedops_args[2] = chrom
+        if intersect:
+            del bedops_args[4]
     else:
         del bedops_args[1:3]
-    if intersect:
-        del bedops_args[4]
+        if intersect:
+            del bedops_args[2]
     if force_strand:
         print("Bedops can't search by strand! Either use bedtools or separate input data by strand!")
         raise Exception
@@ -129,11 +126,7 @@ def run_bedops(A_file, B_file, force_strand = False, write_both = False, chrom =
         print("Bedops hasn't been set up to count the number of overlapping elements. Use bedtools!")
     if no_dups:
         print("Bedops doesn't print duplicates by default!")
-    print(bedops_args)
     bedops_output = gen.run_process(bedops_args, file_for_output = output_file)
-    if sort:
-        gen.remove_file(sorting_temp_file_name)
-        gen.remove_file(sorting_temp_file_name2)
     return(bedops_output)
 
 def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom = None, overlap = None, sort = False, no_name_check = False, no_dups = True, hit_number = False, output_file = None, intersect = False):
@@ -147,13 +140,9 @@ def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom
     else:
         write_option = "-wa"
     if sort:
-        sorting_temp_file_name = "temp_data/temp_sort_{1}.bed".format(random.random())
-        sorting_temp_file_name2 = "temp_data/temp_sort2_{1}.bed".format(random.random())
-        gen.run_process(["sort-bed", A_file], file_for_output = sorting_temp_file_name)
-        gen.run_process(["sort-bed", B_file], file_for_output = sorting_temp_file_name2)
-        bedtools_args = ["intersectBed", "-a", sorting_temp_file_name,"-b", sorting_temp-file_name2, write_option]
-    else:
-        bedtools_args = ["intersectBed", "-a", A_file,"-b", B_file, write_option]
+        sort_bed(A_file, A_file)
+        sort_bed(B_file, B_file)
+    bedtools_args = ["intersectBed", "-a", A_file,"-b", B_file, write_option]
     if overlap:
         bedtools_args.extend(["-f", str(overlap)])
     if force_strand:
@@ -172,3 +161,54 @@ def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom
         raise(Exception)
     bedtools_output = gen.run_process(bedtools_args, file_for_output = output_file)
     return(bedtools_output)
+
+def sort_bed(input_file_name, output_file_name):
+    '''
+    Sort a bed file.
+    '''
+    #This is done via a temp file because that way you can specify the same file as input and output file and thus
+    #overwrite the unsorted file with the sorted one.
+    temp_file_name = "temp_data/temp_sorted_bed{0}.bed".format(random.random())
+    gen.run_process(["sort-bed", input_file_name], file_for_output = temp_file_name)
+    gen.run_process(["mv", temp_file_name, output_file_name])
+    gen.remove_file(temp_file_name)
+
+def write_hits_at_junctions_per_sample(ftp_site, target_directory, exon_junctions_file, subset = None):
+    '''
+    For each .bam file at the ftp site, intersect it with the exon junction intervals and
+    make a file with the number of overlapping reads for each junction interval.
+    subset: only retrieve this many .bam files (useful for testing)
+    '''
+    #create target directory, if it doesn't exist
+    gen.make_dir(target_directory)
+    #split the ftp_site address into host and the path
+    ftp_site = ftp_site.split("/")
+    host = ftp_site[0]
+    ftp_directory = "/".join(ftp_site[1:])
+    user = "anonymous"
+    password = "rs949@bath.ac.uk"
+    #connect to FTP server
+    ftp = gen.ftp_connect(host, user, password, directory = ftp_directory)
+    #get list of all .bam files
+    all_files = ftp.nlst()
+    all_files = [i for i in all_files if i[-4:] == ".bam"]
+    if subset:
+        all_files = all_files[:subset]
+    #loop over .bam files
+    for pos, bam_file in enumerate(all_files):
+        print("{0}/{1}".format(pos, len(all_files)))
+        #retrieve current file
+        ftp = gen.ftp_retrieve(ftp, host, user, password, ftp_directory, bam_file, destination = target_directory)
+        #note that overlap = 1
+        local_bam_file = "{0}/{1}".format(target_directory, bam_file)
+        intersect_bed(exon_junctions_file, local_bam_file, overlap = 1, output_file = "{0}/{1}_junction_hit_count.bed".format(target_directory, bam_file[:-4]),
+                             force_strand = True, no_dups = False, hit_count = True)
+        print("Intersected with exon-exon junctions.\n")
+        gen.remove_file(local_bam_file)
+        raise(Exception)
+    #end the connection to the FTP server
+    #make sure the connection is live before you do or you might crash
+    ftp = gen.ftp_check(ftp, host, user, password, ftp_directory)
+    ftp.quit()
+
+    

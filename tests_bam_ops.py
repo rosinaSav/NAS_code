@@ -35,22 +35,16 @@ class Test_bam_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed_file, "\t")
         self.assertEqual(expected, observed)
 
-##    def test_intersect_bed_default_bedops(self):
-##        A_file = "test_data/test_intersect_bed_A_file.bed"
-##        B_file = "test_data/test_intersect_bed_B_file.bed"
-##        expected_file = "test_data/test_intersect_bed_default_bedops_expected.bed"
-##        observed_file = "test_data/test_intersect_bed_default_bedops_observed.bed"
-##        gen.remove_file(observed_file)
-##        intersect_bed(A_file, B_file, output_file = observed_file, use_bedops = True)
-##        expected = gen.read_many_fields(expected_file, "\t")
-##        observed = gen.read_many_fields(observed_file, "\t")
-##        print("\n")
-##        for i in expected:
-##            print(i)
-##        print("\n")
-##        for i in observed:
-##            print(i)
-##        self.assertEqual(expected, observed)
+    def test_intersect_bed_default_bedops(self):
+        A_file = "test_data/test_intersect_bed_A_file.bed"
+        B_file = "test_data/test_intersect_bed_B_file.bed"
+        expected_file = "test_data/test_intersect_bed_default_bedops_expected.bed"
+        observed_file = "test_data/test_intersect_bed_default_bedops_observed.bed"
+        gen.remove_file(observed_file)
+        intersect_bed(A_file, B_file, output_file = observed_file, use_bedops = True)
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = gen.read_many_fields(observed_file, "\t")
+        self.assertEqual(expected, observed)
 
     def test_intersect_bed_no_dups(self):
         A_file = "test_data/test_intersect_bed_A_file.bed"
@@ -127,12 +121,25 @@ class Test_bam_ops(unittest.TestCase):
         intersect_bed(A_file, B_file, output_file = observed_file, no_dups = False, write_both = True)
         expected = gen.read_many_fields(expected_file, "\t")
         observed = gen.read_many_fields(observed_file, "\t")
-        print("\n")
-        for i in expected:
-            print(i)
-        print("\n")
-        for i in observed:
-            print(i)
         self.assertEqual(expected, observed)
 
-        
+    def test_sort_bed(self):
+        infile = "test_data/test_intersect_bed_A_file_unsorted.bed"
+        expected_file = "test_data/test_intersect_bed_A_file.bed"
+        observed_file = "test_data/test_sort_bed_observed.bed"
+        gen.remove_file(observed_file)
+        sort_bed(infile, observed_file)
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = gen.read_many_fields(observed_file, "\t")
+        self.assertEqual(expected, observed)
+
+    def test_intersect_bed_intersect_bedops(self):
+        A_file = "test_data/test_intersect_bed_A_file.bed"
+        B_file = "test_data/test_intersect_bed_B_file.bed"
+        expected_file = "test_data/test_intersect_bed_intersect_bedops_expected.bed"
+        observed_file = "test_data/test_intersect_bed_intersect_bedops_observed.bed"
+        gen.remove_file(observed_file)
+        intersect_bed(A_file, B_file, output_file = observed_file, no_dups = False, use_bedops = True, intersect = True)
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = gen.read_many_fields(observed_file, "\t")
+        self.assertEqual(expected, observed)
