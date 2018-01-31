@@ -4,6 +4,7 @@ import re
 import collections
 import copy
 import numpy as np
+import os
 
 def extract_exons(gtf, bed):
 	'''Given a GTF file, extract exon coordinates and write them to .bed.
@@ -161,10 +162,20 @@ def extract_features(bed_file, out_file, features):
 							#output and convert to base 0
 							output.write('\t'.join([chr_no, str(int(item[0])-1), item[1], '{0}.{1}'.format(trans, exon), feature, item[2]]) + '\n')
 
-def extract_fasta_temp(bed_file, output_fasta, genome_fasta):
+def extract_fasta_temp(bed_file, output_fasta, genome_fasta, random_directory=None):
+	'''
+	Create a temporary file to hold the fasta extractions
+	'''
+	random_int = np.random.randint(9999999,size=2)
+	if random_directory:
+		temp_directory_path = './temp_files/temp_fasta_files_{0}'.format(random_int[0])
+	else:
+		temp_directory_path = './temp_files/temp_fasta_files'
+	#create temp directory if doesnt already exist
 	gen.create_directory('./temp_files/')
-	gen.create_strict_directory('./temp_files/temp_fasta_files/')
-	# random_int = np.random.randint(100000000000, size=1)[0]
-	# output_fasta_temp = output_fasta.strip('.fasta') + '_{0}.fasta'.format(random_int)
-	fasta_from_intervals(bed_file, output_fasta, genome_fasta, force_strand = True, names = True)
-	# return(output_fasta_temp)
+	#delete temp fasta directory and create new
+	gen.create_strict_directory(temp_directory_path)
+	#set the temporary fasta file path
+	temp_fasta_file = '{0}/{1}_{2}.{3}'.format(temp_directory_path, os.path.splitext(os.path.basename(output_fasta))[0], random_int[1], os.path.splitext(os.path.basename(output_fasta))[1])
+	fasta_from_intervals(bed_file, temp_fasta_file, genome_fasta, force_strand = True, names = True)
+	return(temp_fasta_file, temp_directory_path)
