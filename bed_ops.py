@@ -157,4 +157,4 @@ def extract_features(bed_file, out_file, features):
 						for item in feature_list[chr_no][trans][exon][feature]:
 							if not list_feature:
 								feature = '.'
-							output.write('\t'.join([chr_no, item[0], item[1], feature, item[2], '{0}.{1}'.format(trans, exon)]) + '\n')
+							output.write('\t'.join([chr_no, item[0], item[1], '{0}.{1}'.format(trans, exon), feature, item[2]]) + '\n')
