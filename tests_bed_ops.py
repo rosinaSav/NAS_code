@@ -40,11 +40,20 @@ class Test_bed_ops(unittest.TestCase):
         observed = gen.read_fasta(observed_file_name)
         self.assertEqual(observed,expected)
 
-    def test_extract_features(self):
-        bed_file = "test_data/test_extract_cdss_all.bed"
-        observed = "test_data/test_extract_cdss_observed.bed"
+    def test_extract_features_cdss(self):
+        gtf_file = "test_data/test_extract_features.gtf"
+        observed = "test_data/test_extract_features_cdss_observed.bed"
         gen.remove_file(observed)
-        extract_features(bed_file, observed, ['CDS', 'stop_codon'], list_feature=True)
-        expected = gen.read_many_fields("test_data/test_extract_cdss_expected.bed", "\t")
+        extract_features(gtf_file, observed, ['CDS'])
+        expected = gen.read_many_fields("test_data/test_extract_features_cdss_expected.bed", "\t")
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(observed,expected)
+
+    def test_extract_features_cdss_stops(self):
+        gtf_file = "test_data/test_extract_features.gtf"
+        observed = "test_data/test_extract_features_cdss_stops_observed.bed"
+        gen.remove_file(observed)
+        extract_features(gtf_file, observed, ['CDS', 'stop_codon'])
+        expected = gen.read_many_fields("test_data/test_extract_features_cdss_stops_expected.bed", "\t")
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(observed,expected)
