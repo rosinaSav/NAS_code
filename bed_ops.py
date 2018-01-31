@@ -5,6 +5,7 @@ import collections
 import copy
 import numpy as np
 import os
+import shutil
 
 def extract_exons(gtf, bed):
 	'''Given a GTF file, extract exon coordinates and write them to .bed.
@@ -176,6 +177,47 @@ def extract_fasta_temp(bed_file, output_fasta, genome_fasta, random_directory=No
 	#delete temp fasta directory and create new
 	gen.create_strict_directory(temp_directory_path)
 	#set the temporary fasta file path
-	temp_fasta_file = '{0}/{1}_{2}.{3}'.format(temp_directory_path, os.path.splitext(os.path.basename(output_fasta))[0], random_int[1], os.path.splitext(os.path.basename(output_fasta))[1])
+	temp_fasta_file = '{0}/{1}_{2}{3}'.format(temp_directory_path, os.path.splitext(os.path.basename(output_fasta))[0], random_int[1], os.path.splitext(os.path.basename(output_fasta))[1])
 	fasta_from_intervals(bed_file, temp_fasta_file, genome_fasta, force_strand = True, names = True)
 	return(temp_fasta_file, temp_directory_path)
+
+def extract_cds(bed_file, output_fasta, genome_fasta, random_directory=None):
+	'''
+	Extract the CDS to fasta file
+	This has no sequence quality control (does not check for PTCs, correct start, correct, stop, multiple of 3)
+	Ex.: extract_cds('../feature_file.bed', '../output_file_fasta.fasta', '../source_data/genome_fasta_file.fa')
+	'''
+
+	'''
+	To do: handle stop codons that span exons
+	'''
+	#create dictionaries to hold cds parts
+	cds_list = collections.defaultdict(lambda: collections.defaultdict())
+	concat_list = collections.defaultdict(lambda: collections.UserList())
+	#create temp fasta file with extracted parts
+	temp_fasta_file, temp_directory_path = extract_fasta_temp(bed_file, output_fasta, genome_fasta, random_directory)
+	#read the temp fasta file
+	entries = gen.read_fasta(temp_fasta_file)
+	# get the entry names and seqs
+	sample_names = entries[0]
+	seqs = entries[1]
+	#set up the regex to get entry meta needed
+	entry_regex = re.compile("(\w+)\.(\d+)(\([+-]\))")
+	#iterate through the samples
+	for i, sample in enumerate(sample_names):
+		entry_meta = re.search(entry_regex, sample)
+		#set the sample name: sample(strand)
+		sample_name = entry_meta.group(1) + entry_meta.group(3)
+		#set sample name to dict, with each part and its seq
+		cds_list[sample_name][entry_meta.group(2)] = seqs[i]
+	#get sorted list of seq parts
+	for sample in sorted(cds_list):
+		for part in sorted(cds_list[sample]):
+			concat_list[sample].append(cds_list[sample][part])
+	#concatenate and write to output
+	with open(output_fasta, 'w') as outfile:
+		for sample in sorted(concat_list):
+			outfile.write('>{0}\n'.format(sample))
+			outfile.write('{0}\n'.format("".join(concat_list[sample])))
+	#remove the temporary directory
+	shutil.rmtree(temp_directory_path)
