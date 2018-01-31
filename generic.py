@@ -4,6 +4,7 @@ import multiprocessing
 import os
 import subprocess
 from itertools import islice
+import shutil
 
 def get_extension(file_name, extension_length, valid_list = None):
     '''
@@ -205,3 +206,21 @@ def extract_head_of_file(file_path, lines):
         with open(output_path, 'w') as output_file:
             for line in head:
                 output_file.write(line)
+
+def create_directory(path):
+    '''
+    Create new directory if doesn't already exist
+    '''
+    if not os.path.exists(path):
+        print('Creating new directory {0}'.format(path))
+        os.mkdir(path)
+
+def create_strict_directory(path):
+    '''
+    Remove directory if exists, create new directory
+    '''
+    if os.path.exists(path):
+        print('Directory {0} already exists, removing directory'.format(path))
+        shutil.rmtree(path)
+    print('Creating new directory {0}'.format(path))
+    os.mkdir(path)

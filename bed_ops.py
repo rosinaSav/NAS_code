@@ -3,6 +3,7 @@ from bam_ops import *
 import re
 import collections
 import copy
+import numpy as np
 
 def extract_exons(gtf, bed):
 	'''Given a GTF file, extract exon coordinates and write them to .bed.
@@ -159,3 +160,11 @@ def extract_features(bed_file, out_file, features):
 								feature = '.'
 							#output and convert to base 0
 							output.write('\t'.join([chr_no, str(int(item[0])-1), item[1], '{0}.{1}'.format(trans, exon), feature, item[2]]) + '\n')
+
+def extract_fasta_temp(bed_file, output_fasta, genome_fasta):
+	gen.create_directory('./temp_files/')
+	gen.create_strict_directory('./temp_files/temp_fasta_files/')
+	# random_int = np.random.randint(100000000000, size=1)[0]
+	# output_fasta_temp = output_fasta.strip('.fasta') + '_{0}.fasta'.format(random_int)
+	fasta_from_intervals(bed_file, output_fasta, genome_fasta, force_strand = True, names = True)
+	# return(output_fasta_temp)
