@@ -124,7 +124,7 @@ def fasta_from_intervals(bed_file, fasta_file, genome_fasta, force_strand = True
 	seqs = [i.upper() for i in seqs]
 	gen.write_to_fasta(names, seqs, fasta_file)
 
-def extract_features(bed_file, out_file, features):
+def extract_features(gtf_file, out_file, features):
 	'''Given a GTF file, extract exon coordinates for specific features and write to .bed.
 	EX.: extract_fetures("../source_data/Homo_sapiens.GRCh37.87.gtf", "../source_data/Homo_sapiens.GRCh37.87_exons.bed", ['CDS', 'stop_codon'])
 	'''
@@ -135,7 +135,7 @@ def extract_features(bed_file, out_file, features):
 	else:
 		list_feature = False
 
-	lines = gen.read_many_fields(bed_file, "\t")
+	lines = gen.read_many_fields(gtf_file, "\t")
 	#ensure protein coding and not entry meta
 	lines = [line for line in lines if not line[0].startswith("#") and "pseudogene" not in line[-1]]
 	#compile regex to fine transcripts and exons
@@ -181,7 +181,7 @@ def extract_fasta_temp(bed_file, output_fasta, genome_fasta, random_directory=No
 	fasta_from_intervals(bed_file, temp_fasta_file, genome_fasta, force_strand = True, names = True)
 	return(temp_fasta_file, temp_directory_path)
 
-def extract_cds(bed_file, output_fasta, genome_fasta, random_directory=None):
+def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, random_directory=None):
 	'''
 	Extract the CDS to fasta file
 	This has no sequence quality control (does not check for PTCs, correct start, correct, stop, multiple of 3)
@@ -210,6 +210,7 @@ def extract_cds(bed_file, output_fasta, genome_fasta, random_directory=None):
 		sample_name = entry_meta.group(1) + entry_meta.group(3)
 		#set sample name to dict, with each part and its seq
 		cds_list[sample_name][entry_meta.group(2)] = seqs[i]
+		print(sample_name, seqs[i])
 	#get sorted list of seq parts
 	for sample in sorted(cds_list):
 		for part in sorted(cds_list[sample]):

@@ -212,7 +212,6 @@ def create_directory(path):
     Create new directory if doesn't already exist
     '''
     if not os.path.exists(path):
-        print('Creating new directory {0}'.format(path))
         os.mkdir(path)
 
 def create_strict_directory(path):
@@ -220,7 +219,5 @@ def create_strict_directory(path):
     Remove directory if exists, create new directory
     '''
     if os.path.exists(path):
-        print('Directory {0} already exists, removing directory'.format(path))
         shutil.rmtree(path)
-    print('Creating new directory {0}'.format(path))
     os.mkdir(path)
