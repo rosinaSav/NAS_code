@@ -6,6 +6,33 @@ import subprocess
 from itertools import islice
 import shutil
 
+def create_directory(path):
+    '''
+    Create new directory if doesn't already exist
+    '''
+    if not os.path.exists(path):
+        os.mkdir(path)
+
+def create_strict_directory(path):
+    '''
+    Remove directory if exists, create new directory
+    '''
+    if os.path.exists(path):
+        shutil.rmtree(path)
+    os.mkdir(path)
+
+def extract_head_of_file(file_path, lines):
+    '''
+    Extract a certain number of lines from file
+    '''
+    output_path = ".".join(file_path.split('.')[:-1]) + '.extracted.{}.'.format(lines) + file_path.split('.')[-1]
+    remove_file(output_path)
+    with open(file_path, 'r') as file:
+        head = list(islice(file, lines))
+        with open(output_path, 'w') as output_file:
+            for line in head:
+                output_file.write(line)
+
 def get_extension(file_name, extension_length, valid_list = None):
     '''
     Determine the extension at the end of a file name.
@@ -194,30 +221,3 @@ def write_to_fasta(names, seq, fasta_name):
         for i in range(len(names)):
             file.write(">{0}\n".format(names[i]))
             file.write("{0}\n".format(seq[i]))
-
-def extract_head_of_file(file_path, lines):
-    '''
-    Extract a certain number of lines from file
-    '''
-    output_path = ".".join(file_path.split('.')[:-1]) + '.extracted.{}.'.format(lines) + file_path.split('.')[-1]
-    remove_file(output_path)
-    with open(file_path, 'r') as file:
-        head = list(islice(file, lines))
-        with open(output_path, 'w') as output_file:
-            for line in head:
-                output_file.write(line)
-
-def create_directory(path):
-    '''
-    Create new directory if doesn't already exist
-    '''
-    if not os.path.exists(path):
-        os.mkdir(path)
-
-def create_strict_directory(path):
-    '''
-    Remove directory if exists, create new directory
-    '''
-    if os.path.exists(path):
-        shutil.rmtree(path)
-    os.mkdir(path)

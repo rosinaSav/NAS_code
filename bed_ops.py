@@ -108,27 +108,55 @@ def extract_exon_junctions(exons, bed, window_of_interest=None):
 	#close file
 	out_file.close()
 
-def fasta_from_intervals(bed_file, fasta_file, genome_fasta, force_strand = True, names = False):
+def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, random_directory=None):
 	'''
-	Takes a bed file and creates a fasta file with the corresponding sequences.
-	If names == False, the fasta record names will be generated from the sequence coordinates.
-	If names == True, the fasta name will correspond to whatever is in the 'name' field of the bed file
+	Extract the CDS to fasta file
+	This has no sequence quality control (does not check for PTCs, correct start, correct, stop, multiple of 3)
+	Ex.: extract_cds('../feature_file.bed', '../output_file_fasta.fasta', '../source_data/genome_fasta_file.fa')
 	'''
-	bedtools_args = ["bedtools", "getfasta", "-s", "-fi", genome_fasta, "-bed", bed_file, "-fo", fasta_file]
-	if not force_strand:
-		del bedtools_args[2]
-	if names:
-		bedtools_args.append("-name")
-	gen.run_process(bedtools_args)
-	names, seqs = gen.read_fasta(fasta_file)
-	seqs = [i.upper() for i in seqs]
-	gen.write_to_fasta(names, seqs, fasta_file)
+	#create dictionaries to hold cds parts
+	cds_list = collections.defaultdict(lambda: collections.defaultdict())
+	stop_list = {}
+	concat_list = collections.defaultdict(lambda: collections.UserList())
+	#create temp fasta file with extracted parts
+	temp_fasta_file, temp_directory_path = fasta_from_intervals_temp_file(bed_file, output_fasta, genome_fasta, random_directory)
+	#read the temp fasta file
+	entries = gen.read_fasta(temp_fasta_file)
+	# get the entry names and seqs
+	sample_names = entries[0]
+	seqs = entries[1]
+	#set up the regex to get entry meta needed
+	entry_regex = re.compile("(\w+)\.(\d+)(\([+-]\))")
+	#iterate through the samples
+	for i, sample in enumerate(sample_names):
+		entry_meta = re.search(entry_regex, sample)
+		#set the sample name: sample(strand)
+		sample_name = entry_meta.group(1) + entry_meta.group(3)
+		#if stop, set sample stop or send sample name to dict, with each part and its seq
+		if seqs[i] in ['TAA', 'TAG', 'TGA']:
+			stop_list[sample_name] = seqs[i]
+		else:
+			cds_list[sample_name][entry_meta.group(2)] = seqs[i]
+	#get sorted list of seq parts
+	for sample in sorted(cds_list):
+		for part in sorted(cds_list[sample]):
+			concat_list[sample].append(cds_list[sample][part])
+		#append the stop codon if it exists
+		if sample in stop_list:
+			concat_list[sample].append(stop_list[sample])
+	#concatenate and write to output
+	with open(output_fasta, 'w') as outfile:
+		for sample in sorted(concat_list):
+			outfile.write('>{0}\n'.format(sample))
+			outfile.write('{0}\n'.format("".join(concat_list[sample])))
+	#remove the temporary directory
+	shutil.rmtree(temp_directory_path)
 
 def extract_features(gtf_file, out_file, features):
-	'''Given a GTF file, extract exon coordinates for specific features and write to .bed.
+	'''
+	Given a GTF file, extract exon coordinates for specific features and write to .bed.
 	EX.: extract_fetures("../source_data/Homo_sapiens.GRCh37.87.gtf", "../source_data/Homo_sapiens.GRCh37.87_exons.bed", ['CDS', 'stop_codon'])
 	'''
-
 	feature_list = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: collections.UserList()))))
 	if len(features) > 1:
 		list_feature = True
@@ -163,7 +191,33 @@ def extract_features(gtf_file, out_file, features):
 							#output and convert to base 0
 							output.write('\t'.join([chr_no, str(int(item[0])-1), item[1], '{0}.{1}'.format(trans, exon), feature, item[2]]) + '\n')
 
-def extract_fasta_temp(bed_file, output_fasta, genome_fasta, random_directory=None):
+
+def fasta_from_intervals(bed_file, fasta_file, genome_fasta, force_strand = True, names = False):
+	'''
+	Takes a bed file and creates a fasta file with the corresponding sequences.
+	If names == False, the fasta record names will be generated from the sequence coordinates.
+	If names == True, the fasta name will correspond to whatever is in the 'name' field of the bed file
+	'''
+
+	#if the index file exists, check whether the expected features are present
+	genome_fasta_index = genome_fasta + '.fai'
+	if(os.path.exists(genome_fasta_index)):
+		bed_chrs = sorted(list(set([entry[0] for entry in gen.read_many_fields(bed_file, "\t")])))
+		index_chrs = sorted(list(set([entry[0] for entry in gen.read_many_fields(genome_fasta_index, "\t")])))
+		if(not set(bed_chrs).issubset(set(index_chrs))):
+			gen.remove_file(genome_fasta_index)
+
+	bedtools_args = ["bedtools", "getfasta", "-s", "-fi", genome_fasta, "-bed", bed_file, "-fo", fasta_file]
+	if not force_strand:
+		del bedtools_args[2]
+	if names:
+		bedtools_args.append("-name")
+	gen.run_process(bedtools_args)
+	names, seqs = gen.read_fasta(fasta_file)
+	seqs = [i.upper() for i in seqs]
+	gen.write_to_fasta(names, seqs, fasta_file)
+
+def fasta_from_intervals_temp_file(bed_file, output_fasta, genome_fasta, random_directory=None):
 	'''
 	Create a temporary file to hold the fasta extractions
 	'''
@@ -180,45 +234,3 @@ def extract_fasta_temp(bed_file, output_fasta, genome_fasta, random_directory=No
 	temp_fasta_file = '{0}/{1}_{2}{3}'.format(temp_directory_path, os.path.splitext(os.path.basename(output_fasta))[0], random_int[1], os.path.splitext(os.path.basename(output_fasta))[1])
 	fasta_from_intervals(bed_file, temp_fasta_file, genome_fasta, force_strand = True, names = True)
 	return(temp_fasta_file, temp_directory_path)
-
-def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, random_directory=None):
-	'''
-	Extract the CDS to fasta file
-	This has no sequence quality control (does not check for PTCs, correct start, correct, stop, multiple of 3)
-	Ex.: extract_cds('../feature_file.bed', '../output_file_fasta.fasta', '../source_data/genome_fasta_file.fa')
-	'''
-
-	'''
-	To do: handle stop codons that span exons
-	'''
-	#create dictionaries to hold cds parts
-	cds_list = collections.defaultdict(lambda: collections.defaultdict())
-	concat_list = collections.defaultdict(lambda: collections.UserList())
-	#create temp fasta file with extracted parts
-	temp_fasta_file, temp_directory_path = extract_fasta_temp(bed_file, output_fasta, genome_fasta, random_directory)
-	#read the temp fasta file
-	entries = gen.read_fasta(temp_fasta_file)
-	# get the entry names and seqs
-	sample_names = entries[0]
-	seqs = entries[1]
-	#set up the regex to get entry meta needed
-	entry_regex = re.compile("(\w+)\.(\d+)(\([+-]\))")
-	#iterate through the samples
-	for i, sample in enumerate(sample_names):
-		entry_meta = re.search(entry_regex, sample)
-		#set the sample name: sample(strand)
-		sample_name = entry_meta.group(1) + entry_meta.group(3)
-		#set sample name to dict, with each part and its seq
-		cds_list[sample_name][entry_meta.group(2)] = seqs[i]
-		print(sample_name, seqs[i])
-	#get sorted list of seq parts
-	for sample in sorted(cds_list):
-		for part in sorted(cds_list[sample]):
-			concat_list[sample].append(cds_list[sample][part])
-	#concatenate and write to output
-	with open(output_fasta, 'w') as outfile:
-		for sample in sorted(concat_list):
-			outfile.write('>{0}\n'.format(sample))
-			outfile.write('{0}\n'.format("".join(concat_list[sample])))
-	#remove the temporary directory
-	shutil.rmtree(temp_directory_path)

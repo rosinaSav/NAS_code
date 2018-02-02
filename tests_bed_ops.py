@@ -58,11 +58,11 @@ class Test_bed_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(observed,expected)
 
-    def test_extract_fasta_temp(self):
-        bed_file = "./test_data/test_extract_cds_bed.bed"
-        expected = gen.read_fasta("./test_data/test_extract_cds_temp_fasta_expected.fasta")
-        output_file_name = "./temp_files/temp_fasta_files/test_extract_cds_temp_fasta_observed.fasta"
-        observed_file_name, test_directory_path = extract_fasta_temp(bed_file, output_file_name, "./test_data/test_extract_cds_genome_fasta.fa")
+    def test_fasta_from_intervals_temp_file(self):
+        bed_file = "./test_data/test_extract_fasta_from_intervals_to_temp_bed.bed"
+        expected = gen.read_fasta("./test_data/test_extract_fasta_from_intervals_to_temp_expected.fasta")
+        output_file_name = "./temp_files/temp_fasta_files/test_extract_fasta_from_intervals_to_temp_observed.fasta"
+        observed_file_name, test_directory_path = fasta_from_intervals_temp_file(bed_file, output_file_name, "./test_data/test_extract_fasta_from_intervals_to_temp_genome.fa")
         observed = gen.read_fasta(observed_file_name)
         self.assertEqual(observed,expected)
 
@@ -71,6 +71,6 @@ class Test_bed_ops(unittest.TestCase):
         observed = "./test_data/test_extract_cds_fasta_observed.fasta"
         gen.remove_file(observed)
         expected = gen.read_fasta("./test_data/test_extract_cds_fasta_expected.fasta")
-        extract_cds_from_bed(bed_file, observed, "./test_data/test_extract_cds_genome_fasta.fa", random_directory=True)
+        extract_cds_from_bed(bed_file, observed, "./test_data/test_extract_cds_genome.fa", random_directory=True)
         observed = gen.read_fasta(observed)
         self.assertEqual(observed, expected)
