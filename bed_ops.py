@@ -8,6 +8,15 @@ import os
 import shutil
 
 def check_sequence_quality(names, seqs, check_acgt=None, check_stop=None, check_start=None, check_length=None, check_inframe_stop=None):
+	'''
+	Check sequence quality of fasta entries.
+	Options:
+	check_acgt: check if sequence only containts A,C,G,T nucleotides
+	check_stop: check if the sequence has a recognised stop codon
+	check_start: check if the sequence has a correctly defined ATG start codon
+	check_length: check if the lenth of the sequence is a multiple of 3
+	check_inframe_stop: check if the sequence contains an in frame stop codon
+	'''
 
 	stop_codons = ['TAA', 'TAG', 'TGA']
 	passed_names = []
@@ -39,7 +48,6 @@ def check_sequence_quality(names, seqs, check_acgt=None, check_stop=None, check_
 			codons = re.findall(in_frame_stop_regex, seq[:-3])
 			if len(np.intersect1d(stop_codons, codons)) > 0:
 				inframe_stop_pass = False
-
 		#if the sequence passes all checks, return
 		if [actg_pass, stop_pass, start_pass, length_pass, inframe_stop_pass] == [True, True, True, True, True]:
 			passed_names.append(names[i])
@@ -53,8 +61,11 @@ def extract_cds(gtf, output_fasta, genome_fasta, random_directory=None, check_ac
 	EX.: extract_exons("../source_data/Homo_sapiens.GRCh37.87.gtf", "../output_data/Homo_sapiens.GRCh37.87_cds.fasta", "../source_data/Genomes/Homo_sapiens.GRCh37.dna.primary_assembly.fa")
 	Use random_directory for creating a randomised directory to hold intermediate fasta components
 	'''
+	#create bed file path
 	bed = os.path.splitext(gtf)[0] + ".bed"
+	#extract required cds features
 	extract_features(gtf, bed, ['CDS', 'stop_codon'])
+	#extract to fasta
 	extract_cds_from_bed(bed, output_fasta, genome_fasta, random_directory, check_acgt, check_start, check_length, check_stop, check_inframe_stop)
 
 def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, random_directory=None, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None):
