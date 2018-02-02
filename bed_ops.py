@@ -7,7 +7,47 @@ import numpy as np
 import os
 import shutil
 
-def extract_cds(gtf, output_fasta, genome_fasta, random_directory=None):
+def check_sequence_quality(names, seqs, check_acgt=None, check_stop=None, check_start=None, check_length=None, check_inframe_stop=None):
+
+	stop_codons = ['TAA', 'TAG', 'TGA']
+	passed_names = []
+	passed_seqs = []
+
+	for i, seq in enumerate(seqs):
+		actg_pass, stop_pass, start_pass, length_pass, inframe_stop_pass = True, True, True, True, True
+		#check whether sequence only containts ACTG
+		if check_acgt:
+			actg_regex = re.compile('[^ACTG]')
+			non_actg = re.subn(actg_regex, '0', seq)[1]
+			if non_actg != 0:
+				actg_pass = False
+		#check whether sequence contains a standard stop codon
+		if check_stop:
+			if seq[-3:] not in stop_codons:
+				stop_pass = False
+		#check whether sequence containts correct start codon
+		if check_start:
+			if seq[:3] not in ['ATG']:
+				start_pass = False
+		#check whether the sequence is a multiple of 3
+		if check_length:
+			if len(seq) % 3 != 0:
+				length_pass = False
+		#check whether the sequence contains an in frame stop
+		if check_inframe_stop:
+			in_frame_stop_regex = re.compile('.{3}')
+			codons = re.findall(in_frame_stop_regex, seq[:-3])
+			if len(np.intersect1d(stop_codons, codons)) > 0:
+				inframe_stop_pass = False
+
+		#if the sequence passes all checks, return
+		if [actg_pass, stop_pass, start_pass, length_pass, inframe_stop_pass] == [True, True, True, True, True]:
+			passed_names.append(names[i])
+			passed_seqs.append(seq)
+
+	return(passed_names, passed_seqs)
+
+def extract_cds(gtf, output_fasta, genome_fasta, random_directory=None, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None):
 	'''
 	Given a .gtf file, exrtract the coding sequences to a fasta file.
 	EX.: extract_exons("../source_data/Homo_sapiens.GRCh37.87.gtf", "../output_data/Homo_sapiens.GRCh37.87_cds.fasta", "../source_data/Genomes/Homo_sapiens.GRCh37.dna.primary_assembly.fa")
@@ -15,7 +55,59 @@ def extract_cds(gtf, output_fasta, genome_fasta, random_directory=None):
 	'''
 	bed = os.path.splitext(gtf)[0] + ".bed"
 	extract_features(gtf, bed, ['CDS', 'stop_codon'])
-	extract_cds_from_bed(bed, output_fasta, genome_fasta, random_directory=True)
+	extract_cds_from_bed(bed, output_fasta, genome_fasta, random_directory=True, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None)
+
+def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, random_directory=None, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None):
+	'''
+	Extract the CDS to fasta file
+	This has no sequence quality control (does not check for PTCs, correct start, correct, stop, multiple of 3)
+	Ex.: extract_cds('../feature_file.bed', '../output_file_fasta.fasta', '../source_data/genome_fasta_file.fa')
+	'''
+	#create dictionaries to hold cds parts
+	cds_list = collections.defaultdict(lambda: collections.defaultdict())
+	stop_list = {}
+	concat_list = collections.defaultdict(lambda: collections.UserList())
+	#create temp fasta file with extracted parts
+	temp_fasta_file, temp_directory_path = fasta_from_intervals_temp_file(bed_file, output_fasta, genome_fasta, random_directory)
+	#read the temp fasta file
+	entries = gen.read_fasta(temp_fasta_file)
+	# get the entry names and seqs
+	sample_names = entries[0]
+	seqs = entries[1]
+	#set up the regex to get entry meta needed
+	entry_regex = re.compile("(\w+)\.(\d+)(\..*)*(\([+-]\))")
+	#iterate through the samples
+	for i, sample in enumerate(sample_names):
+		entry_meta = re.search(entry_regex, sample)
+		#set the sample name: sample(strand)
+		sample_name = entry_meta.group(1)
+		if entry_meta.group(3):
+			sample_name += entry_meta.group(3)
+		sample_name += entry_meta.group(4)
+		#if stop, set sample stop or send sample name to dict, with each part and its seq
+		if seqs[i] in ['TAA', 'TAG', 'TGA']:
+			stop_list[sample_name] = seqs[i]
+		else:
+			cds_list[sample_name][entry_meta.group(2)] = seqs[i]
+	#get sorted list of seq parts
+	for sample in sorted(cds_list):
+		for part in sorted(cds_list[sample]):
+			concat_list[sample].append(cds_list[sample][part])
+		#append the stop codon if it exists
+		if sample in stop_list:
+			concat_list[sample].append(stop_list[sample])
+	#concatenate and write to output
+	names = []
+	seqs = []
+	for sample in sorted(concat_list):
+		names.append(sample)
+		seqs.append("".join(concat_list[sample]))
+	#perform sequence quality control checks
+	if check_acgt or check_stop or check_start or check_length or check_inframe_stop:
+		names, seqs = check_sequence_quality(names, seqs, check_acgt, check_stop, check_start, check_length, check_inframe_stop)
+	gen.write_to_fasta(names, seqs, output_fasta)
+	#remove the temporary directory
+	shutil.rmtree(temp_directory_path)
 
 def extract_exons(gtf, bed):
 	'''Given a GTF file, extract exon coordinates and write them to .bed.
@@ -117,50 +209,6 @@ def extract_exon_junctions(exons, bed, window_of_interest=None):
 
 	#close file
 	out_file.close()
-
-def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, random_directory=None):
-	'''
-	Extract the CDS to fasta file
-	This has no sequence quality control (does not check for PTCs, correct start, correct, stop, multiple of 3)
-	Ex.: extract_cds('../feature_file.bed', '../output_file_fasta.fasta', '../source_data/genome_fasta_file.fa')
-	'''
-	#create dictionaries to hold cds parts
-	cds_list = collections.defaultdict(lambda: collections.defaultdict())
-	stop_list = {}
-	concat_list = collections.defaultdict(lambda: collections.UserList())
-	#create temp fasta file with extracted parts
-	temp_fasta_file, temp_directory_path = fasta_from_intervals_temp_file(bed_file, output_fasta, genome_fasta, random_directory)
-	#read the temp fasta file
-	entries = gen.read_fasta(temp_fasta_file)
-	# get the entry names and seqs
-	sample_names = entries[0]
-	seqs = entries[1]
-	#set up the regex to get entry meta needed
-	entry_regex = re.compile("(\w+)\.(\d+)(\([+-]\))")
-	#iterate through the samples
-	for i, sample in enumerate(sample_names):
-		entry_meta = re.search(entry_regex, sample)
-		#set the sample name: sample(strand)
-		sample_name = entry_meta.group(1) + entry_meta.group(3)
-		#if stop, set sample stop or send sample name to dict, with each part and its seq
-		if seqs[i] in ['TAA', 'TAG', 'TGA']:
-			stop_list[sample_name] = seqs[i]
-		else:
-			cds_list[sample_name][entry_meta.group(2)] = seqs[i]
-	#get sorted list of seq parts
-	for sample in sorted(cds_list):
-		for part in sorted(cds_list[sample]):
-			concat_list[sample].append(cds_list[sample][part])
-		#append the stop codon if it exists
-		if sample in stop_list:
-			concat_list[sample].append(stop_list[sample])
-	#concatenate and write to output
-	with open(output_fasta, 'w') as outfile:
-		for sample in sorted(concat_list):
-			outfile.write('>{0}\n'.format(sample))
-			outfile.write('{0}\n'.format("".join(concat_list[sample])))
-	#remove the temporary directory
-	shutil.rmtree(temp_directory_path)
 
 def extract_features(gtf_file, out_file, features):
 	'''
