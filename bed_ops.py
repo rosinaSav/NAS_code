@@ -7,6 +7,16 @@ import numpy as np
 import os
 import shutil
 
+def extract_cds(gtf, output_fasta, genome_fasta, random_directory=None):
+	'''
+	Given a .gtf file, exrtract the coding sequences to a fasta file.
+	EX.: extract_exons("../source_data/Homo_sapiens.GRCh37.87.gtf", "../output_data/Homo_sapiens.GRCh37.87_cds.fasta", "../source_data/Genomes/Homo_sapiens.GRCh37.dna.primary_assembly.fa")
+	Use random_directory for creating a randomised directory to hold intermediate fasta components
+	'''
+	bed = os.path.splitext(gtf)[0] + ".bed"
+	extract_features(gtf, bed, ['CDS', 'stop_codon'])
+	extract_cds_from_bed(bed, output_fasta, genome_fasta, random_directory=True)
+
 def extract_exons(gtf, bed):
 	'''Given a GTF file, extract exon coordinates and write them to .bed.
 	EX.: extract_exons("../source_data/Homo_sapiens.GRCh37.87.gtf", "../source_data/Homo_sapiens.GRCh37.87_exons.bed")'''

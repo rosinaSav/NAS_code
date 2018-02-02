@@ -67,10 +67,20 @@ class Test_bed_ops(unittest.TestCase):
         self.assertEqual(observed,expected)
 
     def test_extract_cds_from_bed(self):
-        bed_file = "./test_data/test_extract_cds_bed.bed"
+        bed_file = "./test_data/test_extract_cds_from_bed_bed.bed"
+        observed = "./test_data/test_extract_cds_from_bed_fasta_observed.fasta"
+        gen.remove_file(observed)
+        expected = gen.read_fasta("./test_data/test_extract_cds_from_bed_fasta_expected.fasta")
+        extract_cds_from_bed(bed_file, observed, "./test_data/test_extract_cds_from_bed_genome.fa", random_directory=True)
+        observed = gen.read_fasta(observed)
+        self.assertEqual(observed, expected)
+
+    def test_extract_cds(self):
+        gtf_file = "./test_data/test_extract_cds.gtf"
+        genome_file = "./test_data/test_extract_cds_genome.fa"
         observed = "./test_data/test_extract_cds_fasta_observed.fasta"
         gen.remove_file(observed)
         expected = gen.read_fasta("./test_data/test_extract_cds_fasta_expected.fasta")
-        extract_cds_from_bed(bed_file, observed, "./test_data/test_extract_cds_genome.fa", random_directory=True)
+        extract_cds(gtf_file, observed, genome_file, random_directory=True)
         observed = gen.read_fasta(observed)
         self.assertEqual(observed, expected)
