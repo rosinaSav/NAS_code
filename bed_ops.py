@@ -55,7 +55,7 @@ def extract_cds(gtf, output_fasta, genome_fasta, random_directory=None, check_ac
 	'''
 	bed = os.path.splitext(gtf)[0] + ".bed"
 	extract_features(gtf, bed, ['CDS', 'stop_codon'])
-	extract_cds_from_bed(bed, output_fasta, genome_fasta, random_directory=True, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None)
+	extract_cds_from_bed(bed, output_fasta, genome_fasta, random_directory, check_acgt, check_start, check_length, check_stop, check_inframe_stop)
 
 def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, random_directory=None, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None):
 	'''
@@ -105,6 +105,7 @@ def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, random_directory=
 	#perform sequence quality control checks
 	if check_acgt or check_stop or check_start or check_length or check_inframe_stop:
 		names, seqs = check_sequence_quality(names, seqs, check_acgt, check_stop, check_start, check_length, check_inframe_stop)
+	#write to output fasta file
 	gen.write_to_fasta(names, seqs, output_fasta)
 	#remove the temporary directory
 	shutil.rmtree(temp_directory_path)
