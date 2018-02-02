@@ -126,6 +126,7 @@ def run_bedops(A_file, B_file, force_strand = False, write_both = False, chrom =
         print("Bedops hasn't been set up to count the number of overlapping elements. Use bedtools!")
     if no_dups:
         print("Bedops doesn't print duplicates by default!")
+    print(bedops_args)
     bedops_output = gen.run_process(bedops_args, file_for_output = output_file)
     return(bedops_output)
 
@@ -188,9 +189,10 @@ def write_hits_at_junctions_per_sample(ftp_site, target_directory, exon_junction
     user = "anonymous"
     password = "rs949@bath.ac.uk"
     #connect to FTP server
-    ftp = gen.ftp_connect(host, user, password, directory = ftp_directory)
+    #ftp = gen.ftp_connect(host, user, password, directory = ftp_directory)
     #get list of all .bam files
-    all_files = ftp.nlst()
+    #all_files = ftp.nlst()
+    all_files = ["NA12399.1.M_120209_4.bam"]
     all_files = [i for i in all_files if i[-4:] == ".bam"]
     if subset:
         all_files = all_files[:subset]
@@ -198,13 +200,18 @@ def write_hits_at_junctions_per_sample(ftp_site, target_directory, exon_junction
     for pos, bam_file in enumerate(all_files):
         print("{0}/{1}".format(pos, len(all_files)))
         #retrieve current file
-        ftp = gen.ftp_retrieve(ftp, host, user, password, ftp_directory, bam_file, destination = target_directory)
+        #ftp = gen.ftp_retrieve(ftp, host, user, password, ftp_directory, bam_file, destination = target_directory)
         #note that overlap = 1
         local_bam_file = "{0}/{1}".format(target_directory, bam_file)
-        intersect_bed(exon_junctions_file, local_bam_file, overlap = 1, output_file = "{0}/{1}_junction_hit_count.bed".format(target_directory, bam_file[:-4]),
-                             force_strand = True, no_dups = False, hit_count = True)
+        #gen.run_process(["curl", "https://www.ebi.ac.uk/arrayexpress/files/E-GEUV-1/processed/NA12399.1.M_120209_4.bam"], file_for_output = local_bam_file)
+        print("Retrieved file {0}.".format(bam_file))
+        #local_bed_file = "temp_data/test.bed"
+        #convert2bed(local_bam_file, local_bed_file)
+        #test = gen.run_process(["head", "-5", local_bed_file])
+        #print(test)
+        intersect_bed(exon_junctions_file, local_bam_file, overlap = 1, output_file = "{0}/{1}_junction_hit_count.bed".format(target_directory, bam_file[:-4]), force_strand = False, no_dups = False, hit_count = False, use_bedops = True)
         print("Intersected with exon-exon junctions.\n")
-        gen.remove_file(local_bam_file)
+        #gen.remove_file(local_bam_file)
         raise(Exception)
     #end the connection to the FTP server
     #make sure the connection is live before you do or you might crash
