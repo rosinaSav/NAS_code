@@ -3,3 +3,4 @@ temp_data/
 __pycache__/
 source_data/
 testfile.py
+.DS_Store
