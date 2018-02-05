@@ -4,6 +4,89 @@ import os
 import random
 import string
 
+def get_relative_SNPs(CDSs, SNP_file_name, CDS_SNP_file_name, seqs, names, genome, get_new_SNPs = False, parse_SNPs = False, remove_GT = False):
+    if get_new_SNPs:
+        flat_CDS = [[j[0] for j in i] for i in list(CDSs.values())]
+        CDS_bed = "temp_data/temp_{0}.bed".format(random.random())
+        write_features_to_bed(flat_CDS, CDS_bed, modify_chr_ids = True)
+        tabix(CDS_bed, SNP_file_name, genome)
+        os.remove(CDS_bed)
+    if parse_SNPs:
+        relative_coords_dict = {i: {"positions": [], "to_remove": [], "var_bases": [], "MAFs": [], "allele_counts": []} for i in list(CDSs.keys())}
+        counter = 0
+        with open(SNP_file_name) as file:
+            error_counter = 0
+            #loop over bed file with SNPs
+            for line in file:
+                if line[0] != "#":
+                    if counter % 1000 == 0:
+                        print(counter)
+                    counter = counter + 1
+                    bed_record = line.split("\t")
+                    info = bed_record[6].split("$")
+                    #reported ancestral base
+                    ref_base = info[1]
+                    #filter out anything that isn't simple SNPs
+                    var_base = info[2].split(",")
+                    var_base_number = len(var_base)
+                    var_base = [i for i in var_base if i in nc._canon_bases_]
+                    trans = bed_record[3]
+                    #convert bed record to indices relative to the CDS
+                    #mismatch_warning_only = True means that if the SNP coordinates don't map onto the CDS,
+                    #return an error message but don't crash.
+                    current_index = bed_to_CDS_indices(bed_record, CDSs[trans], mismatch_warning_only = True)[0]
+                    #this is so you could remove the stuff you filter out for various reasons also from the monomorphic set
+                    relative_coords_dict[trans]["to_remove"].append(str(current_index))
+                    #the SNP bed files contain information on which transcript they overlap
+                    if current_index != ("error"):
+                        if len(ref_base) == 1:
+                            #filtering out polymorphisms with more than 2 segregating alleles
+                            #note that you need to check the number both before and after filtering out non-canonical bases
+                            if var_base_number == 1 and len(var_base) == 1:
+                            #check if the reported ancestral allele matches the base that is at that position in the CDS
+                            #it's expected that sometimes it won't but it should most of the time if everything's worked out properly
+                                strand = CDSs[trans][0][0][6]
+                                var_base = var_base[0]
+                                if strand == "-":
+                                    ref_base = nc.rev_comp(ref_base)
+                                    var_base = nc.rev_comp(var_base)
+                                CDS_base = seqs[names.index(trans)][current_index]
+                                if ref_base != CDS_base:
+                                    print("PROBLEM!")
+                                    print(ref_base)
+                                    print(CDS_base)
+                                    print(var_base)
+                                    print("\n")
+                                elif remove_GT and ref_base == "G" and var_base == "T":
+                                    pass
+                                else:
+                                    relative_coords_dict[trans]["positions"].append(str(current_index))
+                                    relative_coords_dict[trans]["var_bases"].append(str(var_base))
+                                    MAF_MAC = info[4].split(";")
+                                    MAC = MAF_MAC[0].split("=")[1]
+                                    MAF = MAF_MAC[1].split("=")[1]
+                                    relative_coords_dict[trans]["MAFs"].append(str(MAF))
+                                    relative_coords_dict[trans]["allele_counts"].append(str(MAC))
+                    else:
+                        error_counter = error_counter + 1
+        with open(CDS_SNP_file_name, "w") as file:
+            for trans in relative_coords_dict:
+                to_write = zip(relative_coords_dict[trans]["positions"], relative_coords_dict[trans]["var_bases"], relative_coords_dict[trans]["MAFs"], relative_coords_dict[trans]["allele_counts"])
+                to_write = "\t".join([trans, "|".join([",".join(i) for i in to_write]), ",".join(relative_coords_dict[trans]["to_remove"])])
+                file.write(to_write)
+                file.write("\n")
+        relative_coords_dict = {}
+        print("Number of conversion errors:")
+        print(error_counter)
+    
+    current_SNPs = rw.read_many_fields(CDS_SNP_file_name, "\t")
+    current_SNPs_to_remove = list_to_dict(current_SNPs, 0, 2)
+    current_SNPs_to_remove = {i: [int(j) for j in current_SNPs_to_remove[i].split(",") if j != "error"] for i in current_SNPs_to_remove if current_SNPs_to_remove[i]}
+    current_SNPs = list_to_dict(current_SNPs, 0, 1)
+    current_SNPs = {i: [j.split(",") for j in current_SNPs[i].split("|")] for i in current_SNPs if current_SNPs[i]}
+    current_SNPs = {i: {int(j[0]): (j[1], float(j[2])) for j in current_SNPs[i]} for i in current_SNPs}
+    return(current_SNPs, current_SNPs_to_remove)
+
 def tabix(bed_file, output_file, vcf, process_number = None):
     '''
     Given a bed file, use tabix to get overlapping 1000Genomes SNPs.
