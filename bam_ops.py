@@ -1,29 +1,8 @@
 import bed_ops as bo
 import csv
 import generic as gen
-from html.parser import HTMLParser
 import random
 import re
-
-class BamParser(HTMLParser):
-    '''
-    Just some nonsense to be able to parse HTML.
-    '''
-    def __init__(self):
-        HTMLParser.__init__(self)
-        self.data = []    
-
-    def handle_starttag(self, tag, attrs):
-        pass
-
-    def handle_endtag(self, tag):
-        pass
-
-    def handle_data(self, data):
-        print(data[-4:])
-##        if data[-4:] == ".bam":
-##            print(data)
-##            self.data.append(data)
 
 def convert2bed(input_file_name, output_file_name, group_flags = None):
     '''
@@ -197,7 +176,7 @@ def sort_bed(input_file_name, output_file_name):
     gen.run_process(["mv", temp_file_name, output_file_name])
     gen.remove_file(temp_file_name)
 
-def write_hits_at_junctions_per_sample(ftp_site, target_directory, exon_junctions_file, subset = None):
+def write_hits_at_junctions_per_sample(ftp_site, target_directory, exon_junctions_file, file_list, subset = None):
     '''
     For each .bam file at the ftp site, intersect it with the exon junction intervals and
     make a file with the number of overlapping reads for each junction interval.
@@ -206,16 +185,11 @@ def write_hits_at_junctions_per_sample(ftp_site, target_directory, exon_junction
     #create target directory, if it doesn't exist
     gen.make_dir(target_directory)
     #get list of all .bam files
-    all_files = gen.run_process(["curl", "{0}/".format(ftp_site), "--list-only"])
-##    with open("temp_data/html_test.txt") as file:
-##        all_files = "".join(file)
-##    html_parser = BamParser()
-##    html_parser.feed(all_files)
-##    all_files = list(set(html_parser.data))
-    all_files = all_files.split("\n")
+    with open(file_list) as file:
+        all_files = file.readlines()
+    all_files = [i.rstrip("\n") for i in all_files]
     all_files = [i for i in all_files if i[-4:] == ".bam"]
-    print(len(all_files))
-    #all_files = ["NA12399.1.M_120209_4.bam"]
+    print("Will try to retrieve {0} files.".format(len(all_files)))
     if subset:
         all_files = all_files[:subset]
     #loop over .bam files
@@ -223,11 +197,12 @@ def write_hits_at_junctions_per_sample(ftp_site, target_directory, exon_junction
         print("{0}/{1}".format(pos, len(all_files)))
         #retrieve current file
         local_bam_file = "{0}/{1}".format(target_directory, bam_file)
+        print("{0}/{1}".format(ftp_site, bam_file))
         gen.run_process(["curl", "{0}/{1}".format(ftp_site, bam_file)], file_for_output = local_bam_file)
         print("Retrieved file {0}.".format(bam_file))
         #note that overlap = 1
-        intersect_bed(exon_junctions_file, local_bam_file, overlap = 1, output_file = "{0}/{1}_junction_hit_count.bed".format(target_directory, bam_file[:-4]), force_strand = False, no_dups = False, hit_count = False, use_bedops = True, bed_path = "../../rs949/anaconda3/bin/")
+        intersect_bed(exon_junctions_file, local_bam_file, overlap = 1, output_file = "{0}/{1}_junction_hit_count.bed".format(target_directory, bam_file[:-4]), force_strand = True, no_dups = False, hit_count = True, use_bedops = False, bed_path = "../../rs949/anaconda3/bin/")
         print("Intersected with exon-exon junctions.\n")
-        gen.remove_file(local_bam_file)
+        #gen.remove_file(local_bam_file)
 
     

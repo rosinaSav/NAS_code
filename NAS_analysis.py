@@ -9,7 +9,7 @@ def main():
     exons_file = "../source_data/Homo_sapiens.GRCh37.87_exons.bed"
     exon_junctions_file = "../source_data/Homo_sapiens.GRCh37.87_exon_junctions.bed"
     #bo.extract_exon_junctions(exons_file, exon_junctions_file, window_of_interest = 2)
-    bmo.write_hits_at_junctions_per_sample(ftp_site, target_directory, exon_junctions_file, subset = 2)
+    bmo.write_hits_at_junctions_per_sample(ftp_site, target_directory, exon_junctions_file, "../source_data/Geuvadis_file_list.txt", subset = 2)
 
 if __name__ == "__main__":
     main()
