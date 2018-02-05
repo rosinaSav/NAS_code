@@ -3,6 +3,35 @@ import csv
 import multiprocessing
 import os
 import subprocess
+from itertools import islice
+import shutil
+
+def create_directory(path):
+    '''
+    Create new directory if doesn't already exist
+    '''
+    if not os.path.exists(path):
+        os.mkdir(path)
+
+def create_strict_directory(path):
+    '''
+    Remove directory if exists, create new directory
+    '''
+    if os.path.exists(path):
+        shutil.rmtree(path)
+    os.mkdir(path)
+
+def extract_head_of_file(file_path, lines):
+    '''
+    Extract a certain number of lines from file
+    '''
+    output_path = ".".join(file_path.split('.')[:-1]) + '.extracted.{}.'.format(lines) + file_path.split('.')[-1]
+    remove_file(output_path)
+    with open(file_path, 'r') as file:
+        head = list(islice(file, lines))
+        with open(output_path, 'w') as output_file:
+            for line in head:
+                output_file.write(line)
 
 def get_extension(file_name, extension_length, valid_list = None):
     '''
@@ -126,7 +155,7 @@ def run_in_parallel(input_list, args, func, kwargs_dict = None, workers = None, 
         if kwargs_dict:
             process = pool.apply_async(func, tuple(current_args), kwargs_dict)
         else:
-            process = pool.apply_async(func, tuple(current_args))            
+            process = pool.apply_async(func, tuple(current_args))
         results.append(process)
     pool.close()
     pool.join()

@@ -17,7 +17,7 @@ def convert2bed(input_file_name, output_file_name, group_flags = None):
         temp_file_name = "temp_data/temp_bed_file{0}.bed".format(random.random())
         group_flags(output_file_name, temp_file_name, group_flags)
         gen.run_process(["mv", temp_file_name, output_file_name])
-        print("Grouped flags.")      
+        print("Grouped flags.")
     print("Converted data from {0} to bed.".format(extension))
 
 def extract_exons(gtf, bed):
