@@ -20,8 +20,10 @@ class BamParser(HTMLParser):
         pass
 
     def handle_data(self, data):
-        if ".bam" in data:
-            self.data.append(data)
+        print(data[-4:])
+##        if data[-4:] == ".bam":
+##            print(data)
+##            self.data.append(data)
 
 def convert2bed(input_file_name, output_file_name, group_flags = None):
     '''
@@ -204,12 +206,14 @@ def write_hits_at_junctions_per_sample(ftp_site, target_directory, exon_junction
     #create target directory, if it doesn't exist
     gen.make_dir(target_directory)
     #get list of all .bam files
-    all_files = gen.run_process(["curl", ftp_site, "--list-only"])
-    html_parser = BamParser()
-    html_parser.feed(all_files)
-    all_files = list(set(html_parser.data))
-    print(all_files)
-    print("***")
+    all_files = gen.run_process(["curl", "{0}/".format(ftp_site), "--list-only"])
+##    with open("temp_data/html_test.txt") as file:
+##        all_files = "".join(file)
+##    html_parser = BamParser()
+##    html_parser.feed(all_files)
+##    all_files = list(set(html_parser.data))
+    all_files = all_files.split("\n")
+    all_files = [i for i in all_files if i[-4:] == ".bam"]
     print(len(all_files))
     #all_files = ["NA12399.1.M_120209_4.bam"]
     if subset:
