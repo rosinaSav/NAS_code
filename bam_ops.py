@@ -1,8 +1,27 @@
 import bed_ops as bo
 import csv
 import generic as gen
+from html.parser import HTMLParser
 import random
 import re
+
+class BamParser(HTMLParser):
+    '''
+    Just some nonsense to be able to parse HTML.
+    '''
+    def __init__(self):
+        HTMLParser.__init__(self)
+        self.data = []    
+
+    def handle_starttag(self, tag, attrs):
+        pass
+
+    def handle_endtag(self, tag):
+        pass
+
+    def handle_data(self, data):
+        if ".bam" in data:
+            self.data.append(data)
 
 def convert2bed(input_file_name, output_file_name, group_flags = None):
     '''
@@ -60,7 +79,7 @@ def group_flags(input_bed, output_bed, flag_start):
             writer.writerow(new_row)
 
 def intersect_bed(bed_file1, bed_file2, use_bedops = False, overlap = False, write_both = False, sort = False, output_file = None,
-                             force_strand = False, no_name_check = False, no_dups = True, chrom = None, intersect = False, hit_count = False):
+                             force_strand = False, no_name_check = False, no_dups = True, chrom = None, intersect = False, hit_count = False, bed_path = None):
     '''Use bedtools/bedops to intersect coordinates from two bed files.
     Return those lines in bed file 1 that overlap with intervals in bed file 2.
     OPTIONS
@@ -84,7 +103,7 @@ def intersect_bed(bed_file1, bed_file2, use_bedops = False, overlap = False, wri
     if use_bedops:
         bedtools_output = run_bedops(bed_file1, bed_file2, force_strand, write_both, chrom, overlap, sort, output_file = temp_file_name, intersect = intersect, hit_number = hit_count, no_dups = no_dups)
     else:
-        bedtools_output = run_bedtools(bed_file1, bed_file2, force_strand, write_both, chrom, overlap, sort, no_name_check, no_dups, output_file = temp_file_name, intersect = intersect, hit_number = hit_count)
+        bedtools_output = run_bedtools(bed_file1, bed_file2, force_strand, write_both, chrom, overlap, sort, no_name_check, no_dups, output_file = temp_file_name, intersect = intersect, hit_number = hit_count, bed_path = bed_path)
     #move it to a permanent location only if you want to keep it
     if output_file:
         gen.run_process(["mv", temp_file_name, output_file])
@@ -126,10 +145,11 @@ def run_bedops(A_file, B_file, force_strand = False, write_both = False, chrom =
         print("Bedops hasn't been set up to count the number of overlapping elements. Use bedtools!")
     if no_dups:
         print("Bedops doesn't print duplicates by default!")
+    print(bedops_args)
     bedops_output = gen.run_process(bedops_args, file_for_output = output_file)
     return(bedops_output)
 
-def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom = None, overlap = None, sort = False, no_name_check = False, no_dups = True, hit_number = False, output_file = None, intersect = False):
+def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom = None, overlap = None, sort = False, no_name_check = False, no_dups = True, hit_number = False, output_file = None, intersect = False, bed_path = None):
     '''
     See intersect_bed for details.
     '''
@@ -159,6 +179,8 @@ def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom
     if hit_number and no_dups:
         print("When counting hits, each interval in the first bed file is only reported once by default. Set no_dups to False!")
         raise(Exception)
+    if bed_path:
+        bedtools_args[0] = "{0}{1}".format(bed_path, bedtools_args[0])
     bedtools_output = gen.run_process(bedtools_args, file_for_output = output_file)
     return(bedtools_output)
 
@@ -181,34 +203,27 @@ def write_hits_at_junctions_per_sample(ftp_site, target_directory, exon_junction
     '''
     #create target directory, if it doesn't exist
     gen.make_dir(target_directory)
-    #split the ftp_site address into host and the path
-    ftp_site = ftp_site.split("/")
-    host = ftp_site[0]
-    ftp_directory = "/".join(ftp_site[1:])
-    user = "anonymous"
-    password = "rs949@bath.ac.uk"
-    #connect to FTP server
-    ftp = gen.ftp_connect(host, user, password, directory = ftp_directory)
     #get list of all .bam files
-    all_files = ftp.nlst()
-    all_files = [i for i in all_files if i[-4:] == ".bam"]
+    all_files = gen.run_process(["curl", ftp_site, "--list-only"])
+    html_parser = BamParser()
+    html_parser.feed(all_files)
+    all_files = list(set(html_parser.data))
+    print(all_files)
+    print("***")
+    print(len(all_files))
+    #all_files = ["NA12399.1.M_120209_4.bam"]
     if subset:
         all_files = all_files[:subset]
     #loop over .bam files
     for pos, bam_file in enumerate(all_files):
         print("{0}/{1}".format(pos, len(all_files)))
         #retrieve current file
-        ftp = gen.ftp_retrieve(ftp, host, user, password, ftp_directory, bam_file, destination = target_directory)
-        #note that overlap = 1
         local_bam_file = "{0}/{1}".format(target_directory, bam_file)
-        intersect_bed(exon_junctions_file, local_bam_file, overlap = 1, output_file = "{0}/{1}_junction_hit_count.bed".format(target_directory, bam_file[:-4]),
-                             force_strand = True, no_dups = False, hit_count = True)
+        gen.run_process(["curl", "{0}/{1}".format(ftp_site, bam_file)], file_for_output = local_bam_file)
+        print("Retrieved file {0}.".format(bam_file))
+        #note that overlap = 1
+        intersect_bed(exon_junctions_file, local_bam_file, overlap = 1, output_file = "{0}/{1}_junction_hit_count.bed".format(target_directory, bam_file[:-4]), force_strand = False, no_dups = False, hit_count = False, use_bedops = True, bed_path = "../../rs949/anaconda3/bin/")
         print("Intersected with exon-exon junctions.\n")
         gen.remove_file(local_bam_file)
-        raise(Exception)
-    #end the connection to the FTP server
-    #make sure the connection is live before you do or you might crash
-    ftp = gen.ftp_check(ftp, host, user, password, ftp_directory)
-    ftp.quit()
 
     
