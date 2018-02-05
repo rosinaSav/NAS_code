@@ -143,6 +143,8 @@ def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom
         sort_bed(A_file, A_file)
         sort_bed(B_file, B_file)
     bedtools_args = ["intersectBed", "-a", A_file,"-b", B_file, write_option]
+    if intersect:
+        del bedtools_args[-1]
     if overlap:
         bedtools_args.extend(["-f", str(overlap)])
     if force_strand:
@@ -154,8 +156,6 @@ def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom
     if chrom:
         print("Bedtools cannot be restricted to a single chromosome. Use bedops!")
         raise Exception
-    if intersect:
-        print("Bedtools has not been set up to take intersections. Either implement it or use bedops!")
     if hit_number and no_dups:
         print("When counting hits, each interval in the first bed file is only reported once by default. Set no_dups to False!")
         raise(Exception)
@@ -201,6 +201,8 @@ def write_hits_at_junctions_per_sample(ftp_site, target_directory, exon_junction
         ftp = gen.ftp_retrieve(ftp, host, user, password, ftp_directory, bam_file, destination = target_directory)
         #note that overlap = 1
         local_bam_file = "{0}/{1}".format(target_directory, bam_file)
+        local_bed_file = "temp_data/local_bed_file.bed"
+        convert2bed(local_bam_file, local_bed_file)
         intersect_bed(exon_junctions_file, local_bam_file, overlap = 1, output_file = "{0}/{1}_junction_hit_count.bed".format(target_directory, bam_file[:-4]),
                              force_strand = True, no_dups = False, hit_count = True)
         print("Intersected with exon-exon junctions.\n")

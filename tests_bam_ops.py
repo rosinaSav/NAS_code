@@ -133,6 +133,17 @@ class Test_bam_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed_file, "\t")
         self.assertEqual(expected, observed)
 
+    def test_intersect_bed_intersect(self):
+        A_file = "test_data/test_intersect_bed_A_file.bed"
+        B_file = "test_data/test_intersect_bed_B_file.bed"
+        expected_file = "test_data/test_intersect_bed_intersect_expected.bed"
+        observed_file = "test_data/test_intersect_bed_intersect_observed.bed"
+        gen.remove_file(observed_file)
+        intersect_bed(A_file, B_file, output_file = observed_file, no_dups = False, intersect = True)
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = gen.read_many_fields(observed_file, "\t")
+        self.assertEqual(expected, observed)
+
     def test_intersect_bed_intersect_bedops(self):
         A_file = "test_data/test_intersect_bed_A_file.bed"
         B_file = "test_data/test_intersect_bed_B_file.bed"
