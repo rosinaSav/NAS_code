@@ -1,6 +1,7 @@
 import bed_ops as bo
 import bam_ops as bmo
 import generic as gen
+import os
 
 def process_bam_per_individual(bam_files, other_arguments):
     #add other arguments
@@ -10,6 +11,8 @@ def process_bam_per_individual(bam_files, other_arguments):
         '''
         **********
         MISSING: code to filter the bam file to only leave split alignments (i.e. ones that overlap an exon-exon junction).
+        NB! I believe the sequencing was paired-end so at some point, we need to figure out what that
+        means for our data and what to do with that information.
         **********
         '''
 
