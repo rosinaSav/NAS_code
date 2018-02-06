@@ -112,3 +112,14 @@ class Test_bed_ops(unittest.TestCase):
         observed = (names, seqs)
         expected = gen.read_fasta('./test_data/test_fasta_sequence_quality_control_expected.fasta')
         self.assertEqual(observed, expected)
+
+    def test_filter_bed_from_fasta(self):
+        bed = "test_data/test_filter_bed_from_fasta.bed"
+        fasta = "test_data/test_filter_bed_from_fasta.fasta"
+        observed = "test_data/test_filter_bed_from_fasta_observed.bed"
+        gen.remove_file(observed)
+        expected = "test_data/test_filter_bed_from_fasta_expected.bed"
+        filter_bed_from_fasta(bed, fasta, observed)
+        expected = gen.read_many_fields(expected, "\t")
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(expected, observed)

@@ -22,6 +22,7 @@ def process_bam_per_individual(bam_files, other_arguments):
         **********
         '''
         
+        #count how many .bam alignments overlap each exon-exon junction
         bmo.intersect_bed(exon_junctions_file, bam_file, overlap = 1, output_file = "{0}_junction_hit_count.bed".format(bam_file[:-4]), force_strand = True, no_dups = False, hit_count = True, use_bedops = False)
 
         '''
@@ -40,8 +41,9 @@ def main():
     **********
     '''
 
+    #extract and filter CDScoordinates and sequences
     #NB! We need to add in a step during quality control to only leave one transcript isoform per gene!
-    bo.extract_cds(gtf, output_fasta, genome_fasta, random_directory=None, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None)
+    bo.extract_cds(gtf, CDS_fasta, genome_fasta, check_acgt=True, check_start=True, check_length=True, check_stop=True, check_inframe_stop=True)
 
     '''
     **********
@@ -49,15 +51,14 @@ def main():
     **********
     '''
 
-    bo.extract_exons(gtf, bed)
+    #extract exon coordinates
+    bo.extract_exons(gtf, exon_bed)
 
-    '''
-    **********
-    MISSING: code to only leave exons from transcripts that passed quality control in the extract_cds step above.
-    **********
-    '''
+    #only leave exons from transcripts that passed quality control in the extract_cds step above.
+    bo.filter_bed_from_fasta(exon_bed, CDS_fasta, filtered_exon_bed)
 
-    bo.extract_exon_junctions(exons_file, exon_junctions_file, window_of_interest = 2)
+    #extract exon-exon junction coordinates
+    bo.extract_exon_junctions(filtered_exon_bed, exon_junctions_file, window_of_interest = 2)
 
     '''
     **********
@@ -81,6 +82,7 @@ def main():
     **********
     '''
 
+    #make a list of all the .bam files and modify them to have the full path rather than just the file name
     bam_files = os.listdir(bam_folder)
     bam_files = ["{0}/{1}".format(bam_folder, i) for i in bam_files if i[-4:] == ".bam"]
 
@@ -94,7 +96,8 @@ def main():
     **********
     MISSING: for each of the exon-exon junctions that have been retained, determine median PSI (or count/total sample size) for individuals that have/don't have the PSI.
     Would be good to also record sample size for either group.
-    Perform some sort of a paired comparison.
+    Average results across paralogous families.
+    Perform some sort of a paired comparison between PTC+ and PTC-.
     **********
     '''    
     

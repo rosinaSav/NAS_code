@@ -86,12 +86,15 @@ def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, random_directory=
 	sample_names = entries[0]
 	seqs = entries[1]
 	#set up the regex to get entry meta needed
-	entry_regex = re.compile("(\w+)\.(\d+)(\..*)*")
+	entry_regex = re.compile("(\w+)\.(\d+)(\..*)*(\([+-]\))")
 	#iterate through the samples
 	for i, sample in enumerate(sample_names):
 		entry_meta = re.search(entry_regex, sample)
-		#set the sample name: sample(.exon)
+		#set the sample name: sample(strand)
 		sample_name = entry_meta.group(1)
+		if entry_meta.group(3):
+			sample_name += entry_meta.group(3)
+		sample_name += entry_meta.group(4)
 		#if stop, set sample stop or send sample name to dict, with each part and its seq
 		if seqs[i] in ['TAA', 'TAG', 'TGA']:
 			stop_list[sample_name] = seqs[i]
@@ -274,19 +277,16 @@ def fasta_from_intervals(bed_file, fasta_file, genome_fasta, force_strand = True
 			gen.remove_file(genome_fasta_index)
 
 	bedtools_args = ["bedtools", "getfasta", "-s", "-fi", genome_fasta, "-bed", bed_file, "-fo", fasta_file]
-
 	if not force_strand:
 		del bedtools_args[2]
 	if names:
 		bedtools_args.append("-name")
 	gen.run_process(bedtools_args)
 	names, seqs = gen.read_fasta(fasta_file)
-
 	seqs = [i.upper() for i in seqs]
 	gen.write_to_fasta(names, seqs, fasta_file)
 
 def fasta_from_intervals_temp_file(bed_file, output_fasta, genome_fasta, random_directory=None):
-
 	'''
 	Create a temporary file to hold the fasta extractions
 	'''
@@ -301,6 +301,25 @@ def fasta_from_intervals_temp_file(bed_file, output_fasta, genome_fasta, random_
 	gen.create_strict_directory(temp_directory_path)
 	#set the temporary fasta file path
 	temp_fasta_file = '{0}/{1}_{2}{3}'.format(temp_directory_path, os.path.splitext(os.path.basename(output_fasta))[0], random_int[1], os.path.splitext(os.path.basename(output_fasta))[1])
-	temp_fasta_file = output_fasta
 	fasta_from_intervals(bed_file, temp_fasta_file, genome_fasta, force_strand = True, names = True)
 	return(temp_fasta_file, temp_directory_path)
+
+def filter_bed_from_fasta(bed, fasta, out_bed):
+        '''
+        Given a bed file and a fasta file, filter the bed file to only leave records where the 'name' field appears
+        among the names in the fasta file. Write to out_bed.
+        '''
+        #fish out the names in the fasta
+        fasta_names = gen.run_process(["grep", ">", fasta])
+        fasta_names = fasta_names.split("\n")
+        #remove tag and newline from each name
+        fasta_names = [(i.lstrip("\>")).rstrip("\n") for i in fasta_names]
+        bed_data = gen.read_many_fields(bed, "\t")
+        #remove empty lines
+        bed_data = [i for i in bed_data if len(i) > 3]
+        #filter bed data
+        bed_data = [i for i in bed_data if i[3] in fasta_names]
+        with open(out_bed, "w") as file:
+                for line in bed_data:
+                        file.write("\t".join(line))
+                        file.write("\n")
