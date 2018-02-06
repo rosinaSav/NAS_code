@@ -5,6 +5,7 @@ import os
 import subprocess
 from itertools import islice
 import shutil
+import numpy as np
 
 def create_directory(path):
     '''
@@ -32,6 +33,35 @@ def extract_head_of_file(file_path, lines):
         with open(output_path, 'w') as output_file:
             for line in head:
                 output_file.write(line)
+
+def generate_random_sequence(nts=None, codons=None, add_start=None, add_stop=None):
+
+	if not nts or codons:
+		print("Must provide number of nucleotides or codons.")
+		Exception
+
+	nt_list = ["A", "C", "G", "T"]
+	stops = ["TAA", "TAG", "TGA"]
+	codon_list = []
+	for nt1 in nt_list:
+		for nt2 in nt_list:
+			for nt3 in nt_list:
+				if nt1+nt2+nt3 not in stops:
+					codon_list.append(nt1+nt2+nt3)
+
+	if nts:
+		randoms = np.random.choice(nt_list, nts)
+	if codons:
+		randoms = np.random.choice(codon_list, codons)
+
+	seq = "".join(randoms)
+	if add_start:
+		seq = "ATG" + seq
+	if add_stop:
+		seq = seq + np.random.choice(stops, 1)[0]
+
+	return(seq)
+
 
 def get_extension(file_name, extension_length, valid_list = None):
     '''

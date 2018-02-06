@@ -81,3 +81,22 @@ class Test_SNP_ops(unittest.TestCase):
         expected = re.sub("source_[0-9]*\.[0-9]*", "source_N", expected)
         observed = re.sub("source_[0-9]*\.[0-9]*", "source_N", observed)
         self.assertEqual(observed, expected)
+
+    def test_get_snp_feature_relative_position(self):
+        intersect_file = "test_data/test_get_snp_position/test_extracted_cds_snp_intersect.bed"
+        observed = "test_data/test_get_snp_position/test_extracted_cds_snp_intersect_relative_feature_positions_observed.bed"
+        gen.remove_file(observed)
+        expected = gen.read_many_fields("test_data/test_get_snp_position/test_extracted_cds_snp_intersect_relative_feature_positions_expected.bed", "\t")
+        get_snp_feature_relative_position(intersect_file, observed)
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(observed, expected)
+
+    def test_get_snp_cds_relative_position(self):
+        features_relative_position = "test_data/test_get_snp_position/test_extracted_cds_snp_intersect_relative_feature_positions.bed"
+        observed = "test_data/test_get_snp_position/test_extracted_cds_snp_cds_relative_positions_observed.bed"
+        fasta_parts = "test_data/test_get_snp_position/test_extracted_fasta_parts.fasta"
+        gen.remove_file(observed)
+        expected = gen.read_many_fields("test_data/test_get_snp_position/test_extracted_cds_snp_cds_relative_positions_expected.bed", "\t")
+        get_snp_cds_relative_position(features_relative_position, fasta_parts, observed)
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(observed, expected)

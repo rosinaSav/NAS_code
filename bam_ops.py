@@ -78,6 +78,9 @@ def intersect_bed(bed_file1, bed_file2, use_bedops = False, overlap = False, wri
     chrom: limit search to a specific chromosome (only valid with bedops, can help in terms of efficiency)
     intersect: rather than returning the entire interval, only return the part of the interval that overlaps an interval in bed file 2.
     hit_count: for each element in bed file 1, return the number of elements it overlaps in bed file 2 (only valid with bedtools)'''
+    #create the temp directory if it isnt already
+    gen.create_directory('temp_data')
+    #generate temp file name
     temp_file_name = "temp_data/temp_bed_file{0}.bed".format(random.random())
     #have it write the output to a temporary file
     if use_bedops:
