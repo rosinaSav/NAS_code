@@ -219,7 +219,7 @@ def extract_exon_junctions(exons, bed, window_of_interest=None):
 	#close file
 	out_file.close()
 
-def extract_features(gtf_file, out_file, features):
+def extract_features(gtf_file, out_file, features, full_chr_name=None):
 	'''
 	Given a GTF file, extract exon coordinates for specific features and write to .bed.
 	EX.: extract_fetures("../source_data/Homo_sapiens.GRCh37.87.gtf", "../source_data/Homo_sapiens.GRCh37.87_exons.bed", ['CDS', 'stop_codon'])
@@ -255,8 +255,12 @@ def extract_features(gtf_file, out_file, features):
 						for item in feature_list[chr_no][trans][exon][feature]:
 							if not list_feature:
 								feature = '.'
+							if full_chr_name:
+								write_chr_name = 'chr{0}'.format(chr_no)
+							else:
+								write_chr_name = chr_no
 							#output and convert to base 0
-							output.write('\t'.join([chr_no, str(int(item[0])-1), item[1], '{0}.{1}'.format(trans, exon), feature, item[2]]) + '\n')
+							output.write('\t'.join([write_chr_name, str(int(item[0])-1), item[1], '{0}.{1}'.format(trans, exon), feature, item[2]]) + '\n')
 
 
 def fasta_from_intervals(bed_file, fasta_file, genome_fasta, force_strand = True, names = False):

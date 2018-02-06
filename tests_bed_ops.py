@@ -78,6 +78,15 @@ class Test_bed_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(observed,expected)
 
+    def test_extract_features_cdss_full_chr_name(self):
+        gtf_file = "test_data/test_extract_features.gtf"
+        observed = "test_data/test_extract_features_cdss_full_chr_name_observed.bed"
+        gen.remove_file(observed)
+        extract_features(gtf_file, observed, ['CDS'], full_chr_name=True)
+        expected = gen.read_many_fields("test_data/test_extract_features_cdss_full_chr_name_expected.bed", "\t")
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(observed,expected)
+
     def test_extract_features_cdss_stops(self):
         gtf_file = "test_data/test_extract_features.gtf"
         observed = "test_data/test_extract_features_cdss_stops_observed.bed"
