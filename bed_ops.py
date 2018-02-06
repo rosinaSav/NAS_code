@@ -71,7 +71,6 @@ def extract_cds(gtf, output_fasta, genome_fasta, random_directory=None, check_ac
 def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, random_directory=None, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None):
 	'''
 	Extract the CDS to fasta file
-	This has no sequence quality control (does not check for PTCs, correct start, correct, stop, multiple of 3)
 	Ex.: extract_cds('../feature_file.bed', '../output_file_fasta.fasta', '../source_data/genome_fasta_file.fa')
 	'''
 	#create dictionaries to hold cds parts
@@ -86,15 +85,12 @@ def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, random_directory=
 	sample_names = entries[0]
 	seqs = entries[1]
 	#set up the regex to get entry meta needed
-	entry_regex = re.compile("(\w+)\.(\d+)(\..*)*(\([+-]\))")
+	entry_regex = re.compile("(\w+)\.(\d+)(\..*)*")
 	#iterate through the samples
 	for i, sample in enumerate(sample_names):
 		entry_meta = re.search(entry_regex, sample)
-		#set the sample name: sample(strand)
+		#set the sample name: sample(.exon)
 		sample_name = entry_meta.group(1)
-		if entry_meta.group(3):
-			sample_name += entry_meta.group(3)
-		sample_name += entry_meta.group(4)
 		#if stop, set sample stop or send sample name to dict, with each part and its seq
 		if seqs[i] in ['TAA', 'TAG', 'TGA']:
 			stop_list[sample_name] = seqs[i]
@@ -301,6 +297,7 @@ def fasta_from_intervals_temp_file(bed_file, output_fasta, genome_fasta, random_
 	gen.create_strict_directory(temp_directory_path)
 	#set the temporary fasta file path
 	temp_fasta_file = '{0}/{1}_{2}{3}'.format(temp_directory_path, os.path.splitext(os.path.basename(output_fasta))[0], random_int[1], os.path.splitext(os.path.basename(output_fasta))[1])
+	temp_fasta_file = output_fasta
 	fasta_from_intervals(bed_file, temp_fasta_file, genome_fasta, force_strand = True, names = True)
 	return(temp_fasta_file, temp_directory_path)
 
