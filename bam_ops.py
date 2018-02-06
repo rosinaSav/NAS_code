@@ -1,8 +1,10 @@
 import bed_ops as bo
 import csv
 import generic as gen
+import os
 import random
 import re
+import time
 
 def convert2bed(input_file_name, output_file_name, group_flags = None):
     '''
@@ -51,7 +53,7 @@ def group_flags(input_bed, output_bed, flag_start):
     onwards into a single field, with the elements separated by commas.'''
     with open(input_bed) as input_file, open(output_bed, "w") as output_file:
         reader = csv.reader(input_file, delimiter = "\t")
-        writer = csv.writer(output_file, delimiter = "\t")
+        w4riter = csv.writer(output_file, delimiter = "\t")
         for i in reader:
             flags = i[flag_start:]
             flags = ",".join(flags)
@@ -93,6 +95,75 @@ def intersect_bed(bed_file1, bed_file2, use_bedops = False, overlap = False, wri
         bedtools_output = [i.split("\t") for i in bedtools_output]
     gen.remove_file(temp_file_name)
     return(bedtools_output)
+
+def retrieve_bams(ftp_site, local_directory, remote_directory, password_file, subset = None):
+    '''
+    For each .bam file at the ftp site, downsload it, transfer it to
+    a remote server and delete it.
+    ftp_site: the remote site that contains the files
+    local_directory: the local directory where you want to temporarily store the files
+    remote_directory: path to directory on remote server where you want to transfer the files
+    password_file: path to file that contains Watson password
+    subset: only retrieve this many .bam files (useful for testing)
+    '''
+    #create local directory, if it doesn't exist
+    gen.make_dir(local_directory)
+    #split the ftp_site address into host and the path
+    ftp_site = ftp_site.split("/")
+    host = ftp_site[0]
+    ftp_directory = "/".join(ftp_site[1:])
+    user = "anonymous"
+    password = "rs949@bath.ac.uk"
+    #connect to FTP server
+    ftp = gen.ftp_connect(host, user, password, directory = ftp_directory)
+    #get list of all .bam files
+    all_files = ftp.nlst()
+    all_files = [i for i in all_files if i[-4:] == ".bam"]
+    ftp = gen.ftp_check(ftp, host, user, password, ftp_directory)
+    ftp.quit()
+    #get password for Watson
+    with open(password_file) as file:
+        expect_password = "".join(file)
+        expect_password = expect_password.rstrip("\n")
+    #I will use expect to run scp from the script
+    #the way this works is you write an expect script
+    #and then use the expect programme to run it
+    #this is the string that will be in the script
+    #each time, you replace "foo" with the name of the file you want to transfer
+    expect_string = "#!/usr/bin/expect\nspawn scp {0}/foo {1}\nexpect \"rs949@bssv-watson's password:\"\nsend \"{2}\\n\";\nexpect eof\nexit".format(local_directory, remote_directory, expect_password)
+    if subset:
+        all_files = all_files[:subset]
+    #retrieve and transfer .bams in parallel
+    processes = gen.run_in_parallel(all_files, ["foo", local_directory, host, user, password, ftp_directory, expect_string], retrieve_bams_core, workers = 20)
+    for process in processes:
+        process.get()
+
+def retrieve_bams_core(all_files, local_directory, host, user, password, ftp_directory, expect_string):
+    '''
+    Core function parallelized in retrieve_bams above.
+    '''
+    #connect to FTP server
+    ftp = gen.ftp_connect(host, user, password, directory = ftp_directory)
+    #loop over .bam files
+    for pos, bam_file in enumerate(all_files):
+        expect_file = "temp_data/expect_file{0}.txt".format(random.random())
+        start_time = time.time()
+        print("{0}/{1}".format(pos, len(all_files)))
+        local_bam_file = "{0}/{1}".format(local_directory, bam_file)
+        #retrieve current file
+        if not os.path.isfile(local_bam_file):
+            ftp = gen.ftp_retrieve(ftp, host, user, password, ftp_directory, bam_file, destination = local_directory)
+        #transfer file to Watson
+        current_expect_string = str.replace(expect_string, "foo", bam_file)
+        with open(expect_file, "w") as e_file:
+            e_file.write(current_expect_string)
+        gen.run_process(["expect", expect_file])
+        print("Transferred to Watson.")
+        gen.remove_file(expect_file)
+        gen.remove_file(local_bam_file)
+        print("Time spent: {0} minutes.\n".format(round((time.time() - start_time)/60), 3))
+    ftp = gen.ftp_check(ftp, host, user, password, ftp_directory)
+    ftp.quit()
 
 def run_bedops(A_file, B_file, force_strand = False, write_both = False, chrom = None, overlap = None, sort = False, output_file = None, intersect = False, hit_number = None, no_dups = False):
     '''
