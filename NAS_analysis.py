@@ -71,6 +71,7 @@ def main():
     '''
     **********
     MISSING: out of the exons retained in the previous step, check which ones contain a PTC in some individuals and not others.
+    NB! Only consider individuals included in Geuvadis.
     **********
     '''
 
