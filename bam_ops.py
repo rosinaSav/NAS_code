@@ -134,7 +134,7 @@ def retrieve_bams(ftp_site, local_directory, remote_directory, password_file, su
     if subset:
         all_files = all_files[:subset]
     #retrieve and transfer .bams in parallel
-    processes = gen.run_in_parallel(all_files, ["foo", local_directory, host, user, password, ftp_directory, expect_string], retrieve_bams_core, workers = 20)
+    processes = gen.run_in_parallel(all_files, ["foo", local_directory, host, user, password, ftp_directory, expect_string], retrieve_bams_core, workers = 6)
     for process in processes:
         process.get()
 
@@ -245,35 +245,4 @@ def sort_bed(input_file_name, output_file_name):
     temp_file_name = "temp_data/temp_sorted_bed{0}.bed".format(random.random())
     gen.run_process(["sort-bed", input_file_name], file_for_output = temp_file_name)
     gen.run_process(["mv", temp_file_name, output_file_name])
-    gen.remove_file(temp_file_name)
-
-def write_hits_at_junctions_per_sample(ftp_site, target_directory, exon_junctions_file, file_list, subset = None):
-    '''
-    For each .bam file at the ftp site, intersect it with the exon junction intervals and
-    make a file with the number of overlapping reads for each junction interval.
-    subset: only retrieve this many .bam files (useful for testing)
-    '''
-    #create target directory, if it doesn't exist
-    gen.make_dir(target_directory)
-    #get list of all .bam files
-    with open(file_list) as file:
-        all_files = file.readlines()
-    all_files = [i.rstrip("\n") for i in all_files]
-    all_files = [i for i in all_files if i[-4:] == ".bam"]
-    print("Will try to retrieve {0} files.".format(len(all_files)))
-    if subset:
-        all_files = all_files[:subset]
-    #loop over .bam files
-    for pos, bam_file in enumerate(all_files):
-        print("{0}/{1}".format(pos, len(all_files)))
-        #retrieve current file
-        local_bam_file = "{0}/{1}".format(target_directory, bam_file)
-        print("{0}/{1}".format(ftp_site, bam_file))
-        gen.run_process(["curl", "{0}/{1}".format(ftp_site, bam_file)], file_for_output = local_bam_file)
-        print("Retrieved file {0}.".format(bam_file))
-        #note that overlap = 1
-        intersect_bed(exon_junctions_file, local_bam_file, overlap = 1, output_file = "{0}/{1}_junction_hit_count.bed".format(target_directory, bam_file[:-4]), force_strand = True, no_dups = False, hit_count = True, use_bedops = False, bed_path = "../../rs949/anaconda3/bin/")
-        print("Intersected with exon-exon junctions.\n")
-        #gen.remove_file(local_bam_file)
-
-    
+    gen.remove_file(temp_file_name)   
