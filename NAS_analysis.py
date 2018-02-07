@@ -11,8 +11,7 @@ def process_bam_per_individual(bam_files, other_arguments):
         '''
         **********
         MISSING: code to filter the bam file to only leave split alignments (i.e. ones that overlap an exon-exon junction).
-        NB! I believe the sequencing was paired-end so at some point, we need to figure out what that
-        means for our data and what to do with that information.
+        Information contained in the cigar.
         **********
         '''
 
@@ -21,9 +20,22 @@ def process_bam_per_individual(bam_files, other_arguments):
         MISSING: filter remaining .bam alignments by quality.
         **********
         '''
+
+        '''
+        **********
+        MISSING: our reads are paired-end, so we need to split the intersect step in two.
+        1) Intersect junctions and .bam, and write down the overlapping .bam alignments, without counting.
+        Intermediate stage: Find cases where both of the reads in a pair have been retained in step 1, and randomly remove one of them.
+        This is because you can theoretically imagine a situation where one read overlaps with one junction and
+        the other read maps with another junction. I think it's better to only count one of them because the two reads from the same
+        fragment are not independent data points. Do you agree?
+        2) An intersect like the one below where you just count the number of overlapping alignments.
+        NB! The RNA-seq data we're using is not stranded so contrary to what I had written before, we should NOT match strand in the intersect.
+        **********
+        '''
         
         #count how many .bam alignments overlap each exon-exon junction
-        bmo.intersect_bed(PTC_exon_junctions_file, bam_file, overlap = 1, output_file = "{0}_junction_hit_count.bed".format(bam_file[:-4]), force_strand = True, no_dups = False, hit_count = True, use_bedops = False)
+        bmo.intersect_bed(PTC_exon_junctions_file, bam_file, overlap = 1, output_file = "{0}_junction_hit_count.bed".format(bam_file[:-4]), force_strand = False, no_dups = False, hit_count = True, use_bedops = False)
 
         '''
         **********

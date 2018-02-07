@@ -94,13 +94,6 @@ def retrieve_bams(ftp_site, local_directory, remote_directory, password_file, su
     #get list of all .bam files
     all_files = ftp.nlst()
     all_files = [i for i in all_files if i[-4:] == ".bam"]
-    #temporary so it wouldn't do the files that are already on Watson
-    #remove after the transfer
-    with open("temp_data/bam_list.txt") as file:
-        found = "".join(file)
-    found = found.split("\n")
-    found = [i.rstrip("\n") for i in found]
-    all_files = [i for i in all_files if i not in found]
     print(len(all_files))
     ftp = gen.ftp_check(ftp, host, user, password, ftp_directory)
     ftp.quit()
@@ -129,6 +122,7 @@ def retrieve_bams_core(all_files, local_directory, host, user, password, ftp_dir
     ftp = gen.ftp_connect(host, user, password, directory = ftp_directory)
     #loop over .bam files
     for pos, bam_file in enumerate(all_files):
+##        bam_file = "example.bam"
         expect_file = "temp_data/expect_file{0}.txt".format(random.random())
         start_time = time.time()
         print("{0}/{1}".format(pos, len(all_files)))
@@ -142,6 +136,7 @@ def retrieve_bams_core(all_files, local_directory, host, user, password, ftp_dir
             e_file.write(current_expect_string)
         gen.run_process(["expect", expect_file])
         print("Transferred to Watson.")
+        raise Exception
         gen.remove_file(expect_file)
         gen.remove_file(local_bam_file)
         print("Time spent: {0} minutes.\n".format(round((time.time() - start_time)/60), 3))
