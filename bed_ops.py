@@ -349,13 +349,11 @@ def filter_exon_junctions(junctions_file, exons_file, out_file):
                                                 #check if the upstream/downstream exon appears (depending on whether it's the 3' or 5' part of the junction)
                                                 else:
                                                         if name_field[2] == "3":
-                                                                print(name_field)
-                                                                if int(name_field[1]) + 1 in exons[name_field[0]]:
+                                                                if str(int(name_field[1]) + 1) in exons[name_field[0]]:
                                                                         o_file.write(line)
                                                         #elif safer than else
                                                         elif name_field[2] == "5":
-                                                                print(name_field)
-                                                                if int(name_field[1]) - 1 in exons[name_field[0]]:
+                                                                if str(int(name_field[1]) - 1) in exons[name_field[0]]:
                                                                         o_file.write(line)
 
                 
