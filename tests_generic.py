@@ -23,6 +23,42 @@ class Test_generic(unittest.TestCase):
         observed = line_count(file)
         self.assertEqual(expected, observed)
 
+    def test_list_to_dict(self):
+        input_list = [[1, 5], [3, 8], [2, 0]]
+        expected = {}
+        expected[1] = 5
+        expected[3] = 8
+        expected[2] = 0
+        observed = list_to_dict(input_list, 0, 1)
+        self.assertEqual(observed, expected)
+
+    def test_list_to_dict2(self):
+        input_list = [[1, 4, 5], [3, 2, 8], [2, 9, 0]]
+        expected = {}
+        expected[1] = 5
+        expected[3] = 8
+        expected[2] = 0
+        observed = list_to_dict(input_list, 0, 2)
+        self.assertEqual(observed, expected)
+
+    def test_list_to_dict_as_list(self):
+        input_list = [[1, 4, 5], [3, 2, 8], [2, 9, 0], [3, 9, 15]]
+        expected = {}
+        expected[1] = [5]
+        expected[3] = [8, 15]
+        expected[2] = [0]
+        observed = list_to_dict(input_list, 0, 2, as_list = True)
+        self.assertEqual(observed, expected)
+
+    def test_list_to_dict_as_list_uniquify(self):
+        input_list = [[1, 4, 5], [3, 2, 8], [2, 9, 0], [3, 9, 15], [3, 60, 15]]
+        expected = {}
+        expected[1] = [5]
+        expected[3] = [8, 15]
+        expected[2] = [0]
+        observed = list_to_dict(input_list, 0, 2, as_list = True, uniquify = True)
+        self.assertEqual(observed, expected)
+
     def test_read_fasta(self):
         expected = [[],[]]
         expected[0] = ["1:17-25(+)", "2:0-12(+)", "1:21-30(-)"]

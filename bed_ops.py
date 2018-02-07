@@ -320,3 +320,42 @@ def filter_bed_from_fasta(bed, fasta, out_bed):
                 for line in bed_data:
                         file.write("\t".join(line))
                         file.write("\n")
+
+def filter_exon_junctions(junctions_file, exons_file, out_file):
+        '''
+        Given two bed files, one containing exon junction coordinates and one containing exon coordinates,
+        filter the former to only leave intervals that either overlap exons in the latter or form part of an exon-exon
+        junction with an exon that appears in the exon file.
+        '''
+        #read in exons file
+        exons = gen.read_many_fields(exons_file, "\t")
+        #only leave name field, parse, remove empty lines
+        exons = [i[3].split(".") for i in exons if len(i) > 1]
+        exons = gen.list_to_dict(exons, 0, 1, as_list = True)
+        #open output file
+        with open(out_file, "w") as o_file:
+                #loop over exon junctions file
+                with open(junctions_file) as ej_file:
+                        for line in ej_file:
+                                #ignore empty lines
+                                if len(line) > 1:
+                                        name_field = line.split("\t")[3]
+                                        name_field = name_field.split(".")
+                                        #check if the transcript appears
+                                        if name_field[0] in exons:
+                                                #check if the exon appears
+                                                if name_field[1] in exons[name_field[0]]:
+                                                        o_file.write(line)
+                                                #check if the upstream/downstream exon appears (depending on whether it's the 3' or 5' part of the junction)
+                                                else:
+                                                        if name_field[2] == "3":
+                                                                print(name_field)
+                                                                if int(name_field[1]) + 1 in exons[name_field[0]]:
+                                                                        o_file.write(line)
+                                                        #elif safer than else
+                                                        elif name_field[2] == "5":
+                                                                print(name_field)
+                                                                if int(name_field[1]) - 1 in exons[name_field[0]]:
+                                                                        o_file.write(line)
+
+                

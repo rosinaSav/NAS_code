@@ -41,8 +41,9 @@ def main():
     **********
     '''
 
-    #extract and filter CDScoordinates and sequences
+    #extract and filter CDS coordinates and sequences
     #NB! We need to add in a step during quality control to only leave one transcript isoform per gene!
+    #and also remove overlapping genes
     bo.extract_cds(gtf, CDS_fasta, genome_fasta, check_acgt=True, check_start=True, check_length=True, check_stop=True, check_inframe_stop=True)
 
     '''

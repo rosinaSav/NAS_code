@@ -123,6 +123,28 @@ def line_count(file):
     output = run_process(["grep", "-c", "^", file])
     return(int(output))
 
+def list_to_dict(input_list, index1, index2, as_list = False, uniquify = False, floatify = False):
+    '''
+    Convert the input_list into a dictionary, with the index1th element of each sublist as the key and the index2th element as the value.
+    '''
+    if as_list and floatify:
+        print("_as_list_ and _floatify_ can't both be True!")
+        raise Exception
+    output_dict = {}
+    for i in input_list:
+        if not as_list:
+            if floatify:
+                output_dict[i[index1]] = float(i[index2])
+            else:
+                output_dict[i[index1]] = i[index2]
+        else:
+            if i[index1] not in output_dict:
+                output_dict[i[index1]] = []
+            output_dict[i[index1]].append(i[index2])
+    if as_list and uniquify:
+        output_dict = {i: sorted(list(set(output_dict[i]))) for i in output_dict}
+    return(output_dict)
+
 def make_dir(dir_name):
     '''
     Check whether a directory exists and if not, create it.
