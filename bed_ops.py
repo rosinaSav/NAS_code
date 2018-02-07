@@ -142,17 +142,16 @@ def extract_exons(gtf, bed):
 		for exon in exons:
 			file.write("{0}\n".format("\t".join([str(i) for i in exon])))
 
-
 def extract_exon_junctions(exons, bed, window_of_interest=None):
 	'''
-	Given the file of extacted exons (generated using extract_exons), extact the coordinates of the junctions and write to .bed
+	Given the file of extracted exons (generated using extract_exons), extract the coordinates of the junctions and write to .bed
 	Set window_of_interest to a number of nucletides that you wish to examine across the junction
 	EX.: extract_exon_junctions("../source_data/Homo_sapiens.GRCh37.87_exons.bed", "../source_data/Homo_sapiens.GRCh37.87_exon_junctions.bed", 30)
 	'''
 
 	#set up default dict to store info
 	exon_list = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict())))
-	#precompile regex to extact transcript id and exon id
+	#precompile regex to extract transcript id and exon id
 	trans_exon_regex = re.compile(r"(?<=ENST)([0-9]*)\.([0-9]*)")
 	#iterate over all exons and sort
 	with open(exons, "r") as file:
@@ -179,16 +178,17 @@ def extract_exon_junctions(exons, bed, window_of_interest=None):
 	#this is a bit clunky
 	# for each chromosome, strand, transcript, exon, see if there is a 'next' exon
 	# if there is write to file
-	for chr in sorted(exon_list):
-		for strand in sorted(exon_list[chr]):
-			for trans_id in sorted(exon_list[chr][strand]):
+	# I changed "chr" to "chrom" to avoid conflict with the in-built type "chr"
+	for chrom in sorted(exon_list):
+		for strand in sorted(exon_list[chrom]):
+			for trans_id in sorted(exon_list[chrom][strand]):
 				#create blank transcript output so we arent writing to file twice
-				for exon_id in sorted(exon_list[chr][strand][trans_id]):
-					if(exon_id+1 in exon_list[chr][strand][trans_id]):
+				for exon_id in sorted(exon_list[chrom][strand][trans_id]):
+					if(exon_id+1 in exon_list[chrom][strand][trans_id]):
 
 						#get exons for ease
-						exon1 = exon_list[chr][strand][trans_id][exon_id]
-						exon2 = copy.deepcopy(exon_list[chr][strand][trans_id][exon_id+1])
+						exon1 = exon_list[chrom][strand][trans_id][exon_id]
+						exon2 = copy.deepcopy(exon_list[chrom][strand][trans_id][exon_id+1])
 
 						#if window is defined, extract junction of size defined
 						if window_of_interest:
@@ -201,8 +201,8 @@ def extract_exon_junctions(exons, bed, window_of_interest=None):
 							#if exon1 is bigger than the window interval, redefine window of interest
 							if(exon1[1] - exon1[0] > window_half):
 								exon1[0] = exon1[1]-window_half
-							#if exon1 is bigger than the window interval, redefine window of interest
-							if(exon2[1] - exon1[0] > window_half):
+							#if exon2 is bigger than the window interval, redefine window of interest
+							if(exon2[1] - exon2[0] > window_half):
 								exon2[1] = exon2[0]+window_half
 
 						if strand == "+":
@@ -211,9 +211,9 @@ def extract_exon_junctions(exons, bed, window_of_interest=None):
 							exon1_site, exon2_site = 5,3
 
 						#write exon1 window to file
-						out_file.write('{}\t{}\t{}\tENST{}.{}.{}\t.\t{}\n'.format(chr,exon1[0],exon1[1],trans_id,exon_id,exon1_site,strand))
+						out_file.write('{}\t{}\t{}\tENST{}.{}.{}\t.\t{}\n'.format(chrom,exon1[0],exon1[1],trans_id,exon_id,exon1_site,strand))
 						#write exon2 window to file
-						out_file.write('{}\t{}\t{}\tENST{}.{}.{}\t.\t{}\n'.format(chr,exon2[0],exon2[1],trans_id,exon_id+1,exon2_site,strand))
+						out_file.write('{}\t{}\t{}\tENST{}.{}.{}\t.\t{}\n'.format(chrom,exon2[0],exon2[1],trans_id,exon_id+1,exon2_site,strand))
 
 	#close file
 	out_file.close()
