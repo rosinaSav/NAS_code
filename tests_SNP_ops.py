@@ -8,8 +8,8 @@ class Test_SNP_ops(unittest.TestCase):
     def test_get_relative_SNPs(self):
         CDSs = {"ENST1": [[["16", "CDS", 30397645, 30397762, "ENST1", ".", "+"], 0], [["16", "CDS", 3204450, 3204500, "ENST1", ".", "+"], 1]],
                 "ENST2": [[["16", "CDS", 3204287, 3204295, "ENST2", ".", "-"], 0]]}
-        SNP_file_name = "test_data/test_SNPs_for_relative_coords.txt"
-        CDS_SNP_file_name = "test_data/test_SNPs_clean_relative_coords.txt"
+        SNP_file_name = "test_data/snp_ops/test_SNPs_for_relative_coords.txt"
+        CDS_SNP_file_name = "test_data/snp_ops/test_SNPs_clean_relative_coords.txt"
         seqs = ["ATTTGGTTACCCGGGTCCACTCTTCTACTGGTCGCTTACGACTTGTGCGCAGTCTATCCCACACGTGGAGAAGGTGCCCCTATATTCTTAATTGACGCGAGGCGCATAGCATGCCCAGTAGGACACGTAAGACGGATTTGAGCCATCCACATTCCTTCGCCTTAGAATTCAGGCACACTTGAATAGGGCAAGACCCCTTTATGCAATATTATTGCGTTACGTCCGTACCGTGAGTC", "ATGACAGAG"]
         names = ["ENST1", "ENST2"]
         genome = "hg38"
@@ -35,11 +35,11 @@ class Test_SNP_ops(unittest.TestCase):
 
 
     def test_tabix(self):
-        bed_file = "test_data/test_tabix.bed"
-        expected = gen.read_many_fields("test_data/test_tabix_expected.txt", "\t")
-        observed = "test_data/test_tabix_observed.txt"
+        bed_file = "test_data/snp_ops/test_tabix.bed"
+        expected = gen.read_many_fields("test_data/snp_ops/test_tabix_expected.txt", "\t")
+        observed = "test_data/snp_ops/test_tabix_observed.txt"
         gen.remove_file(observed)
-        vcf = "../source_data/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5b.20130502.sites.gz"
+        vcf = "./source_data/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5b.20130502.sites.gz"
         tabix(bed_file, observed, vcf)
         observed = gen.read_many_fields(observed, "\t")
         print("\n")
@@ -49,10 +49,10 @@ class Test_SNP_ops(unittest.TestCase):
         self.assertEqual(sorted(observed), sorted(expected))
 
     def test_tabix_samples(self):
-        bed_file = "test_data/test_tabix.bed"
-        with open("test_data/test_tabix_samples_expected.txt") as file:
+        bed_file = "test_data/snp_ops/test_tabix.bed"
+        with open("test_data/snp_ops/test_tabix_samples_expected.txt") as file:
             expected = "".join(file)
-        observed = "test_data/test_tabix_samples_observed.txt"
+        observed = "test_data/snp_ops/test_tabix_samples_observed.txt"
         gen.remove_file(observed)
         gen.remove_file(observed + ".gz")
         vcf_folder = "../source_data/per_sample_vcfs"
@@ -68,10 +68,10 @@ class Test_SNP_ops(unittest.TestCase):
         self.assertEqual(observed, expected)
 
     def test_tabix_samples2(self):
-        bed_file = "test_data/test_tabix.bed"
-        with open("test_data/test_tabix_samples2_expected.txt") as file:
+        bed_file = "test_data/snp_ops/test_tabix.bed"
+        with open("test_data/snp_ops/test_tabix_samples2_expected.txt") as file:
             expected = "".join(file)
-        observed = "test_data/test_tabix_samples2_observed.txt"
+        observed = "test_data/snp_ops/test_tabix_samples2_observed.txt"
         gen.remove_file(observed)
         gen.remove_file(observed + ".gz")
         vcf_folder = "../source_data/per_sample_vcfs"
