@@ -23,7 +23,7 @@ def process_bam_per_individual(bam_files, other_arguments):
         '''
         
         #count how many .bam alignments overlap each exon-exon junction
-        bmo.intersect_bed(exon_junctions_file, bam_file, overlap = 1, output_file = "{0}_junction_hit_count.bed".format(bam_file[:-4]), force_strand = True, no_dups = False, hit_count = True, use_bedops = False)
+        bmo.intersect_bed(PTC_exon_junctions_file, bam_file, overlap = 1, output_file = "{0}_junction_hit_count.bed".format(bam_file[:-4]), force_strand = True, no_dups = False, hit_count = True, use_bedops = False)
 
         '''
         **********
@@ -77,11 +77,8 @@ def main():
     **********
     '''
 
-    '''
-    **********
-    MISSING: filter the exon junctions file to only leave those junctions that flank exons retained in the previous step.
-    **********
-    '''
+    #filter the exon junctions file to only leave those junctions that flank exons retained in the previous step.
+    bo.filter_exon_junctions(exon_junctions_file, PTC_exons_file, PTC_exon_junctions_file)
 
     #make a list of all the .bam files and modify them to have the full path rather than just the file name
     bam_files = os.listdir(bam_folder)

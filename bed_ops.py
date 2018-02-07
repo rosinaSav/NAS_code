@@ -77,10 +77,11 @@ def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, random_directory=
 	cds_list = collections.defaultdict(lambda: collections.defaultdict())
 	stop_list = {}
 	concat_list = collections.defaultdict(lambda: collections.UserList())
-	#create temp fasta file with extracted parts
-	temp_fasta_file, temp_directory_path = fasta_from_intervals_temp_file(bed_file, output_fasta, genome_fasta, random_directory)
-	#read the temp fasta file
-	entries = gen.read_fasta(temp_fasta_file)
+	#create fasta file with intervals
+	fasta_interval_file = "{0}_intervals{1}".format(os.path.splitext(output_fasta)[0], os.path.splitext(output_fasta)[1])
+	fasta_from_intervals(bed_file, fasta_interval_file, genome_fasta, names=True)
+	#read the interval fasta file
+	entries = gen.read_fasta(fasta_interval_file)
 	# get the entry names and seqs
 	sample_names = entries[0]
 	seqs = entries[1]
@@ -114,8 +115,6 @@ def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, random_directory=
 		names, seqs = check_sequence_quality(names, seqs, check_acgt, check_stop, check_start, check_length, check_inframe_stop)
 	#write to output fasta file
 	gen.write_to_fasta(names, seqs, output_fasta)
-	#remove the temporary directory
-	shutil.rmtree(temp_directory_path)
 
 def extract_exons(gtf, bed):
 	'''Given a GTF file, extract exon coordinates and write them to .bed.
@@ -281,25 +280,6 @@ def fasta_from_intervals(bed_file, fasta_file, genome_fasta, force_strand = True
 	names, seqs = gen.read_fasta(fasta_file)
 	seqs = [i.upper() for i in seqs]
 	gen.write_to_fasta(names, seqs, fasta_file)
-
-def fasta_from_intervals_temp_file(bed_file, output_fasta, genome_fasta, random_directory=None):
-	'''
-	Create a temporary file to hold the fasta extractions
-	'''
-	random_int = np.random.randint(9999999,size=2)
-	if random_directory:
-		temp_directory_path = './temp_files/temp_fasta_files_{0}'.format(random_int[0])
-	else:
-		temp_directory_path = './temp_files/temp_fasta_files'
-	#create temp directory if doesnt already exist
-	gen.create_directory('./temp_files/')
-	#delete temp fasta directory and create new
-	gen.create_strict_directory(temp_directory_path)
-	#set the temporary fasta file path
-	temp_fasta_file = '{0}/{1}_{2}{3}'.format(temp_directory_path, os.path.splitext(os.path.basename(output_fasta))[0], random_int[1], os.path.splitext(os.path.basename(output_fasta))[1])
-	temp_fasta_file = output_fasta
-	fasta_from_intervals(bed_file, temp_fasta_file, genome_fasta, force_strand = True, names = True)
-	return(temp_fasta_file, temp_directory_path)
 
 def filter_bed_from_fasta(bed, fasta, out_bed):
         '''
