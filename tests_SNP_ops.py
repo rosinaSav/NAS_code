@@ -35,8 +35,8 @@ class Test_SNP_ops(unittest.TestCase):
 
 
     def test_tabix(self):
-        bed_file = "test_data/snp_ops/test_tabix.bed"
-        expected = gen.read_many_fields("test_data/snp_ops/test_tabix_expected.txt", "\t")
+        bed_file = "test_data/snp_ops/test_tabix/test_tabix.bed"
+        expected = gen.read_many_fields("test_data/snp_ops/test_tabix/test_tabix_expected.txt", "\t")
         observed = "test_data/snp_ops/test_tabix_observed.txt"
         gen.remove_file(observed)
         vcf = "./source_data/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5b.20130502.sites.gz"
@@ -49,10 +49,10 @@ class Test_SNP_ops(unittest.TestCase):
         self.assertEqual(sorted(observed), sorted(expected))
 
     def test_tabix_samples(self):
-        bed_file = "test_data/snp_ops/test_tabix.bed"
-        with open("test_data/snp_ops/test_tabix_samples_expected.txt") as file:
+        bed_file = "test_data/snp_ops/test_tabix_samples/test_tabix.bed"
+        with open("test_data/snp_ops/test_tabix_samples/test_tabix_samples_expected.txt") as file:
             expected = "".join(file)
-        observed = "test_data/snp_ops/test_tabix_samples_observed.txt"
+        observed = "test_data/snp_ops/test_tabix_samples/test_tabix_samples_observed.txt"
         gen.remove_file(observed)
         gen.remove_file(observed + ".gz")
         vcf_folder = "../source_data/per_sample_vcfs"
@@ -68,10 +68,10 @@ class Test_SNP_ops(unittest.TestCase):
         self.assertEqual(observed, expected)
 
     def test_tabix_samples2(self):
-        bed_file = "test_data/snp_ops/test_tabix.bed"
-        with open("test_data/snp_ops/test_tabix_samples2_expected.txt") as file:
+        bed_file = "test_data/snp_ops/test_tabix_samples2/test_tabix.bed"
+        with open("test_data/snp_ops/test_tabix_samples2/test_tabix_samples2_expected.txt") as file:
             expected = "".join(file)
-        observed = "test_data/snp_ops/test_tabix_samples2_observed.txt"
+        observed = "test_data/snp_ops/test_tabix_samples2/test_tabix_samples2_observed.txt"
         gen.remove_file(observed)
         gen.remove_file(observed + ".gz")
         vcf_folder = "../source_data/per_sample_vcfs"
