@@ -34,7 +34,7 @@ def group_flags(input_bed, output_bed, flag_start):
             flags = ",".join(flags)
             new_row = i[0:flag_start]
             new_row.append(flags)
-            writer.writerow(new_row)
+            w4riter.writerow(new_row)
 
 def intersect_bed(bed_file1, bed_file2, use_bedops = False, overlap = False, write_both = False, sort = False, output_file = None,
                              force_strand = False, no_name_check = False, no_dups = True, chrom = None, intersect = False, hit_count = False, bed_path = None):
@@ -56,6 +56,7 @@ def intersect_bed(bed_file1, bed_file2, use_bedops = False, overlap = False, wri
     chrom: limit search to a specific chromosome (only valid with bedops, can help in terms of efficiency)
     intersect: rather than returning the entire interval, only return the part of the interval that overlaps an interval in bed file 2.
     hit_count: for each element in bed file 1, return the number of elements it overlaps in bed file 2 (only valid with bedtools)'''
+    gen.create_directory("temp_data/")
     temp_file_name = "temp_data/temp_bed_file{0}.bed".format(random.random())
     #have it write the output to a temporary file
     if use_bedops:
@@ -220,4 +221,4 @@ def sort_bed(input_file_name, output_file_name):
     temp_file_name = "temp_data/temp_sorted_bed{0}.bed".format(random.random())
     gen.run_process(["sort-bed", input_file_name], file_for_output = temp_file_name)
     gen.run_process(["mv", temp_file_name, output_file_name])
-    gen.remove_file(temp_file_name)   
+    gen.remove_file(temp_file_name)
