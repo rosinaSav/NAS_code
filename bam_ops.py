@@ -117,7 +117,7 @@ def retrieve_bams(ftp_site, local_directory, remote_directory, password_file, su
     if subset:
         all_files = all_files[:subset]
     #retrieve and transfer .bams in parallel
-    processes = gen.run_in_parallel(all_files, ["foo", local_directory, host, user, password, ftp_directory, expect_string], retrieve_bams_core, workers = 10)
+    processes = gen.run_in_parallel(all_files, ["foo", local_directory, host, user, password, ftp_directory, expect_string], retrieve_bams_core, workers = 6)
     for process in processes:
         process.get()
 

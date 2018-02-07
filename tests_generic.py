@@ -12,7 +12,7 @@ class Test_generic(unittest.TestCase):
         self.assertEqual(expected, observed)
 
     def test_line_count(self):
-        file = "test_data/test_bed_second_go_expected.txt"
+        file = "test_data/generic/test_line_count/test_bed_second_go_expected.txt"
         expected = 3
         observed = line_count(file)
         self.assertEqual(expected, observed)
@@ -64,5 +64,5 @@ class Test_generic(unittest.TestCase):
         expected[0] = ["1:17-25(+)", "2:0-12(+)", "1:21-30(-)"]
         expected[1] = ["CATAGACA", "GTCCCCCCCCAA", "AAATATGTC"]
         expected = tuple(expected)
-        observed = read_fasta("test_data/test_converted_fasta.fasta")
+        observed = read_fasta("test_data/generic/test_read_fasta/test_converted_fasta.fasta")
         self.assertEqual(expected, observed)
