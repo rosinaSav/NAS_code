@@ -96,14 +96,6 @@ class Test_bed_ops(unittest.TestCase):
         observed = gen.read_fasta(observed)
         self.assertEqual(observed,expected)
 
-    # def test_fasta_from_intervals_temp_file(self):
-    #     bed_file = "./test_data/bed_ops/test_fasta_from_intervals_temp_file/test_extract_fasta_from_intervals_to_temp_bed.bed"
-    #     expected = gen.read_fasta("./test_data/bed_ops/test_fasta_from_intervals_temp_file/expected_test_extract_fasta_from_intervals_to_temp.fasta")
-    #     output_file_name = "./temp_files/temp_fasta_files/test_extract_fasta_from_intervals_to_temp.fasta"
-    #     observed_file_name, test_directory_path = fasta_from_intervals_temp_file(bed_file, output_file_name, "./test_data/bed_ops/test_fasta_from_intervals_temp_file/test_extract_fasta_from_intervals_to_temp_genome.fa")
-    #     observed = gen.read_fasta(observed_file_name)
-    #     self.assertEqual(observed,expected)
-
     def test_fasta_sequence_quality_control(self):
         fasta_parts = gen.read_fasta('./test_data/bed_ops/test_fasta_sequence_quality_control/test_fasta_sequence_quality_control.fasta')
         fasta_parts_names = fasta_parts[0]
