@@ -326,9 +326,14 @@ def get_snp_relative_exon_position(intersect_file):
     before calculating the snp position in the cds using get_snp_cds_relative_position.
     '''
     #read the intersects file
+    cds_strands = cds_exons = collections.defaultdict()
     relative_positions = []
     intersects = gen.read_many_fields(intersect_file, "\t")
     for intersect in intersects:
+        #get strand of exon
+        entry_regex = re.compile("(\w+)\.(\d+)(\..*)*")
+        trans = re.search(entry_regex, intersect[3]).group(1)
+        cds_strands[trans] = intersect[5]
         #get the features
         feature_start = intersect[1]
         feature = intersect[3]
@@ -383,12 +388,28 @@ def get_snp_relative_cds_position(snp_exon_realtive_positions, snp_cds_position_
             snp[5] = str(snp_cds_position)
             output.write("{0}\n".format("\t".join(snp)))
 
-def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_file, others_output_file):
+def get_snp_change_status(snp_cds_relative_positions, cds_fasta, cds_strands, ptcs_output_file, others_output_file):
+
+    reverse_comps = {
+        "A": "T",
+        "C": "G",
+        "G": "C",
+        "T": "A",
+    }
+
+    strands = collections.defaultdict()
+    for strand in cds_strands:
+        strands[strand[0]] = strand[1]
 
     snps = gen.read_many_fields(snp_cds_relative_positions, "\t")
     cds_names, cds_seqs = gen.read_fasta(cds_fasta)
     entry_regex = re.compile("(\w+)\.(\d+)(\..*)*")
 
+    ptc_outputs = open(ptcs_output_file, "w")
+    other_outputs = open(others_output_file, "w")
+
+    refbase_error = 0
+    snp_count = 0
     for snp in snps:
         cds_id = re.search(entry_regex, snp[3]).group(1)
         snp_index = int(snp[5])
@@ -409,16 +430,23 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
         if cds_id in cds_names:
             #if the snp index exists
             if snp_index:
+                snp_count += 1
                 #check that the snp is only one base
                 if len(ref_base) == 1:
                     #from RS: filter out polyomrphisms with more than 2 segregating alleles
                     #need to check the number both before and after filtering out non-canonical bases
                     #also check whether the variant type is annotated as a snp
                     if var_base_count == 1 and len(var_base) == 1 and var_type == "SNP":
+                        var_base = var_base[0]
+                        if strands[cds_id] == "-":
+                            ref_base = reverse_comps[ref_base]
+                            var_base = reverse_comps[var_base]
+
                         cds_base = cds_seqs[cds_names.index(cds_id)][snp_index]
 
                         #check whether cds base and ref base are the same
                         if cds_base != ref_base:
+                            refbase_error += 1
                             # print("Cds base and reference base not the same (id: {0})".format(snp_info[0]))
                             # print("Cds base: {0}".format(cds_base))
                             # print("Ref base: {0}".format(ref_base))
@@ -426,14 +454,17 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
                             # print("\n")
                             pass
                         else:
-                            var_base = var_base[0]
                             cds_codon, snp_codon, mutation_type = get_snp_type(cds_seqs[cds_names.index(cds_id)], [snp_index, var_base])
-                            print(snp)
-                            print(cds_codon, snp_codon, mutation_type)
+                            snp[6] = "CDS_CODON={0}$SNP_CODON={1}${2}".format(cds_codon, snp_codon, snp[6])
+                            snp[5] = mutation_type
+                            if(mutation_type == "ptc"):
+                                ptc_outputs.write("{0}\n".format("\t".join(snp)))
+                            else:
+                                other_outputs.write("{0}\n".format("\t".join(snp)))
 
 
-    ptc_outputs = open(ptcs_output_file, "w")
-    other_outputs = open(others_output_file, "w")
+    print("Number of ref errors: {0} ({1}%)".format(refbase_error, np.divide(refbase_error, snp_count)*100))
+
     ptc_outputs.close()
     other_outputs.close()
 
@@ -464,26 +495,27 @@ def get_snp_type(sequence, variant):
     codon_regex = re.compile('.{3}')
     sequence_codons = re.findall(codon_regex, sequence)
     snp_sequence_codons = re.findall(codon_regex, snp_sequence)
-    #find the index in the lists where the codon has changed
-    changed_index = [i for i, x in enumerate(sequence_codons) if x != snp_sequence_codons[i]][0]
-    #get the cds and snp codon
-    cds_codon = sequence_codons[changed_index]
-    snp_codon = snp_sequence_codons[changed_index]
-    #determine the type of snp
-    #if the snp generated an in frame stop
-    if codon_map[snp_codon] == "*":
-        mutation_type = "ptc"
-    #if the snp generated a synonymous codon
-    elif codon_map[cds_codon] == codon_map[snp_codon]:
-        mutation_type = "syn"
-    #if the snp generated a nonsynonymous codon
-    elif codon_map[cds_codon] != codon_map[snp_codon] and codon_map[snp_codon] != "*":
-        mutation_type = "non"
-    #error calling the snp (shouldn't occur)
+    #find the index in the lists where the codon has changed, should be length 1
+    changed_indicies = [i for i, x in enumerate(sequence_codons) if x != snp_sequence_codons[i]]
+    if len(changed_indicies) == 1:
+        changed_index = changed_indicies[0]
+        #get the cds and snp codon
+        cds_codon = sequence_codons[changed_index]
+        snp_codon = snp_sequence_codons[changed_index]
+        #determine the type of snp
+        #if the snp generated an in frame stop
+        if codon_map[snp_codon] == "*":
+            mutation_type = "ptc"
+        #if the snp generated a synonymous codon
+        elif codon_map[cds_codon] == codon_map[snp_codon]:
+            mutation_type = "syn"
+        #if the snp generated a nonsynonymous codon
+        elif codon_map[cds_codon] != codon_map[snp_codon] and codon_map[snp_codon] != "*":
+            mutation_type = "non"
+        #error calling the snp (shouldn't occur)
+        else:
+            mutation_type = "call_error"
     else:
-        mutation_type = "call_error"
-
-    if "TGA" in sequence_codons:
-        print("STOP!!")
+        cds_codon, snp_codon, mutation_type = "error", "error", "error"
 
     return cds_codon, snp_codon, mutation_type

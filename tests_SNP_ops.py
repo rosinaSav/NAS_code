@@ -105,13 +105,14 @@ class Test_SNP_ops(unittest.TestCase):
     def test_get_snp_change_status(self):
         snp_relative_cds_position = "test_data/snp_ops/test_get_snp_change_status/test_snp_relative_cds_position.bed"
         cds_fasta = "test_data/snp_ops/test_get_snp_change_status/test_get_snp_change_status_cds_fasta.fasta"
+        cds_strands = gen.read_many_fields("test_data/snp_ops/test_get_snp_change_status/test_get_snp_change_status_cds_strands.bed", "\t")
         expected_ptc_snps = gen.read_many_fields("test_data/snp_ops/test_get_snp_change_status/expected_get_snp_ptcs.bed", "\t")
         expected_other_snps = gen.read_many_fields("test_data/snp_ops/test_get_snp_change_status/expected_get_snp_others.bed", "\t")
         observed_ptc_snps = "test_data/snp_ops/test_get_snp_change_status/observed_get_snp_ptc_status.bed"
         observed_other_snps = "test_data/snp_ops/test_get_snp_change_status/observed_get_snp_other_status.bed"
         gen.remove_file(observed_ptc_snps)
         gen.remove_file(observed_other_snps)
-        get_snp_change_status(snp_relative_cds_position, cds_fasta, observed_ptc_snps, observed_other_snps)
+        get_snp_change_status(snp_relative_cds_position, cds_fasta, cds_strands, observed_ptc_snps, observed_other_snps)
         observed_ptc_snps = gen.read_many_fields(observed_ptc_snps, "\t")
         observed_other_snps = gen.read_many_fields(observed_other_snps, "\t")
         self.assertEqual(observed_ptc_snps, expected_ptc_snps)
