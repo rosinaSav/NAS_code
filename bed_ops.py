@@ -5,7 +5,39 @@ import collections
 import copy
 import numpy as np
 import os
+import random
 import shutil
+
+def check_coding(exons_file, CDSs_file, outfile):
+        '''
+        Given a bed file of exon coordinates and a bed file of CDS coordinates,
+        writes a new bed file that only contains those exon coordinates form the former file that
+        1) are fully coding
+        2) are internal
+        NB! Assumes that all the cooridnates are from non-overlapping transcripts.
+        '''
+        #filter out anything that isn't fully coding
+        temp_file = "temp_data/temp{0}.txt".format(random.random())
+        bmo.intersect_bed(exons_file, CDSs_file, overlap = 1, output_file = temp_file, force_strand = True, no_dups = True)
+        #filter out terminal exons
+        #in theory, there shouldn't be any left after the previous step
+        #in practice, there may be unannotated UTRs, so it looks like we have a fully coding terminal exon,
+        #whereas in reality, the exon is only partially coding
+        with open(outfile, "w") as o_file:
+                filt_exons = gen.read_many_fields(temp_file, "\t")
+                filt_exons = [i for i in filt_exons if len(i) > 3]
+                names = [i[3].split(".") for i in filt_exons]
+                names = gen.list_to_dict(names, 0, 1, as_list = True)
+                names = {i: [int(j) for j in names[i]] for i in names}
+                for exon in filt_exons:
+                        name = exon[3].split(".")
+                        if name[-1] != "1":
+                                last_exon = max(names[name[0]])
+                                if int(name[-1]) != last_exon:
+                                        exon = [str(i) for i in exon]
+                                        o_file.write("\t".join(exon))
+                                        o_file.write("\n")
+        gen.remove_file(temp_file)
 
 def check_sequence_quality(names, seqs, check_acgt=None, check_stop=None, check_start=None, check_length=None, check_inframe_stop=None):
 	'''
@@ -58,7 +90,7 @@ def check_sequence_quality(names, seqs, check_acgt=None, check_stop=None, check_
 def extract_cds(gtf, output_fasta, genome_fasta, random_directory=None, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None):
 	'''
 	Given a .gtf file, exrtract the coding sequences to a fasta file.
-	EX.: extract_exons("../source_data/Homo_sapiens.GRCh37.87.gtf", "../output_data/Homo_sapiens.GRCh37.87_cds.fasta", "../source_data/Genomes/Homo_sapiens.GRCh37.dna.primary_assembly.fa")
+	EX.: extract_cds("../source_data/Homo_sapiens.GRCh37.87.gtf", "../output_data/Homo_sapiens.GRCh37.87_cds.fasta", "../source_data/Genomes/Homo_sapiens.GRCh37.dna.primary_assembly.fa")
 	Use random_directory for creating a randomised directory to hold intermediate fasta components
 	'''
 	#create bed file path
@@ -77,11 +109,10 @@ def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, random_directory=
 	cds_list = collections.defaultdict(lambda: collections.defaultdict())
 	stop_list = {}
 	concat_list = collections.defaultdict(lambda: collections.UserList())
-	#create fasta file with intervals
-	fasta_interval_file = "{0}_intervals{1}".format(os.path.splitext(output_fasta)[0], os.path.splitext(output_fasta)[1])
-	fasta_from_intervals(bed_file, fasta_interval_file, genome_fasta, names=True)
-	#read the interval fasta file
-	entries = gen.read_fasta(fasta_interval_file)
+	#create temp fasta file with extracted parts
+	temp_fasta_file, temp_directory_path = fasta_from_intervals_temp_file(bed_file, output_fasta, genome_fasta, random_directory)
+	#read the temp fasta file
+	entries = gen.read_fasta(temp_fasta_file)
 	# get the entry names and seqs
 	sample_names = entries[0]
 	seqs = entries[1]
@@ -115,6 +146,8 @@ def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, random_directory=
 		names, seqs = check_sequence_quality(names, seqs, check_acgt, check_stop, check_start, check_length, check_inframe_stop)
 	#write to output fasta file
 	gen.write_to_fasta(names, seqs, output_fasta)
+	#remove the temporary directory
+	shutil.rmtree(temp_directory_path)
 
 def extract_exons(gtf, bed):
 	'''Given a GTF file, extract exon coordinates and write them to .bed.
@@ -280,6 +313,25 @@ def fasta_from_intervals(bed_file, fasta_file, genome_fasta, force_strand = True
 	names, seqs = gen.read_fasta(fasta_file)
 	seqs = [i.upper() for i in seqs]
 	gen.write_to_fasta(names, seqs, fasta_file)
+
+def fasta_from_intervals_temp_file(bed_file, output_fasta, genome_fasta, random_directory=None):
+	'''
+	Create a temporary file to hold the fasta extractions
+	'''
+	random_int = np.random.randint(9999999,size=2)
+	if random_directory:
+		temp_directory_path = './temp_files/temp_fasta_files_{0}'.format(random_int[0])
+	else:
+		temp_directory_path = './temp_files/temp_fasta_files'
+	#create temp directory if doesnt already exist
+	gen.create_directory('./temp_files/')
+	#delete temp fasta directory and create new
+	gen.create_strict_directory(temp_directory_path)
+	#set the temporary fasta file path
+	temp_fasta_file = '{0}/{1}_{2}{3}'.format(temp_directory_path, os.path.splitext(os.path.basename(output_fasta))[0], random_int[1], os.path.splitext(os.path.basename(output_fasta))[1])
+	temp_fasta_file = output_fasta
+	fasta_from_intervals(bed_file, temp_fasta_file, genome_fasta, force_strand = True, names = True)
+	return(temp_fasta_file, temp_directory_path)
 
 def filter_bed_from_fasta(bed, fasta, out_bed):
         '''
