@@ -7,6 +7,17 @@ import subprocess
 from itertools import islice
 import shutil
 
+def blast_all_against_all(db_name, fasta_file_name, output_file_name, blast_db_path):
+    '''
+    Blast all the sequences in a fasta file against each-other.
+    '''
+    gen.run_process(["makeblastdb", "-in", fasta_file_name, "-out",
+                 "{0}/{1}".format(blast_db_path, db_name),
+                 "-dbtype", "nucl"])
+    gen.run_process(["Blastn", "-task", "blastn", "-query", fasta_file_name,
+                 "-db", "/Users/{0}/Documents/Software/ncbi-blast-2.2.30+/db/{1}".format(user, db_name),
+                 "-out", output_file_name, "-outfmt", "10", "-evalue", "1e-04", "-num_threads", str(int((os.cpu_count()/2)-1))])
+
 def create_directory(path):
     '''
     Create new directory if doesn't already exist
@@ -33,6 +44,114 @@ def extract_head_of_file(file_path, lines):
         with open(output_path, 'w') as output_file:
             for line in head:
                 output_file.write(line)
+
+def find_families(fasta_file_name, output_prefix, blast_db_path):
+    '''
+    Given a fasta file, group the sequences into paralogous families.
+    '''
+    blast_results_file_name = "{0}_blast_results".format(output_prefix)
+    output_prefix_short = output_prefix.split("/")
+    output_prefix_short = output_prefix_short[-1]
+    #run a BLAST all against all for the sequences in the fasta file
+    blast_all_against_all("{0}_blast_db".format(output_prefix_short), fasta_file_name, blast_results_file_name, blast_db_path)
+    names, seqs = rw.read_fasta(fasta_file_name)
+
+    #create an empty list for storing the indices of BLAST query - hit pairs to delete
+    #open a .csv file containing the results of a BLAST and turn it into a list
+    #delete all of the information except the identifiers of queries and hits
+    #identify those pairs where the query and the hit come from the same sequence and delete them
+    to_delete = []
+    with open(blast_results_file_name) as csvfile:
+        blast_results = csv.reader(csvfile, delimiter=',')
+        blast_results = list(blast_results)
+        print("Total number of BLAST hits.")
+        print(len(blast_results))
+        for i in blast_results:
+            del i[2:12]
+            if i[0] == i[1]:
+                to_delete.append(i)
+    print("Elements to delete:")
+    print(len(to_delete))
+    print("Unique elements to delete:")
+    print(len(list(set(flatten(to_delete)))))
+    for i in list(reversed(to_delete)):
+        blast_results.remove(i)
+            
+    print("Number of results without self-matches:")
+    print(len(blast_results))
+    queries = [i for i,j in blast_results]
+    print("Number of queries:")
+    print(len(queries))
+    print("Number of unique queries:")
+    print(len(list(set(queries))))
+    matches = [j for i,j in blast_results]
+    print("Number of matches:")
+    print(len(matches))
+    print("Number of unique matches:")
+    print(len(list(set(matches))))
+
+    print("Genes that don't overlap between queries and matches:")
+    for i in list(set(queries)):
+        if i not in list(set(matches)):
+            print(i)
+    for i in list(set(matches)):
+        if i not in list(set(queries)):
+            print(i)
+
+    #create an empty list for storing the gene families, another for storing the genes
+    #that have already been analyzed within a family and a third one for storing all
+    #the genes that have been analyzed across all families.
+    #create a counter (fcounter) for storing the number of families that have been created
+    #while there are query-hit pairs left,
+    #add genes seen in the previous family to the list of all genes analyzed and then empty the
+    #first list for the next family
+    #pick a random query out of the remaining query-hit pairs and create a new family containing
+    #just that query. This is now the current family. Increment fcounter by 1.
+    #add all genes that are either hits to the current query or that the current query is a hit to
+    #into the current family.
+    #loop over all the genes in the current family and add everything they match or are a match
+    #to into the current family
+    #once you've done all the genes in a family, pick a new random query from the query-hit pairs
+    #that are left and start a new family with it
+    families = []
+    added_something = True
+    while len(blast_results) > 0:
+        seen = []
+        current_pair = random.choice(blast_results)
+        families.append(current_pair)
+        while added_something:
+            length_before = len(families[-1])
+            for query in families[-1]:
+                if query not in seen:
+                    seen.append(query)
+                    [blast_results, families] = extend_family(blast_results, families, query)
+            if(len(families[-1])) == length_before:
+                added_something == False
+                break
+        
+    families_file_name = "{0}_families.txt".format(output_prefix)
+    families_file = open(families_file_name,"w")
+    for i in range(0,len(families)):
+        families_file.write("{0}\n".format(",".join(families[i])))
+
+    #create flat version of the families list so you could count the total number of genes that have been allocated to a family
+    flat_families = flatten(families)
+
+    #these two numbers should be identical
+    print("Number of genes in families:")
+    print(len(flat_families))
+    print("Number of unique genes in families:")
+    print(len(list(set(flat_families))))
+
+    #create a list with the sizes of all the different families
+    family_sizes = [len(i) for i in families]
+    print("Number of families:")
+    print(len(families))
+    print("Distribution of family sizes:")
+    print(sorted(family_sizes))
+
+    #close the output file
+    families_file.close()
 
 def ftp_check(ftp, host, user, password, pwd):
     '''

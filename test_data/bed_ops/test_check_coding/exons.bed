@@ -1,0 +1,9 @@
+chr1	129	300	ENST01.1	.	+
+chr1	666	999	ENST01.3	.	+
+chr4	129	300	ENST02.3	.	-
+chr4	666	999	ENST02.1	.	-
+chr7	5	19	ENST03.3	.	-
+chr7	24	78	ENST03.2	.	-
+chr7	150	170	ENST03.1	.	-
+chr4	400	600	ENST02.2	.	-
+chr1	400	600	ENST01.2	.	+
