@@ -73,14 +73,12 @@ def main():
     #extract exon-exon junction coordinates
     bo.extract_exon_junctions(filtered_exon_bed, exon_junctions_file, window_of_interest = 2)
 
-    '''
-    **********
-    MISSING: make another exons bed that only contains fully coding exons (easy to do by intersecting with CDS file).
-    This is because in the final analysis we should only consider fully protein-coding exons.
-    However, for getting the exon junctions we need the full exons file because fully protein-coding exons might
-    be flanked by exons that are not. This is why we couldn't do this filtering step earlier.
-    **********
-    '''
+    #make another exons bed that only contains fully coding exons.
+    #This is because in the final analysis we should only consider fully protein-coding exons.
+    #However, for getting the exon junctions we need the full exons file because fully protein-coding exons might
+    #be flanked by exons that are not. This is why we couldn't do this filtering step earlier.
+    bmo.intersect_bed(filtered_exon_bed, CDS_bed, overlap = 1, output_file = filtered_coding_exon_bed, force_strand = True, no_dups = True)
+        
 
     '''
     **********
