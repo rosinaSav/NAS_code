@@ -54,13 +54,13 @@ def main():
     #extract and filter CDS coordinates and sequences
     #NB! We need to add in a step during quality control to only leave one transcript isoform per gene!
     #and also remove overlapping genes
-    CDS_fasta = "{0}_CDS.fasta"
+    CDS_fasta = "{0}_CDS.fasta".format(out_prefix)
     bo.extract_cds(gtf, CDS_fasta, genome_fasta, check_acgt=True, check_start=True, check_length=True, check_stop=True, check_inframe_stop=True)
     print("Extracted and filtered CDSs.")
 
     #group the CDS sequences into families based on sequence similarity
     print("Grouping sequences into families...")
-    gen.find_families(CDS_fasta, out_prefix)
+    gen.find_families(CDS_fasta, out_prefix, "../blast_dbs")
 
     #extract exon coordinates
     bo.extract_exons(gtf, exon_bed)

@@ -11,11 +11,11 @@ def blast_all_against_all(db_name, fasta_file_name, output_file_name, blast_db_p
     '''
     Blast all the sequences in a fasta file against each-other.
     '''
-    gen.run_process(["makeblastdb", "-in", fasta_file_name, "-out",
+    run_process(["../Software/ncbi-blast-2.7.1+/bin/makeblastdb", "-in", fasta_file_name, "-out",
                  "{0}/{1}".format(blast_db_path, db_name),
                  "-dbtype", "nucl"])
-    gen.run_process(["Blastn", "-task", "blastn", "-query", fasta_file_name,
-                 "-db", "/Users/{0}/Documents/Software/ncbi-blast-2.2.30+/db/{1}".format(user, db_name),
+    run_process(["../Software/ncbi-blast-2.7.1+/bin/blastn", "-task", "blastn", "-query", fasta_file_name,
+                 "-db", "{0}/{1}".format(blast_db_path, db_name),
                  "-out", output_file_name, "-outfmt", "10", "-evalue", "1e-04", "-num_threads", str(int((os.cpu_count()/2)-1))])
 
 def create_directory(path):
@@ -54,7 +54,7 @@ def find_families(fasta_file_name, output_prefix, blast_db_path):
     output_prefix_short = output_prefix_short[-1]
     #run a BLAST all against all for the sequences in the fasta file
     blast_all_against_all("{0}_blast_db".format(output_prefix_short), fasta_file_name, blast_results_file_name, blast_db_path)
-    names, seqs = rw.read_fasta(fasta_file_name)
+    names, seqs = read_fasta(fasta_file_name)
 
     #create an empty list for storing the indices of BLAST query - hit pairs to delete
     #open a .csv file containing the results of a BLAST and turn it into a list
