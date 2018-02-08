@@ -106,7 +106,7 @@ def retrieve_bams(ftp_site, local_directory, remote_directory, password_file, su
     #and then use the expect programme to run it
     #this is the string that will be in the script
     #each time, you replace "foo" with the name of the file you want to transfer
-    expect_string = "#!/usr/bin/expect\nspawn scp {0}/foo {1}\nexpect \"rs949@bssv-watson's password:\"\nsend \"{2}\\n\";\nexpect eof\nexit".format(local_directory, remote_directory, expect_password)
+    expect_string = "#!/usr/bin/expect\nset timeout -1\nspawn rsync {0}/foo {1}\nexpect \"rs949@bssv-watson's password:\"\nsend \"{2}\\n\";\nexpect eof\nexit".format(local_directory, remote_directory, expect_password)
     if subset:
         all_files = all_files[:subset]
     #retrieve and transfer .bams in parallel
@@ -122,7 +122,6 @@ def retrieve_bams_core(all_files, local_directory, host, user, password, ftp_dir
     ftp = gen.ftp_connect(host, user, password, directory = ftp_directory)
     #loop over .bam files
     for pos, bam_file in enumerate(all_files):
-##        bam_file = "example.bam"
         expect_file = "temp_data/expect_file{0}.txt".format(random.random())
         start_time = time.time()
         print("{0}/{1}".format(pos, len(all_files)))
@@ -136,7 +135,6 @@ def retrieve_bams_core(all_files, local_directory, host, user, password, ftp_dir
             e_file.write(current_expect_string)
         gen.run_process(["expect", expect_file])
         print("Transferred to Watson.")
-        raise Exception
         gen.remove_file(expect_file)
         gen.remove_file(local_bam_file)
         print("Time spent: {0} minutes.\n".format(round((time.time() - start_time)/60), 3))
