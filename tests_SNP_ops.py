@@ -93,8 +93,36 @@ class Test_SNP_ops(unittest.TestCase):
         self.assertEqual(observed, expected)
 
     def test_get_snp_relative_cds_position(self):
-        relative_exon_position_file = "test_data/snp_ops/test_get_snp_relative_cds_position/test_snp_relative_exon_position.bed"
+        relative_exon_position_file = gen.read_many_fields("test_data/snp_ops/test_get_snp_relative_cds_position/test_snp_relative_exon_position.bed", "\t")
         fasta_interval_file = "test_data/snp_ops/test_get_snp_relative_cds_position/test_get_snp_relative_exon_position_exon_intervals.fasta"
         expected = gen.read_many_fields("test_data/snp_ops/test_get_snp_relative_cds_position/expected_test_snp_relative_cds_position.bed", "\t")
-        observed = get_snp_relative_cds_position(relative_exon_position_file, fasta_interval_file)
+        observed = "test_data/snp_ops/test_get_snp_relative_cds_position/observed_test_snp_relative_cds_position.bed"
+        gen.remove_file(observed)
+        get_snp_relative_cds_position(relative_exon_position_file, observed, fasta_interval_file)
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(observed, expected)
+
+    def test_get_snp_change_status(self):
+        snp_relative_cds_position = "test_data/snp_ops/test_get_snp_change_status/test_snp_relative_cds_position.bed"
+        cds_fasta = "test_data/snp_ops/test_get_snp_change_status/test_get_snp_change_status_cds_fasta.fasta"
+        expected_ptc_snps = gen.read_many_fields("test_data/snp_ops/test_get_snp_change_status/expected_get_snp_ptcs.bed", "\t")
+        expected_other_snps = gen.read_many_fields("test_data/snp_ops/test_get_snp_change_status/expected_get_snp_others.bed", "\t")
+        observed_ptc_snps = "test_data/snp_ops/test_get_snp_change_status/observed_get_snp_ptc_status.bed"
+        observed_other_snps = "test_data/snp_ops/test_get_snp_change_status/observed_get_snp_other_status.bed"
+        gen.remove_file(observed_ptc_snps)
+        gen.remove_file(observed_other_snps)
+        get_snp_change_status(snp_relative_cds_position, cds_fasta, observed_ptc_snps, observed_other_snps)
+        observed_ptc_snps = gen.read_many_fields(observed_ptc_snps, "\t")
+        observed_other_snps = gen.read_many_fields(observed_other_snps, "\t")
+        self.assertEqual(observed_ptc_snps, expected_ptc_snps)
+        self.assertEqual(observed_other_snps, expected_other_snps)
+
+    def test_get_snp_type(self):
+        cds_list = gen.read_many_fields("test_data/snp_ops/test_get_snp_type/test_cdss.bed", "\t")
+        snp_info = gen.read_many_fields("test_data/snp_ops/test_get_snp_type/test_snp_cds_info.bed", "\t")
+        expected = gen.read_many_fields("test_data/snp_ops/test_get_snp_type/expected_snp_types.bed", "\t")
+        observed = []
+        for i, snp in enumerate(snp_info):
+            cds_codon, snp_codon, mutation_type = get_snp_type(cds_list[i][0], snp)
+            observed.append([cds_codon, snp_codon, mutation_type])
         self.assertEqual(observed, expected)

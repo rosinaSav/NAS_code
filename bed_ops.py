@@ -7,7 +7,7 @@ import numpy as np
 import os
 import shutil
 
-def check_sequence_quality(names, seqs, check_acgt=None, check_stop=None, check_start=None, check_length=None, check_inframe_stop=None):
+def check_sequence_quality(names, seqs, check_acgt=None, check_stop=None, check_start=None, check_length=None, check_inframe_stop=None, all_checks=None):
 	'''
 	Check sequence quality of fasta entries.
 	Options:
@@ -25,25 +25,25 @@ def check_sequence_quality(names, seqs, check_acgt=None, check_stop=None, check_
 	for i, seq in enumerate(seqs):
 		actg_pass, stop_pass, start_pass, length_pass, inframe_stop_pass = True, True, True, True, True
 		#check whether sequence only containts ACTG
-		if check_acgt:
+		if check_acgt or all_checks:
 			actg_regex = re.compile('[^ACTG]')
 			non_actg = re.subn(actg_regex, '0', seq)[1]
 			if non_actg != 0:
 				actg_pass = False
 		#check whether sequence contains a standard stop codon
-		if check_stop:
+		if check_stop or all_checks:
 			if seq[-3:] not in stop_codons:
 				stop_pass = False
 		#check whether sequence containts correct start codon
-		if check_start:
+		if check_start or all_checks:
 			if seq[:3] not in ['ATG']:
 				start_pass = False
 		#check whether the sequence is a multiple of 3
-		if check_length:
+		if check_length or all_checks:
 			if len(seq) % 3 != 0:
 				length_pass = False
 		#check whether the sequence contains an in frame stop
-		if check_inframe_stop:
+		if check_inframe_stop or all_checks:
 			in_frame_stop_regex = re.compile('.{3}')
 			codons = re.findall(in_frame_stop_regex, seq[:-3])
 			if len(np.intersect1d(stop_codons, codons)) > 0:
@@ -55,20 +55,19 @@ def check_sequence_quality(names, seqs, check_acgt=None, check_stop=None, check_
 
 	return(passed_names, passed_seqs)
 
-def extract_cds(gtf, output_fasta, genome_fasta, random_directory=None, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None):
+def extract_cds(gtf, output_fasta, genome_fasta, full_chr_name=None, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None, all_checks=None):
 	'''
 	Given a .gtf file, exrtract the coding sequences to a fasta file.
 	EX.: extract_exons("../source_data/Homo_sapiens.GRCh37.87.gtf", "../output_data/Homo_sapiens.GRCh37.87_cds.fasta", "../source_data/Genomes/Homo_sapiens.GRCh37.dna.primary_assembly.fa")
-	Use random_directory for creating a randomised directory to hold intermediate fasta components
 	'''
 	#create bed file path
 	bed = os.path.splitext(gtf)[0] + ".bed"
 	#extract required cds features
-	extract_features(gtf, bed, ['CDS', 'stop_codon'])
+	extract_features(gtf, bed, ['CDS', 'stop_codon'], full_chr_name)
 	#extract to fasta
-	extract_cds_from_bed(bed, output_fasta, genome_fasta, random_directory, check_acgt, check_start, check_length, check_stop, check_inframe_stop)
+	extract_cds_from_bed(bed, output_fasta, genome_fasta, check_acgt, check_start, check_length, check_stop, check_inframe_stop, all_checks)
 
-def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, random_directory=None, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None):
+def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None, all_checks=None):
 	'''
 	Extract the CDS to fasta file
 	Ex.: extract_cds('../feature_file.bed', '../output_file_fasta.fasta', '../source_data/genome_fasta_file.fa')
@@ -111,8 +110,8 @@ def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, random_directory=
 		names.append(sample)
 		seqs.append("".join(concat_list[sample]))
 	#perform sequence quality control checks
-	if check_acgt or check_stop or check_start or check_length or check_inframe_stop:
-		names, seqs = check_sequence_quality(names, seqs, check_acgt, check_stop, check_start, check_length, check_inframe_stop)
+	if check_acgt or check_stop or check_start or check_length or check_inframe_stop or all_checks:
+		names, seqs = check_sequence_quality(names, seqs, check_acgt, check_stop, check_start, check_length, check_inframe_stop, all_checks)
 	#write to output fasta file
 	gen.write_to_fasta(names, seqs, output_fasta)
 
@@ -217,7 +216,7 @@ def extract_exon_junctions(exons, bed, window_of_interest=None):
 	#close file
 	out_file.close()
 
-def extract_features(gtf_file, out_file, features):
+def extract_features(gtf_file, out_file, features, full_chr_name=None):
 	'''
 	Given a GTF file, extract exon coordinates for specific features and write to .bed.
 	EX.: extract_fetures("../source_data/Homo_sapiens.GRCh37.87.gtf", "../source_data/Homo_sapiens.GRCh37.87_exons.bed", ['CDS', 'stop_codon'])
@@ -253,8 +252,12 @@ def extract_features(gtf_file, out_file, features):
 						for item in feature_list[chr_no][trans][exon][feature]:
 							if not list_feature:
 								feature = '.'
+							if full_chr_name:
+								chr_name = "chr{0}".format(chr_no)
+							else:
+								chr_name = str(chr_no)
 							#output and convert to base 0
-							output.write('\t'.join([chr_no, str(int(item[0])-1), item[1], '{0}.{1}'.format(trans, exon), feature, item[2]]) + '\n')
+							output.write('\t'.join([chr_name, str(int(item[0])-1), item[1], '{0}.{1}'.format(trans, exon), feature, item[2]]) + '\n')
 
 def fasta_from_intervals(bed_file, fasta_file, genome_fasta, force_strand = True, names = False):
 	'''
@@ -335,5 +338,3 @@ def filter_exon_junctions(junctions_file, exons_file, out_file):
                                                         elif name_field[2] == "5":
                                                                 if str(int(name_field[1]) - 1) in exons[name_field[0]]:
                                                                         o_file.write(line)
-
-                
