@@ -23,31 +23,6 @@ def convert2bed(input_file_name, output_file_name, group_flags = None):
         print("Grouped flags.")
     print("Converted data from {0} to bed.".format(extension))
 
-def extract_exons(gtf, bed):
-    '''Given a GTF file, extract exon coordinates and write them to .bed.
-    EX.: extract_exons("../source_data/Homo_sapiens.GRCh37.87.gtf", "../source_data/Homo_sapiens.GRCh37.87_exons.bed")'''
-    #extract exons from GTF
-    exons = gen.run_process(["grep", "\texon\t", gtf])
-    #filter down to only protein-coding ones
-    exons = gen.run_process(["grep", "gene_biotype \"protein_coding\""], input_to_pipe = exons)
-    #split lines
-    exons = [i.split("\t") for i in exons.split("\n")]
-    #format as .bed. Switch to base 0.
-    exons = [["chr{0}".format(i[0]), int(i[3]) - 1, i[4], i[8], ".", i[6]] for i in exons if len(i) >= 8]
-    #pre-compile regex
-    trans_regex = re.compile("(?<=transcript_id \")ENST[0-9]*")
-    exon_no_regex = re.compile("(?<=exon_number \")[0-9]*")
-    #extract transcript IDs and exon numbers
-    for pos, exon in enumerate(exons):
-        to_parse = exon[3]
-        trans = re.search(trans_regex, to_parse).group(0)
-        exon_no = re.search(exon_no_regex, to_parse).group(0)
-        exons[pos][3] = "{0}.{1}".format(trans, exon_no)
-    #write to bed
-    with open(bed, "w") as file:
-        for exon in exons:
-            file.write("{0}\n".format("\t".join([str(i) for i in exon])))
-
 def group_flags(input_bed, output_bed, flag_start):
     '''Takes an input bed file and converts all the fields from the flag_start'th
     onwards into a single field, with the elements separated by commas.'''
@@ -119,6 +94,7 @@ def retrieve_bams(ftp_site, local_directory, remote_directory, password_file, su
     #get list of all .bam files
     all_files = ftp.nlst()
     all_files = [i for i in all_files if i[-4:] == ".bam"]
+    print(len(all_files))
     ftp = gen.ftp_check(ftp, host, user, password, ftp_directory)
     ftp.quit()
     #get password for Watson
@@ -130,7 +106,7 @@ def retrieve_bams(ftp_site, local_directory, remote_directory, password_file, su
     #and then use the expect programme to run it
     #this is the string that will be in the script
     #each time, you replace "foo" with the name of the file you want to transfer
-    expect_string = "#!/usr/bin/expect\nspawn scp {0}/foo {1}\nexpect \"rs949@bssv-watson's password:\"\nsend \"{2}\\n\";\nexpect eof\nexit".format(local_directory, remote_directory, expect_password)
+    expect_string = "#!/usr/bin/expect\nset timeout -1\nspawn rsync {0}/foo {1}\nexpect \"rs949@bssv-watson's password:\"\nsend \"{2}\\n\";\nexpect eof\nexit".format(local_directory, remote_directory, expect_password)
     if subset:
         all_files = all_files[:subset]
     #retrieve and transfer .bams in parallel

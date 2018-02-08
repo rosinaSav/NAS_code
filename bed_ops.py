@@ -5,7 +5,39 @@ import collections
 import copy
 import numpy as np
 import os
+import random
 import shutil
+
+def check_coding(exons_file, CDSs_file, outfile):
+        '''
+        Given a bed file of exon coordinates and a bed file of CDS coordinates,
+        writes a new bed file that only contains those exon coordinates form the former file that
+        1) are fully coding
+        2) are internal
+        NB! Assumes that all the cooridnates are from non-overlapping transcripts.
+        '''
+        #filter out anything that isn't fully coding
+        temp_file = "temp_data/temp{0}.txt".format(random.random())
+        bmo.intersect_bed(exons_file, CDSs_file, overlap = 1, output_file = temp_file, force_strand = True, no_dups = True)
+        #filter out terminal exons
+        #in theory, there shouldn't be any left after the previous step
+        #in practice, there may be unannotated UTRs, so it looks like we have a fully coding terminal exon,
+        #whereas in reality, the exon is only partially coding
+        with open(outfile, "w") as o_file:
+                filt_exons = gen.read_many_fields(temp_file, "\t")
+                filt_exons = [i for i in filt_exons if len(i) > 3]
+                names = [i[3].split(".") for i in filt_exons]
+                names = gen.list_to_dict(names, 0, 1, as_list = True)
+                names = {i: [int(j) for j in names[i]] for i in names}
+                for exon in filt_exons:
+                        name = exon[3].split(".")
+                        if name[-1] != "1":
+                                last_exon = max(names[name[0]])
+                                if int(name[-1]) != last_exon:
+                                        exon = [str(i) for i in exon]
+                                        o_file.write("\t".join(exon))
+                                        o_file.write("\n")
+        gen.remove_file(temp_file)
 
 def check_sequence_quality(names, seqs, check_acgt=None, check_stop=None, check_start=None, check_length=None, check_inframe_stop=None):
 	'''
@@ -58,7 +90,7 @@ def check_sequence_quality(names, seqs, check_acgt=None, check_stop=None, check_
 def extract_cds(gtf, output_fasta, genome_fasta, random_directory=None, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None):
 	'''
 	Given a .gtf file, exrtract the coding sequences to a fasta file.
-	EX.: extract_exons("../source_data/Homo_sapiens.GRCh37.87.gtf", "../output_data/Homo_sapiens.GRCh37.87_cds.fasta", "../source_data/Genomes/Homo_sapiens.GRCh37.dna.primary_assembly.fa")
+	EX.: extract_cds("../source_data/Homo_sapiens.GRCh37.87.gtf", "../output_data/Homo_sapiens.GRCh37.87_cds.fasta", "../source_data/Genomes/Homo_sapiens.GRCh37.dna.primary_assembly.fa")
 	Use random_directory for creating a randomised directory to hold intermediate fasta components
 	'''
 	#create bed file path
@@ -142,17 +174,16 @@ def extract_exons(gtf, bed):
 		for exon in exons:
 			file.write("{0}\n".format("\t".join([str(i) for i in exon])))
 
-
 def extract_exon_junctions(exons, bed, window_of_interest=None):
 	'''
-	Given the file of extacted exons (generated using extract_exons), extact the coordinates of the junctions and write to .bed
+	Given the file of extracted exons (generated using extract_exons), extract the coordinates of the junctions and write to .bed
 	Set window_of_interest to a number of nucletides that you wish to examine across the junction
 	EX.: extract_exon_junctions("../source_data/Homo_sapiens.GRCh37.87_exons.bed", "../source_data/Homo_sapiens.GRCh37.87_exon_junctions.bed", 30)
 	'''
 
 	#set up default dict to store info
 	exon_list = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict())))
-	#precompile regex to extact transcript id and exon id
+	#precompile regex to extract transcript id and exon id
 	trans_exon_regex = re.compile(r"(?<=ENST)([0-9]*)\.([0-9]*)")
 	#iterate over all exons and sort
 	with open(exons, "r") as file:
@@ -179,16 +210,17 @@ def extract_exon_junctions(exons, bed, window_of_interest=None):
 	#this is a bit clunky
 	# for each chromosome, strand, transcript, exon, see if there is a 'next' exon
 	# if there is write to file
-	for chr in sorted(exon_list):
-		for strand in sorted(exon_list[chr]):
-			for trans_id in sorted(exon_list[chr][strand]):
+	# I changed "chr" to "chrom" to avoid conflict with the in-built type "chr"
+	for chrom in sorted(exon_list):
+		for strand in sorted(exon_list[chrom]):
+			for trans_id in sorted(exon_list[chrom][strand]):
 				#create blank transcript output so we arent writing to file twice
-				for exon_id in sorted(exon_list[chr][strand][trans_id]):
-					if(exon_id+1 in exon_list[chr][strand][trans_id]):
+				for exon_id in sorted(exon_list[chrom][strand][trans_id]):
+					if(exon_id+1 in exon_list[chrom][strand][trans_id]):
 
 						#get exons for ease
-						exon1 = exon_list[chr][strand][trans_id][exon_id]
-						exon2 = copy.deepcopy(exon_list[chr][strand][trans_id][exon_id+1])
+						exon1 = exon_list[chrom][strand][trans_id][exon_id]
+						exon2 = copy.deepcopy(exon_list[chrom][strand][trans_id][exon_id+1])
 
 						#if window is defined, extract junction of size defined
 						if window_of_interest:
@@ -201,8 +233,8 @@ def extract_exon_junctions(exons, bed, window_of_interest=None):
 							#if exon1 is bigger than the window interval, redefine window of interest
 							if(exon1[1] - exon1[0] > window_half):
 								exon1[0] = exon1[1]-window_half
-							#if exon1 is bigger than the window interval, redefine window of interest
-							if(exon2[1] - exon1[0] > window_half):
+							#if exon2 is bigger than the window interval, redefine window of interest
+							if(exon2[1] - exon2[0] > window_half):
 								exon2[1] = exon2[0]+window_half
 
 						if strand == "+":
@@ -211,9 +243,9 @@ def extract_exon_junctions(exons, bed, window_of_interest=None):
 							exon1_site, exon2_site = 5,3
 
 						#write exon1 window to file
-						out_file.write('{}\t{}\t{}\tENST{}.{}.{}\t.\t{}\n'.format(chr,exon1[0],exon1[1],trans_id,exon_id,exon1_site,strand))
+						out_file.write('{}\t{}\t{}\tENST{}.{}.{}\t.\t{}\n'.format(chrom,exon1[0],exon1[1],trans_id,exon_id,exon1_site,strand))
 						#write exon2 window to file
-						out_file.write('{}\t{}\t{}\tENST{}.{}.{}\t.\t{}\n'.format(chr,exon2[0],exon2[1],trans_id,exon_id+1,exon2_site,strand))
+						out_file.write('{}\t{}\t{}\tENST{}.{}.{}\t.\t{}\n'.format(chrom,exon2[0],exon2[1],trans_id,exon_id+1,exon2_site,strand))
 
 	#close file
 	out_file.close()
@@ -320,3 +352,40 @@ def filter_bed_from_fasta(bed, fasta, out_bed):
                 for line in bed_data:
                         file.write("\t".join(line))
                         file.write("\n")
+
+def filter_exon_junctions(junctions_file, exons_file, out_file):
+        '''
+        Given two bed files, one containing exon junction coordinates and one containing exon coordinates,
+        filter the former to only leave intervals that either overlap exons in the latter or form part of an exon-exon
+        junction with an exon that appears in the exon file.
+        '''
+        #read in exons file
+        exons = gen.read_many_fields(exons_file, "\t")
+        #only leave name field, parse, remove empty lines
+        exons = [i[3].split(".") for i in exons if len(i) > 1]
+        exons = gen.list_to_dict(exons, 0, 1, as_list = True)
+        #open output file
+        with open(out_file, "w") as o_file:
+                #loop over exon junctions file
+                with open(junctions_file) as ej_file:
+                        for line in ej_file:
+                                #ignore empty lines
+                                if len(line) > 1:
+                                        name_field = line.split("\t")[3]
+                                        name_field = name_field.split(".")
+                                        #check if the transcript appears
+                                        if name_field[0] in exons:
+                                                #check if the exon appears
+                                                if name_field[1] in exons[name_field[0]]:
+                                                        o_file.write(line)
+                                                #check if the upstream/downstream exon appears (depending on whether it's the 3' or 5' part of the junction)
+                                                else:
+                                                        if name_field[2] == "3":
+                                                                if str(int(name_field[1]) + 1) in exons[name_field[0]]:
+                                                                        o_file.write(line)
+                                                        #elif safer than else
+                                                        elif name_field[2] == "5":
+                                                                if str(int(name_field[1]) - 1) in exons[name_field[0]]:
+                                                                        o_file.write(line)
+
+                
