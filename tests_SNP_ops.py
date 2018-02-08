@@ -85,3 +85,16 @@ class Test_SNP_ops(unittest.TestCase):
         expected = re.sub("source_[0-9]*\.[0-9]*", "source_N", expected)
         observed = re.sub("source_[0-9]*\.[0-9]*", "source_N", observed)
         self.assertEqual(observed, expected)
+
+    def test_get_snp_relative_exon_position(self):
+        intersect_file = "test_data/snp_ops/test_get_snp_relative_exon_position/test_cds_bed_snps_vcf_intersect.bed"
+        expected = gen.read_many_fields("test_data/snp_ops/test_get_snp_relative_exon_position/expected_test_snp_relative_exon_position.bed", "\t")
+        observed = get_snp_relative_exon_position(intersect_file)
+        self.assertEqual(observed, expected)
+
+    def test_get_snp_relative_cds_position(self):
+        relative_exon_position_file = "test_data/snp_ops/test_get_snp_relative_cds_position/test_snp_relative_exon_position.bed"
+        fasta_interval_file = "test_data/snp_ops/test_get_snp_relative_cds_position/test_get_snp_relative_exon_position_exon_intervals.fasta"
+        expected = gen.read_many_fields("test_data/snp_ops/test_get_snp_relative_cds_position/expected_test_snp_relative_cds_position.bed", "\t")
+        observed = get_snp_relative_cds_position(relative_exon_position_file, fasta_interval_file)
+        self.assertEqual(observed, expected)

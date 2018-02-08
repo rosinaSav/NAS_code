@@ -3,6 +3,8 @@ import numpy as np
 import os
 import random
 import string
+import collections
+import re
 
 def get_relative_SNPs(CDSs, SNP_file_name, CDS_SNP_file_name, seqs, names, genome, get_new_SNPs = False, parse_SNPs = False, remove_GT = False):
     if get_new_SNPs:
@@ -78,7 +80,7 @@ def get_relative_SNPs(CDSs, SNP_file_name, CDS_SNP_file_name, seqs, names, genom
         relative_coords_dict = {}
         print("Number of conversion errors:")
         print(error_counter)
-    
+
     current_SNPs = rw.read_many_fields(CDS_SNP_file_name, "\t")
     current_SNPs_to_remove = list_to_dict(current_SNPs, 0, 2)
     current_SNPs_to_remove = {i: [int(j) for j in current_SNPs_to_remove[i].split(",") if j != "error"] for i in current_SNPs_to_remove if current_SNPs_to_remove[i]}
@@ -100,7 +102,7 @@ def tabix(bed_file, output_file, vcf, process_number = None):
     if not process_number:
         process_number = int(os.cpu_count()/2)
     bed_file_length = gen.line_count(bed_file)
-    #if the input bed_file has fewer lines than process_number, use 2 processes 
+    #if the input bed_file has fewer lines than process_number, use 2 processes
     if bed_file_length <= process_number:
         process_number = 2
     lines_per_file = int(bed_file_length/process_number)
@@ -166,14 +168,14 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
     output_file_name: name of output file
     panel_file: path to panel file
     vcf_folder: directory that contains the per-individual VCF files
-    
+
     superpop: population code if you want to filter by population. Possible:
     AFR, African
     AMR, Ad Mixed American
     EAS, East Asian
     EUR, European
     SAS, South Asian
-    
+
     subpop: subpopulation code if you want to filter by subpopulation. Possible:
     CHB 	Han Chinese in Beijing, China
     JPT 	Japanese in Tokyo, Japan
@@ -212,8 +214,8 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
     sex_chromosomes = ["Y", "X"]
 
     if not samples:
-        
-        #read and parse panel file    
+
+        #read and parse panel file
         panel = gen.read_many_fields(panel_file, "\t")
         panel = [i for i in panel if len(i) == 4]
 
@@ -236,7 +238,7 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
 
     if not vcftools_path:
         vcftools_path = ""
-        
+
     #get a list of all the files in the VCF folder
     vcf_files = os.listdir(vcf_folder)
     #just in case there is nonsense in the directory
@@ -317,3 +319,58 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
     for concat_file in concat_files:
         gen.remove_file(concat_file)
     gen.remove_file(sort_file)
+
+def get_snp_relative_exon_position(intersect_file):
+    '''
+    Get the relative position of a snp within the exon it is found. Used as an intermediate step
+    before calculating the snp position in the cds using get_snp_cds_relative_position.
+    '''
+    #read the intersects file
+    relative_positions = []
+    intersects = gen.read_many_fields(intersect_file, "\t")
+    for intersect in intersects:
+        #get the features
+        feature_start = intersect[1]
+        feature = intersect[3]
+        snp_start = intersect[7]
+        #get the meta about the snp
+        snp_meta = intersect[6:]
+        #get the position of the snp compared with the feature
+        relative_position = int(snp_start) - int(feature_start)
+        #replace . field with relative position
+        snp_meta[5] = str(relative_position)
+        relative_positions.append(snp_meta)
+    return(relative_positions)
+
+def get_snp_relative_cds_position(exon_realtive_positions, fasta_interval_file):
+    '''
+    Get the position of the snp within a CDS using the relative positions of snps in the features they are found
+    '''
+    #read snp positions relative to their feature
+    # snp_relative_positions = gen.read_many_fields(features_relative_position, "\t")
+
+    #get the fasta entries of the features
+    feature_names, feature_seqs =  gen.read_fasta(fasta_interval_file)
+    #set up dict to hold the feature positions relative to the cds
+    cds_features_relative_positions = collections.defaultdict(lambda: collections.defaultdict())
+
+    entry_regex = re.compile("(\w+)\.(\d+)(\..*)*")
+    for i, feature_name in enumerate(feature_names):
+        entry_meta = re.search(entry_regex, feature_name)
+        #get the lengths of each feature and those before it, and sum
+        rel_pos = sum([len(feature_seqs[x]) for x in range(0,i)])
+        cds_features_relative_positions[entry_meta.group(1)][entry_meta.group(2)] = rel_pos
+
+    # for cds in cds_features_relative_positions:
+    #     for exon in sorted(cds_features_relative_positions[cds]:
+    #         print(cds, exon, cds_features_relative_positions[cds][exon])
+    #
+    # with open(out_file, "w") as output:
+    #     for snp_relative_position in snp_relative_positions:
+    #         id = snp_relative_position[3]
+    #         id_meta = re.search(entry_regex, id)
+    #         snp_position = int(snp_relative_position[5])
+    #         #get the position of the snp relative to the cds, by summing the feature start position and the snp position
+    #         snp_cds_relative_position = cds_features_relative_positions[id_meta.group(1)][id_meta.group(2)] + snp_position
+    #         snp_relative_position[5] = str(snp_cds_relative_position)
+    #         output.write("{0}\n".format("\t".join(snp_relative_position)))
