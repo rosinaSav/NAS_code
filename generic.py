@@ -296,7 +296,7 @@ def make_dir(dir_name):
     Check whether a directory exists and if not, create it.
     '''
     if not os.path.exists(dir_name):
-        os.mkdir(dir_name)   
+        os.mkdir(dir_name)
 
 def parse_arguments(description, arguments, floats = None, flags = None, ints = None):
     '''
@@ -363,6 +363,16 @@ def remove_file(file_name):
         os.remove(file_name)
     except FileNotFoundError:
         pass
+
+def reverse_complement(base):
+    reverse_comps = {
+        "A": "T",
+        "C": "G",
+        "G": "C",
+        "T": "A",
+    }
+    return(reverse_comps[base])
+
 
 def run_in_parallel(input_list, args, func, kwargs_dict = None, workers = None, onebyone = False):
     '''

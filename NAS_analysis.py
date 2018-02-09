@@ -33,7 +33,7 @@ def process_bam_per_individual(bam_files, other_arguments):
         NB! The RNA-seq data we're using is not stranded so contrary to what I had written before, we should NOT match strand in the intersect.
         **********
         '''
-        
+
         #count how many .bam alignments overlap each exon-exon junction
         bmo.intersect_bed(PTC_exon_junctions_file, bam_file, overlap = 1, output_file = "{0}_junction_hit_count.bed".format(bam_file[:-4]), force_strand = False, no_dups = False, hit_count = True, use_bedops = False)
 
@@ -52,8 +52,6 @@ def main():
     gtf, genome_fasta, out_prefix = args.gtf, args.genome_fasta, args.out_prefix
 
     #extract and filter CDS coordinates and sequences
-    #NB! We need to add in a step during quality control to only leave one transcript isoform per gene!
-    #and also remove overlapping genes
     CDS_fasta = "{0}_CDS.fasta".format(out_prefix)
     print("Extracting and filtering CDSs...")
 ##    bo.extract_cds(gtf, CDS_fasta, genome_fasta, check_acgt=True, check_start=True, check_length=True, check_stop=True, check_inframe_stop=True)
@@ -64,6 +62,7 @@ def main():
     names = gen.read_fasta(CDS_fasta)[0]
     print("Matching transcript identifiers with gene names...")
 ##    bo.get_descriptions(names, gtf, descriptions_file)
+
     #group the CDS sequences into families based on sequence similarity
     print("Grouping sequences into families...")
     gen.find_families(CDS_fasta, out_prefix, "../blast_dbs", descriptions_file)
@@ -86,6 +85,7 @@ def main():
     print("Filtering out non-coding and partially coding, as well as terminal exons...")
     bo.check_coding(filtered_exon_bed, CDS_bed, filtered_coding_exon_bed)
         
+
     '''
     **********
     MISSING: out of the exons retained in the previous step, check which ones contain a PTC in some individuals and not others.
@@ -115,7 +115,7 @@ def main():
     Average results across paralogous families.
     Perform some sort of a paired comparison between PTC+ and PTC-.
     **********
-    '''    
-    
+    '''
+
 if __name__ == "__main__":
     main()
