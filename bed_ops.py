@@ -6,6 +6,8 @@ import copy
 import numpy as np
 import os
 import shutil
+from pathlib import Path
+import random
 
 def check_sequence_quality(names, seqs, check_acgt=None, check_stop=None, check_start=None, check_length=None, check_inframe_stop=None, all_checks=None):
 	'''
@@ -56,14 +58,21 @@ def check_sequence_quality(names, seqs, check_acgt=None, check_stop=None, check_
 	return(passed_names, passed_seqs)
 
 def extract_cds(gtf, bed_output, output_fasta, genome_fasta, full_chr_name=None, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None, all_checks=None):
-	'''
-	Given a .gtf file, exrtract the coding sequences to a fasta file.
-	EX.: extract_exons("../source_data/Homo_sapiens.GRCh37.87.gtf", "../output_data/Homo_sapiens.GRCh37.87_cds.fasta", "../source_data/Genomes/Homo_sapiens.GRCh37.dna.primary_assembly.fa")
-	'''
-	#extract required cds features
-	extract_features(gtf, bed_output, ['CDS', 'stop_codon'], full_chr_name)
-	#extract to fasta
-	extract_cds_from_bed(bed_output, output_fasta, genome_fasta, check_acgt, check_start, check_length, check_stop, check_inframe_stop, all_checks)
+    '''
+    Given a .gtf file, exrtract the coding sequences to a fasta file.
+    EX.: extract_exons("../source_data/Homo_sapiens.GRCh37.87.gtf", "../output_data/Homo_sapiens.GRCh37.87_cds.fasta", "../source_data/Genomes/Homo_sapiens.GRCh37.dna.primary_assembly.fa")
+    '''
+    #extract required cds features
+    extract_features(gtf, bed_output, ['CDS', 'stop_codon'], full_chr_name)
+    #extract to fasta
+    extract_cds_from_bed(bed_output, output_fasta, genome_fasta, check_acgt, check_start, check_length, check_stop, check_inframe_stop, all_checks)
+    #filter the previous files to only include those that passed the filters
+
+    print(bed_output)
+    print(output_fasta)
+    filter_bed_from_fasta(bed_output, output_fasta, bed_output)
+    # fasta_interval_file = "{0}_intervals{1}".format(os.path.splitext(output_fasta)[0], os.path.splitext(output_fasta)[1])
+    # filter_fasta_intervals_from_fasta(fasta_interval_file, output_fasta, fasta_interval_file)
 
 def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None, all_checks=None):
 	'''
@@ -287,6 +296,16 @@ def filter_bed_from_fasta(bed, fasta, out_bed):
         Given a bed file and a fasta file, filter the bed file to only leave records where the 'name' field appears
         among the names in the fasta file. Write to out_bed.
         '''
+        #add feature in here that enables overwrite of current file
+        output_exists = False
+        if Path(out_bed).exists():
+            output_exists = True
+            temp_file_name = "{0}.{1}{2}".format(os.path.splitext(out_bed)[0], random.random(), os.path.splitext(out_bed)[1])
+        else:
+            temp_file_name = out_bed
+
+        print(temp_file_name)
+
         #fish out the names in the fasta
         fasta_names = gen.run_process(["grep", ">", fasta])
         fasta_names = fasta_names.split("\n")
@@ -295,18 +314,33 @@ def filter_bed_from_fasta(bed, fasta, out_bed):
         bed_data = gen.read_many_fields(bed, "\t")
         #remove empty lines
         bed_data = [i for i in bed_data if len(i) > 3]
-        #filter bed data
-        bed_data = [i for i in bed_data if i[3] in fasta_names]
-        with open(out_bed, "w") as file:
-                for line in bed_data:
+        id_regex = re.compile("^(\w+).*")
+        with open(temp_file_name, "w") as file:
+            for line in bed_data:
+                id = re.search(id_regex, line[3])
+                if id:
+                    #filter bed data
+                    if id.group(1) in fasta_names:
                         file.write("\t".join(line))
                         file.write("\n")
+        #remove old file, replace with new
+        if(output_exists):
+            os.remove(out_bed)
+            shutil.move(temp_file_name, out_bed)
 
 def filter_fasta_intervals_from_fasta(intervals_fasta, fasta, output):
         '''
         Given a fasta file and a fasta intervals file, filter the intervals file to only leave records where the 'name' field appears
         among the names in the fasta file. Write to fasta.
         '''
+        #add feature in here that enables overwrite of current file
+        output_exists = False
+        if Path(output).exists():
+            output_exists = True
+            temp_file_name = "{0}.{1}{2}".format(os.path.splitext(output)[0], random.random(), os.path.splitext(output)[1])
+        else:
+            temp_file_name = output
+
         #fish out the names in the fasta
         fasta_names = gen.run_process(["grep", ">", fasta])
         fasta_names = fasta_names.split("\n")
@@ -317,8 +351,8 @@ def filter_fasta_intervals_from_fasta(intervals_fasta, fasta, output):
 
         #read in the interval data
         fasta_interval_names, fasta_interval_seqs = gen.read_fasta(intervals_fasta)
-        id_regex = re.compile("^(\w+)\..*")
-        with open(output, "w") as file:
+        id_regex = re.compile("^(\w+).*")
+        with open(temp_file_name, "w") as file:
             for i, interval in enumerate(fasta_interval_names):
                 #search for the sample name
                 id = re.search(id_regex, interval)
@@ -327,6 +361,10 @@ def filter_fasta_intervals_from_fasta(intervals_fasta, fasta, output):
                     #if the sample name is in the fasta names, output to file
                     if trans_id in fasta_names:
                         file.write(">{0}\n{1}\n".format(fasta_interval_names[i], fasta_interval_seqs[i]))
+        #remove old file, replace with new
+        if(output_exists):
+            os.remove(output)
+            shutil.move(temp_file_name, output)
 
 def filter_exon_junctions(junctions_file, exons_file, out_file):
         '''

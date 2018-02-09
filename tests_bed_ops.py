@@ -7,20 +7,22 @@ class Test_bed_ops(unittest.TestCase):
     def test_extract_cds(self):
         gtf_file = "./test_data/bed_ops/test_extract_cds/test_extract_cds.gtf"
         genome_file = "./test_data/bed_ops/test_extract_cds/test_extract_cds_genome.fa"
+        bed_output = "./test_data/bed_ops/test_extract_cds/test_extract_cds.bed"
         observed = "./test_data/bed_ops/test_extract_cds/observed_test_extract_cds_fasta.fasta"
         gen.remove_file(observed)
         expected = gen.read_fasta("./test_data/bed_ops/test_extract_cds/expected_test_extract_cds_fasta.fasta")
-        extract_cds(gtf_file, observed, genome_file)
+        extract_cds(gtf_file, bed_output, observed, genome_file)
         observed = gen.read_fasta(observed)
         self.assertEqual(observed, expected)
 
     def test_extract_cds_quality_control(self):
         gtf_file = "./test_data/bed_ops/test_extract_cds_quality_control/test_extract_cds_quality_control.gtf"
         genome_file = "./test_data/bed_ops/test_extract_cds_quality_control/test_extract_cds_quality_control_genome.fa"
+        bed_output = "./test_data/bed_ops/test_extract_cds_quality_control/test_extract_cds_quality_control_cds.bed"
         observed = "./test_data/bed_ops/test_extract_cds_quality_control/observed_test_extract_cds_quality_control_fasta.fasta"
         gen.remove_file(observed)
         expected = gen.read_fasta("./test_data/bed_ops/test_extract_cds_quality_control/expected_test_extract_cds_quality_control_fasta.fasta")
-        extract_cds(gtf_file, observed, genome_file,  check_acgt=True, check_start=True, check_length=True, check_stop=True, check_inframe_stop=True)
+        extract_cds(gtf_file, bed_output, observed, genome_file,  check_acgt=True, check_start=True, check_length=True, check_stop=True, check_inframe_stop=True)
         observed = gen.read_fasta(observed)
         self.assertEqual(observed, expected)
 
