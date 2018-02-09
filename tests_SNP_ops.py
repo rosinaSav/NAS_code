@@ -33,19 +33,14 @@ class Test_SNP_ops(unittest.TestCase):
 # ####chr16	3204292	3204293	ENST00000304646	100	.	rs142486394$G$A,C$PASS$AC=2,20;AF=0.000399361,0.00399361;AN=5008;NS=2504;DP=18501;EAS_AF=0.0000,0.0000;AMR_AF=0.0000,0.0000;AFR_AF=0.0000,0.0000;EUR_AF=0.0020,0.0000;SAS_AF=0.0000,0.0204;ssID=ss1355074797,ss1355074798;ASP;MATCHED_FWD
 #         self.assertEqual(expected, observed)
 
-
     def test_tabix(self):
-        bed_file = "test_data/snp_ops/test_tabix/test_tabix.bed"
+        bed_file = "test_data/snp_ops/test_tabix/test_tabix_bed.txt"
         expected = gen.read_many_fields("test_data/snp_ops/test_tabix/expected_test_tabix.txt", "\t")
-        observed = "test_data/snp_ops/observed_test_tabix.txt"
+        observed = "test_data/snp_ops/observed_test_tabix.bed"
         gen.remove_file(observed)
-        vcf = "./source_data/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5b.20130502.sites.gz"
+        vcf = "../source_data/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5b.20130502.sites.gz"
         tabix(bed_file, observed, vcf)
         observed = gen.read_many_fields(observed, "\t")
-        print("\n")
-        print(expected)
-        print("\n")
-        print(observed)
         self.assertEqual(sorted(observed), sorted(expected))
 
     def test_tabix_samples(self):
