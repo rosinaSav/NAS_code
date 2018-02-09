@@ -11,10 +11,10 @@ def blast_all_against_all(db_name, fasta_file_name, output_file_name, blast_db_p
     '''
     Blast all the sequences in a fasta file against each-other.
     '''
-    run_process(["../Software/ncbi-blast-2.7.1+/bin/makeblastdb", "-in", fasta_file_name, "-out",
+    run_process(["makeblastdb", "-in", fasta_file_name, "-out",
                  "{0}/{1}".format(blast_db_path, db_name),
                  "-dbtype", "nucl"])
-    run_process(["../Software/ncbi-blast-2.7.1+/bin/blastn", "-task", "blastn", "-query", fasta_file_name,
+    run_process(["blastn", "-task", "blastn", "-query", fasta_file_name,
                  "-db", "{0}/{1}".format(blast_db_path, db_name),
                  "-out", output_file_name, "-outfmt", "10", "-evalue", "1e-04", "-num_threads", str(int((os.cpu_count()/2)-1))])
 
