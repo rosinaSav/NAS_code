@@ -1,0 +1,10 @@
+ACC	AGC	non
+TCC	TCA	syn
+CAT	CGT	non
+GAG	GAA	syn
+TAC	TAA	ptc
+ACG	AGG	non
+AAA	AAT	non
+ACC	GCC	non
+TGG	AGG	non
+TAC	TAG	ptc

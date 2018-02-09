@@ -3,6 +3,8 @@ import numpy as np
 import os
 import random
 import string
+import collections
+import re
 
 def get_relative_SNPs(CDSs, SNP_file_name, CDS_SNP_file_name, seqs, names, genome, get_new_SNPs = False, parse_SNPs = False, remove_GT = False):
     if get_new_SNPs:
@@ -78,7 +80,7 @@ def get_relative_SNPs(CDSs, SNP_file_name, CDS_SNP_file_name, seqs, names, genom
         relative_coords_dict = {}
         print("Number of conversion errors:")
         print(error_counter)
-    
+
     current_SNPs = rw.read_many_fields(CDS_SNP_file_name, "\t")
     current_SNPs_to_remove = list_to_dict(current_SNPs, 0, 2)
     current_SNPs_to_remove = {i: [int(j) for j in current_SNPs_to_remove[i].split(",") if j != "error"] for i in current_SNPs_to_remove if current_SNPs_to_remove[i]}
@@ -100,7 +102,7 @@ def tabix(bed_file, output_file, vcf, process_number = None):
     if not process_number:
         process_number = int(os.cpu_count()/2)
     bed_file_length = gen.line_count(bed_file)
-    #if the input bed_file has fewer lines than process_number, use 2 processes 
+    #if the input bed_file has fewer lines than process_number, use 2 processes
     if bed_file_length <= process_number:
         process_number = 2
     lines_per_file = int(bed_file_length/process_number)
@@ -166,14 +168,14 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
     output_file_name: name of output file
     panel_file: path to panel file
     vcf_folder: directory that contains the per-individual VCF files
-    
+
     superpop: population code if you want to filter by population. Possible:
     AFR, African
     AMR, Ad Mixed American
     EAS, East Asian
     EUR, European
     SAS, South Asian
-    
+
     subpop: subpopulation code if you want to filter by subpopulation. Possible:
     CHB 	Han Chinese in Beijing, China
     JPT 	Japanese in Tokyo, Japan
@@ -212,8 +214,8 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
     sex_chromosomes = ["Y", "X"]
 
     if not samples:
-        
-        #read and parse panel file    
+
+        #read and parse panel file
         panel = gen.read_many_fields(panel_file, "\t")
         panel = [i for i in panel if len(i) == 4]
 
@@ -236,7 +238,7 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
 
     if not vcftools_path:
         vcftools_path = ""
-        
+
     #get a list of all the files in the VCF folder
     vcf_files = os.listdir(vcf_folder)
     #just in case there is nonsense in the directory
@@ -317,3 +319,195 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
     for concat_file in concat_files:
         gen.remove_file(concat_file)
     gen.remove_file(sort_file)
+
+def get_snp_relative_exon_position(intersect_file):
+    '''
+    Get the relative position of a snp within the exon it is found. Used as an intermediate step
+    before calculating the snp position in the cds using get_snp_cds_relative_position.
+    '''
+    #read the intersects file
+    cds_strands = cds_exons = collections.defaultdict()
+    relative_positions = []
+    intersects = gen.read_many_fields(intersect_file, "\t")
+    for intersect in intersects:
+        #get strand of exon
+        entry_regex = re.compile("(\w+)\.(\d+)(\..*)*")
+        trans = re.search(entry_regex, intersect[3]).group(1)
+        cds_strands[trans] = intersect[5]
+        #get the features
+        feature_start = intersect[1]
+        feature = intersect[3]
+        snp_start = intersect[7]
+        #get the position of the snp compared with the feature
+        relative_position = int(snp_start) - int(feature_start)
+        #replace . field with relative position
+        intersect[11] = str(relative_position)
+        relative_positions.append(intersect)
+    return(relative_positions)
+
+def get_snp_relative_cds_position(snp_exon_realtive_positions, snp_cds_position_output, fasta_interval_file):
+    '''
+    Get the position of the snp within a CDS using the relative positions of snps in the features they are found
+    '''
+    #get the fasta entries of the features
+    interval_names, interval_seqs =  gen.read_fasta(fasta_interval_file)
+    cds_exons = collections.defaultdict(lambda: collections.defaultdict())
+    entry_regex = re.compile("(\w+)\.(\d+)(\..*)*")
+    stops = ["TAA", "TAG", "TGA"]
+    #iterate through the fasta entries, sorting by exon (needed in case fasta is not sorted)
+    for i, name in enumerate(interval_names):
+        name_regex = re.search(entry_regex, name)
+        if interval_seqs[i] in stops:
+            #set stop codon id to arbitrarily high number
+            exon = 99999
+        else:
+            exon = int(name_regex.group(2))
+        cds_exons[name_regex.group(1)][exon] = interval_seqs[i]
+
+    #set up dict to hold the feature positions relative to the cds
+    cds_features_relative_positions = collections.defaultdict(lambda: collections.defaultdict())
+    #get the relative start positions of each exon
+    for cds in cds_exons:
+        total = 0
+        for exon in sorted(cds_exons[cds]):
+            cds_features_relative_positions[cds][exon] = total
+            total += len(cds_exons[cds][exon])
+
+    #now get the relative position of the snp within the cds
+    with open(snp_cds_position_output, "w") as output:
+        for snp in snp_exon_realtive_positions:
+            cds_id = snp[3]
+            cds_id_meta = re.search(entry_regex, cds_id)
+            snp_cds = cds_id_meta.group(1)
+            snp_exon_id = cds_id_meta.group(2)
+            snp_exon_position = int(snp[11])
+            #snp position in cds is the position in the exon plus the exons position in the cds
+            snp_cds_position = snp_exon_position + cds_features_relative_positions[snp_cds][int(snp_exon_id)]
+            snp[11] = str(snp_cds_position)
+            output.write("{0}\n".format("\t".join(snp)))
+
+def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_file, others_output_file):
+
+    snps = gen.read_many_fields(snp_cds_relative_positions, "\t")
+    cds_names, cds_seqs = gen.read_fasta(cds_fasta)
+    entry_regex = re.compile("(\w+)\.(\d+)(\..*)*")
+
+    ptc_outputs = open(ptcs_output_file, "w")
+    other_outputs = open(others_output_file, "w")
+
+    refbase_error = 0
+    snp_count = 0
+    for snp in snps:
+        cds_id = re.search(entry_regex, snp[3]).group(1)
+        snp_index = int(snp[11])
+        #get and split the snp info
+        snp_info = snp[12].split("$")
+        #get the strand
+        strand = snp[5]
+        #get ancestral based
+        ref_base = snp_info[1]
+        #get the information on the variant type
+        var_base = snp_info[2].split(",")
+        var_base_count = len(var_base)
+        var_base = [i for i in var_base if i in ["A", "C", "G", "T"]]
+
+        #get the feature type
+        var_type_reg = re.compile('VT=(.+);')
+        var_type = re.search(var_type_reg, snp_info[4])
+        if var_type:
+            var_type = var_type.group(1)
+
+        #check whether the cds is in the fasta (can be after the quality control filterings)
+        if cds_id in cds_names:
+            #if the snp index exists
+            if snp_index:
+                snp_count += 1
+                #check that the snp is only one base
+                if len(ref_base) == 1:
+                    #from RS: filter out polyomrphisms with more than 2 segregating alleles
+                    #need to check the number both before and after filtering out non-canonical bases
+                    #also check whether the variant type is annotated as a snp
+                    if var_base_count == 1 and len(var_base) == 1 and var_type and var_type == "SNP":
+                        var_base = var_base[0]
+
+                        if strand == "-":
+                            ref_base = gen.reverse_complement(ref_base)
+                            var_base = gen.reverse_complement(var_base)
+                        #get the base of reference cds where the snp occured
+                        cds_base = cds_seqs[cds_names.index(cds_id)][snp_index]
+
+                        #check whether cds base and ref base are the same
+                        if cds_base != ref_base:
+                            refbase_error += 1
+                            # print("Cds base and reference base not the same (id: {0})".format(snp_info[0]))
+                            # print("Cds base: {0}".format(cds_base))
+                            # print("Ref base: {0}".format(ref_base))
+                            # print("Variant base: {0}".format(var_base))
+                            # print("\n")
+                            pass
+                        else:
+                            cds_codon, snp_codon, mutation_type = get_snp_type(cds_seqs[cds_names.index(cds_id)], [snp_index, var_base])
+                            snp[6] = "CDS_CODON={0}$SNP_CODON={1}${2}".format(cds_codon, snp_codon, snp[6])
+                            snp[5] = mutation_type
+                            if(mutation_type == "ptc"):
+                                ptc_outputs.write("{0}\n".format("\t".join(snp)))
+                            else:
+                                other_outputs.write("{0}\n".format("\t".join(snp)))
+
+
+    print("Number of ref errors: {0} ({1}%)".format(refbase_error, np.divide(refbase_error, snp_count)*100))
+
+    ptc_outputs.close()
+    other_outputs.close()
+
+def get_snp_type(sequence, variant):
+
+    codon_map = {
+        "TTT":"F", "TTC":"F", "TTA":"L", "TTG":"L",
+        "TCT":"S", "TCC":"S", "TCA":"S", "TCG":"S",
+        "TAT":"Y", "TAC":"Y", "TAA":"*", "TAG":"*",
+        "TGT":"C", "TGC":"C", "TGA":"*", "TGG":"W",
+        "CTT":"L", "CTC":"L", "CTA":"L", "CTG":"L",
+        "CCT":"P", "CCC":"P", "CCA":"P", "CCG":"P",
+        "CAT":"H", "CAC":"H", "CAA":"Q", "CAG":"Q",
+        "CGT":"R", "CGC":"R", "CGA":"R", "CGG":"R",
+        "ATT":"I", "ATC":"I", "ATA":"I", "ATG":"M",
+        "ACT":"T", "ACC":"T", "ACA":"T", "ACG":"T",
+        "AAT":"N", "AAC":"N", "AAA":"K", "AAG":"K",
+        "AGT":"s", "AGC":"s", "AGA":"r", "AGG":"r",
+        "GTT":"V", "GTC":"V", "GTA":"V", "GTG":"V",
+        "GCT":"A", "GCC":"A", "GCA":"A", "GCG":"A",
+        "GAT":"D", "GAC":"D", "GAA":"E", "GAG":"E",
+        "GGT":"G", "GGC":"G", "GGA":"G", "GGG":"G",
+    }
+
+    #get the sequence with the snp in position
+    snp_sequence = sequence[:int(variant[0])] + variant[1] + sequence[int(variant[0])+1:]
+    #extract the codons for both the cds and snp cds
+    codon_regex = re.compile('.{3}')
+    sequence_codons = re.findall(codon_regex, sequence)
+    snp_sequence_codons = re.findall(codon_regex, snp_sequence)
+    #find the index in the lists where the codon has changed, should be length 1
+    changed_indicies = [i for i, x in enumerate(sequence_codons) if x != snp_sequence_codons[i]]
+    if len(changed_indicies) == 1:
+        changed_index = changed_indicies[0]
+        #get the cds and snp codon
+        cds_codon = sequence_codons[changed_index]
+        snp_codon = snp_sequence_codons[changed_index]
+        #determine the type of snp
+        #if the snp generated an in frame stop
+        if codon_map[snp_codon] == "*":
+            mutation_type = "ptc"
+        #if the snp generated a synonymous codon
+        elif codon_map[cds_codon] == codon_map[snp_codon]:
+            mutation_type = "syn"
+        #if the snp generated a nonsynonymous codon
+        elif codon_map[cds_codon] != codon_map[snp_codon] and codon_map[snp_codon] != "*":
+            mutation_type = "non"
+        #error calling the snp (shouldn't occur)
+        else:
+            mutation_type = "call_error"
+    else:
+        cds_codon, snp_codon, mutation_type = "error", "error", "error"
+
+    return cds_codon, snp_codon, mutation_type
