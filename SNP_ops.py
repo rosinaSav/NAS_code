@@ -399,9 +399,11 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
     snp_count = 0
     for snp in snps:
         cds_id = re.search(entry_regex, snp[3]).group(1)
-        snp_index = int(snp[5])
+        snp_index = int(snp[11])
         #get and split the snp info
-        snp_info = snp[6].split("$")
+        snp_info = snp[12].split("$")
+        #get the strand
+        strand = snp[5]
         #get ancestral based
         ref_base = snp_info[1]
         #get the information on the variant type
@@ -411,7 +413,9 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
 
         #get the feature type
         var_type_reg = re.compile('VT=(.+);')
-        var_type = re.search(var_type_reg, snp_info[-1]).group(1)
+        var_type = re.search(var_type_reg, snp_info[4])
+        if var_type:
+            var_type = var_type.group(1)
 
         #check whether the cds is in the fasta (can be after the quality control filterings)
         if cds_id in cds_names:
@@ -423,13 +427,13 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
                     #from RS: filter out polyomrphisms with more than 2 segregating alleles
                     #need to check the number both before and after filtering out non-canonical bases
                     #also check whether the variant type is annotated as a snp
-                    if var_base_count == 1 and len(var_base) == 1 and var_type == "SNP":
+                    if var_base_count == 1 and len(var_base) == 1 and var_type and var_type == "SNP":
                         var_base = var_base[0]
 
-                        if strands[cds_id] == "-":
+                        if strand == "-":
                             ref_base = gen.reverse_complement(ref_base)
                             var_base = gen.reverse_complement(var_base)
-
+                        #get the base of reference cds where the snp occured
                         cds_base = cds_seqs[cds_names.index(cds_id)][snp_index]
 
                         #check whether cds base and ref base are the same

@@ -67,12 +67,9 @@ def extract_cds(gtf, bed_output, output_fasta, genome_fasta, full_chr_name=None,
     #extract to fasta
     extract_cds_from_bed(bed_output, output_fasta, genome_fasta, check_acgt, check_start, check_length, check_stop, check_inframe_stop, all_checks)
     #filter the previous files to only include those that passed the filters
-
-    print(bed_output)
-    print(output_fasta)
     filter_bed_from_fasta(bed_output, output_fasta, bed_output)
-    # fasta_interval_file = "{0}_intervals{1}".format(os.path.splitext(output_fasta)[0], os.path.splitext(output_fasta)[1])
-    # filter_fasta_intervals_from_fasta(fasta_interval_file, output_fasta, fasta_interval_file)
+    fasta_interval_file = "{0}_intervals{1}".format(os.path.splitext(output_fasta)[0], os.path.splitext(output_fasta)[1])
+    filter_fasta_intervals_from_fasta(fasta_interval_file, output_fasta, fasta_interval_file)
 
 def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None, all_checks=None):
 	'''
@@ -303,8 +300,6 @@ def filter_bed_from_fasta(bed, fasta, out_bed):
             temp_file_name = "{0}.{1}{2}".format(os.path.splitext(out_bed)[0], random.random(), os.path.splitext(out_bed)[1])
         else:
             temp_file_name = out_bed
-
-        print(temp_file_name)
 
         #fish out the names in the fasta
         fasta_names = gen.run_process(["grep", ">", fasta])
