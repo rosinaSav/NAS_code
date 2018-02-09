@@ -53,19 +53,20 @@ def main():
 
     #extract and filter CDS coordinates and sequences
     CDS_fasta = "{0}_CDS.fasta".format(out_prefix)
+    CDS_bed = "{0}_CDS.bed".format(out_prefix)
     print("Extracting and filtering CDSs...")
-##    bo.extract_cds(gtf, CDS_fasta, genome_fasta, check_acgt=True, check_start=True, check_length=True, check_stop=True, check_inframe_stop=True)
+    bo.extract_cds(gtf, CDS_bed, CDS_fasta, genome_fasta, all_checks = True, uniquify = True)
 
     #match transcript identifiers with gene names so that you coud also generate
     #a families output file that is meaningful to a human
     descriptions_file = "{0}_descriptions.txt".format(out_prefix)
     names = gen.read_fasta(CDS_fasta)[0]
     print("Matching transcript identifiers with gene names...")
-##    bo.get_descriptions(names, gtf, descriptions_file)
+    bo.get_descriptions(names, gtf, descriptions_file)
 
     #group the CDS sequences into families based on sequence similarity
     print("Grouping sequences into families...")
-    gen.find_families(CDS_fasta, out_prefix, "../blast_dbs", descriptions_file)
+    gen.find_families(CDS_fasta, out_prefix + "5", "../blast_dbs", descriptions_file)
 
     #extract exon coordinates
     bo.extract_exons(gtf, exon_bed)

@@ -62,12 +62,6 @@ class Test_bed_ops(unittest.TestCase):
         extract_exons(gtf, observed)
         expected = gen.read_many_fields("test_data/bed_ops/test_extract_exons/expected_test_extract_exons.bed", "\t")
         observed = gen.read_many_fields(observed, "\t")
-        print("\n")
-        for i in expected:
-            print(i)
-        print("\n")
-        for i in observed:
-            print(i)
         self.assertEqual(expected, observed)
 
     def test_extract_exon_junctions(self):
@@ -167,3 +161,17 @@ class Test_bed_ops(unittest.TestCase):
         expected = gen.read_many_fields(expected, "\t")
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(expected, observed)
+
+    def test_link_genes_and_transcripts(self):
+        bed = "test_data/bed_ops/test_link_genes_and_transcripts/input.bed"
+        expected = {"ENSG000001": ["ENST0003246"], "ENSG00000223972": ["ENST00032132", "ENST00032323"]}
+        observed = link_genes_and_transcripts(bed)
+        self.assertEqual(expected, observed)
+
+    def test_uniquify_trans(self):
+        gene_to_trans = {"ENSG000001": ["ENST0003246"], "ENSG00000223972": ["ENST00032132", "ENST00032323"]}
+        names = ["ENST00032132", "ENST0003246", "ENST00032323"]
+        seqs = ["ATCGCGG", "GGGCAG", "CCATAG"]
+        expected = [(["ENST00032132", "ENST0003246"], ["ATCGCGG", "GGGCAG"]), (["ENST0003246", "ENST00032323"], ["GGGCAG", "CCATAG"])]
+        observed = uniquify_trans(names, seqs, gene_to_trans)
+        self.assertIn(observed, expected)
