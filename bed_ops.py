@@ -112,7 +112,7 @@ def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, check_acgt=None, 
 	stop_list = {}
 	concat_list = collections.defaultdict(lambda: collections.UserList())
 	#create temp fasta file with extracted parts
-	temp_fasta_file, temp_directory_path = fasta_from_intervals_temp_file(bed_file, output_fasta, genome_fasta, random_directory)
+	temp_fasta_file, temp_directory_path = fasta_from_intervals_temp_file(bed_file, output_fasta, genome_fasta, random_directory = True)
 	#read the temp fasta file
 	entries = gen.read_fasta(temp_fasta_file)
 	# get the entry names and seqs
