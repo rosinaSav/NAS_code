@@ -376,14 +376,14 @@ def get_snp_relative_cds_position(snp_exon_realtive_positions, snp_cds_position_
     #now get the relative position of the snp within the cds
     with open(snp_cds_position_output, "w") as output:
         for snp in snp_exon_realtive_positions:
-            id = snp[3]
-            id_meta = re.search(entry_regex, id)
-            snp_cds = id_meta.group(1)
-            snp_exon = id_meta.group(2)
-            snp_exon_position = int(snp[5])
+            cds_id = snp[3]
+            cds_id_meta = re.search(entry_regex, cds_id)
+            snp_cds = cds_id_meta.group(1)
+            snp_exon_id = cds_id_meta.group(2)
+            snp_exon_position = int(snp[11])
             #snp position in cds is the position in the exon plus the exons position in the cds
-            snp_cds_position = snp_exon_position + cds_features_relative_positions[snp_cds][int(snp_exon)]
-            snp[5] = str(snp_cds_position)
+            snp_cds_position = snp_exon_position + cds_features_relative_positions[snp_cds][int(snp_exon_id)]
+            snp[11] = str(snp_cds_position)
             output.write("{0}\n".format("\t".join(snp)))
 
 def get_snp_change_status(snp_cds_relative_positions, cds_fasta, cds_strands, ptcs_output_file, others_output_file):
