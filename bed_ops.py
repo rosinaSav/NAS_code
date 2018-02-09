@@ -388,4 +388,19 @@ def filter_exon_junctions(junctions_file, exons_file, out_file):
                                                                 if str(int(name_field[1]) - 1) in exons[name_field[0]]:
                                                                         o_file.write(line)
 
-                
+def get_descriptions(names, gtf, out_file):
+        '''
+        Given a set of Ensembl transcript identifiers and a GTF file,
+        determine the corresponding "gene name" for each transcript identifier.
+        '''
+        name_regex = re.compile("(?<=gene_name \")[A-z0-9\.\-\/\(\)]*(?=\")")
+        trans_regex = re.compile("(?<=transcript_id \")[A-z0-9]*(?=\")")
+        transcript_lines = gen.run_process(["grep", "\ttranscript\t", gtf])
+        transcript_lines = transcript_lines.split("\n")
+        with open(out_file, "w") as file:
+                for line in transcript_lines:
+                        if len(line) > 1:
+                                trans = re.search(trans_regex, line).group(0)
+                                if trans in names:
+                                        description = re.search(name_regex, line).group(0)
+                                        file.write("{0}\t{1}\n".format(trans, description))

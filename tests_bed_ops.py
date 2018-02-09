@@ -60,6 +60,12 @@ class Test_bed_ops(unittest.TestCase):
         extract_exons(gtf, observed)
         expected = gen.read_many_fields("test_data/bed_ops/test_extract_exons/expected_test_extract_exons.bed", "\t")
         observed = gen.read_many_fields(observed, "\t")
+        print("\n")
+        for i in expected:
+            print(i)
+        print("\n")
+        for i in observed:
+            print(i)
         self.assertEqual(expected, observed)
 
     def test_extract_exon_junctions(self):
@@ -135,6 +141,17 @@ class Test_bed_ops(unittest.TestCase):
         observed = "test_data/bed_ops/test_filter_exon_junctions/observed_filter_exon_junctions.bed"
         gen.remove_file(observed)
         filter_exon_junctions(exon_junctions_file, exons_file, observed)
+        expected = gen.read_many_fields(expected, "\t")
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(expected, observed)
+
+    def test_get_descriptions(self):
+        gtf = "test_data/bed_ops/test_get_descriptions/descriptions.gtf"
+        names = ["ENST100", "ENST7", "ENST0003", "ENST5"]
+        expected = "test_data/bed_ops/test_get_descriptions/expected_get_descriptions.txt"
+        observed = "test_data/bed_ops/test_get_descriptions/observed_get_descriptions.txt"
+        gen.remove_file(observed)
+        get_descriptions(names, gtf, observed)
         expected = gen.read_many_fields(expected, "\t")
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(expected, observed)

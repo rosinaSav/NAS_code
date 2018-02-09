@@ -1,11 +1,12 @@
 import argparse
 import csv
 import ftplib
+import itertools as it
 import multiprocessing
 import os
-import subprocess
-from itertools import islice
+import re
 import shutil
+import subprocess
 
 def blast_all_against_all(db_name, fasta_file_name, output_file_name, blast_db_path):
     '''
@@ -33,6 +34,19 @@ def create_strict_directory(path):
         shutil.rmtree(path)
     os.mkdir(path)
 
+def extend_family(blast_results, families, query):
+    '''
+    Given a gene identifier (query), find all genes that are connected to it
+    in the BLAST results (i.e. one is a hit for the other). Add them to the current family and remove
+    the relevant lines from the BLAST results.
+    '''
+    to_add = [i for i in blast_results if query in i]
+    blast_results = [i for i in blast_results if query not in i]
+    to_add = flatten(to_add)
+    families[-1].extend(to_add)
+    families[-1] = list(set(families[-1]))
+    return(blast_results, families)
+
 def extract_head_of_file(file_path, lines):
     '''
     Extract a certain number of lines from file
@@ -40,12 +54,12 @@ def extract_head_of_file(file_path, lines):
     output_path = ".".join(file_path.split('.')[:-1]) + '.extracted.{}.'.format(lines) + file_path.split('.')[-1]
     remove_file(output_path)
     with open(file_path, 'r') as file:
-        head = list(islice(file, lines))
+        head = list(it.islice(file, lines))
         with open(output_path, 'w') as output_file:
             for line in head:
                 output_file.write(line)
 
-def find_families(fasta_file_name, output_prefix, blast_db_path):
+def find_families(fasta_file_name, output_prefix, blast_db_path, descriptions_file):
     '''
     Given a fasta file, group the sequences into paralogous families.
     '''
@@ -130,9 +144,15 @@ def find_families(fasta_file_name, output_prefix, blast_db_path):
                 break
         
     families_file_name = "{0}_families.txt".format(output_prefix)
+    families_descriptions_file_name = "{0}_families_descriptions.txt".format(output_prefix)
+    descriptions = read_many_fields(descriptions_file, "\t")
+    descriptions = list_to_dict(descriptions, 0, 1)
     families_file = open(families_file_name,"w")
-    for i in range(0,len(families)):
-        families_file.write("{0}\n".format(",".join(families[i])))
+    with open(families_descriptions_file, "w") as fd_file:
+        for family in families:
+            families_file.write("{0}\n".format(",".join(family)))
+            fd = [descriptions[i] for i in family]
+            fd_file.write("{0}\n".format(",".join(fd)))
 
     #create flat version of the families list so you could count the total number of genes that have been allocated to a family
     flat_families = flatten(families)
@@ -152,6 +172,13 @@ def find_families(fasta_file_name, output_prefix, blast_db_path):
 
     #close the output file
     families_file.close()
+
+def flatten(structured_list):
+    '''
+    Flatten a structured list.
+    '''
+    flat_list = list(it.chain(*structured_list))
+    return(flat_list)
 
 def ftp_check(ftp, host, user, password, pwd):
     '''

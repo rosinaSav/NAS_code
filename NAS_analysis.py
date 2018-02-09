@@ -55,31 +55,36 @@ def main():
     #NB! We need to add in a step during quality control to only leave one transcript isoform per gene!
     #and also remove overlapping genes
     CDS_fasta = "{0}_CDS.fasta".format(out_prefix)
-    bo.extract_cds(gtf, CDS_fasta, genome_fasta, check_acgt=True, check_start=True, check_length=True, check_stop=True, check_inframe_stop=True)
-    print("Extracted and filtered CDSs.")
+    print("Extracting and filtering CDSs...")
+##    bo.extract_cds(gtf, CDS_fasta, genome_fasta, check_acgt=True, check_start=True, check_length=True, check_stop=True, check_inframe_stop=True)
 
+    #match transcript identifiers with gene names so that you coud also generate
+    #a families output file that is meaningful to a human
+    descriptions_file = "{0}_descriptions.txt".format(out_prefix)
+    names = gen.read_fasta(CDS_fasta)[0]
+    print("Matching transcript identifiers with gene names...")
+##    bo.get_descriptions(names, gtf, descriptions_file)
     #group the CDS sequences into families based on sequence similarity
     print("Grouping sequences into families...")
-    gen.find_families(CDS_fasta, out_prefix, "../blast_dbs")
+    gen.find_families(CDS_fasta, out_prefix, "../blast_dbs", descriptions_file)
 
     #extract exon coordinates
     bo.extract_exons(gtf, exon_bed)
 
     #only leave exons from transcripts that passed quality control in the extract_cds step above.
+    print("Extracting and filtering exons...")
     bo.filter_bed_from_fasta(exon_bed, CDS_fasta, filtered_exon_bed)
-    print("Extracted and filtered exons.")
-
 
     #extract exon-exon junction coordinates
+    print("Extracting exon-exon junctions...")
     bo.extract_exon_junctions(filtered_exon_bed, exon_junctions_file, window_of_interest = 2)
-    print("Extracted exon-exon junctions.")
 
     #make another exons bed that only contains fully coding exons.
     #This is because in the final analysis we should only consider fully protein-coding exons.
     #However, for getting the exon junctions we need the full exons file because fully protein-coding exons might
     #be flanked by exons that are not. This is why we couldn't do this filtering step earlier.
+    print("Filtering out non-coding and partially coding, as well as terminal exons...")
     bo.check_coding(filtered_exon_bed, CDS_bed, filtered_coding_exon_bed)
-    print("Filtered out non-coding and partially coding, as well as terminal exons.")
         
     '''
     **********
@@ -89,8 +94,8 @@ def main():
     '''
 
     #filter the exon junctions file to only leave those junctions that flank exons retained in the previous step.
+    print("Filtering exon-exon junctions to only leave those that flank exons with a PTC variant...")
     bo.filter_exon_junctions(exon_junctions_file, PTC_exons_file, PTC_exon_junctions_file)
-    print("Filtered exon-exon junctions to only leave those that flank exons with a PTC variant.")
 
     #make a list of all the .bam files and modify them to have the full path rather than just the file name
     bam_files = os.listdir(bam_folder)
@@ -99,10 +104,9 @@ def main():
     #in parallel, do the processing on individual .bam files
     #fill in 'other_arguments' later
     processes = gen.run_in_parallel(bam_files, ["foo", other_arguments], process_bam_per_individual)
+    print("Processing RNA-seq data...")
     for process in processes:
         process.get()
-
-    print("Processed RNA-seq data.")
 
     '''
     **********
