@@ -386,11 +386,7 @@ def get_snp_relative_cds_position(snp_exon_realtive_positions, snp_cds_position_
             snp[11] = str(snp_cds_position)
             output.write("{0}\n".format("\t".join(snp)))
 
-def get_snp_change_status(snp_cds_relative_positions, cds_fasta, cds_strands, ptcs_output_file, others_output_file):
-
-    strands = collections.defaultdict()
-    for strand in cds_strands:
-        strands[strand[0]] = strand[1]
+def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_file, others_output_file):
 
     snps = gen.read_many_fields(snp_cds_relative_positions, "\t")
     cds_names, cds_seqs = gen.read_fasta(cds_fasta)

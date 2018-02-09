@@ -116,6 +116,16 @@ class Test_bed_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(expected, observed)
 
+    def test_filter_fasta_intervals_from_fasta(self):
+        fasta = "test_data/bed_ops/test_filter_fasta_intervals_from_fasta/test_filter_fasta_intervals_from_fasta_fasta.fasta"
+        fasta_intervals = "test_data/bed_ops/test_filter_fasta_intervals_from_fasta/test_filter_fasta_intervals_from_fasta_intervals.fasta"
+        observed = "test_data/bed_ops/test_filter_fasta_intervals_from_fasta/observed_filtered_intervals.fasta"
+        gen.remove_file(observed)
+        expected = "test_data/bed_ops/test_filter_fasta_intervals_from_fasta/expected_filtered_intervals.fasta"
+        filter_fasta_intervals_from_fasta(fasta_intervals, fasta, observed)
+        expected = gen.read_fasta(expected)
+        observed = gen.read_fasta(observed)
+        self.assertEqual(expected, observed)
 
     def test_filter_exon_junctions(self):
         exon_junctions_file = "test_data/bed_ops/test_filter_exon_junctions/exon_junctions.bed"

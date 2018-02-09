@@ -302,6 +302,32 @@ def filter_bed_from_fasta(bed, fasta, out_bed):
                         file.write("\t".join(line))
                         file.write("\n")
 
+def filter_fasta_intervals_from_fasta(intervals_fasta, fasta, output):
+        '''
+        Given a fasta file and a fasta intervals file, filter the intervals file to only leave records where the 'name' field appears
+        among the names in the fasta file. Write to fasta.
+        '''
+        #fish out the names in the fasta
+        fasta_names = gen.run_process(["grep", ">", fasta])
+        fasta_names = fasta_names.split("\n")
+        #remove tag and newline from each name
+        fasta_names = [(i.lstrip("\>")).rstrip("\n") for i in fasta_names]
+        #remove and potential blank entries
+        fasta_names = [i for i in fasta_names if len(fasta_names) > 3]
+
+        #read in the interval data
+        fasta_interval_names, fasta_interval_seqs = gen.read_fasta(intervals_fasta)
+        id_regex = re.compile("^(\w+)\..*")
+        with open(output, "w") as file:
+            for i, interval in enumerate(fasta_interval_names):
+                #search for the sample name
+                id = re.search(id_regex, interval)
+                if id:
+                    trans_id = id.group(1)
+                    #if the sample name is in the fasta names, output to file
+                    if trans_id in fasta_names:
+                        file.write(">{0}\n{1}\n".format(fasta_interval_names[i], fasta_interval_seqs[i]))
+
 def filter_exon_junctions(junctions_file, exons_file, out_file):
         '''
         Given two bed files, one containing exon junction coordinates and one containing exon coordinates,
