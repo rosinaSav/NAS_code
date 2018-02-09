@@ -55,17 +55,15 @@ def check_sequence_quality(names, seqs, check_acgt=None, check_stop=None, check_
 
 	return(passed_names, passed_seqs)
 
-def extract_cds(gtf, output_fasta, genome_fasta, full_chr_name=None, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None, all_checks=None):
+def extract_cds(gtf, bed_output, output_fasta, genome_fasta, full_chr_name=None, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None, all_checks=None):
 	'''
 	Given a .gtf file, exrtract the coding sequences to a fasta file.
 	EX.: extract_exons("../source_data/Homo_sapiens.GRCh37.87.gtf", "../output_data/Homo_sapiens.GRCh37.87_cds.fasta", "../source_data/Genomes/Homo_sapiens.GRCh37.dna.primary_assembly.fa")
 	'''
-	#create bed file path
-	bed = os.path.splitext(gtf)[0] + ".bed"
 	#extract required cds features
-	extract_features(gtf, bed, ['CDS', 'stop_codon'], full_chr_name)
+	extract_features(gtf, bed_output, ['CDS', 'stop_codon'], full_chr_name)
 	#extract to fasta
-	extract_cds_from_bed(bed, output_fasta, genome_fasta, check_acgt, check_start, check_length, check_stop, check_inframe_stop, all_checks)
+	extract_cds_from_bed(bed_output, output_fasta, genome_fasta, check_acgt, check_start, check_length, check_stop, check_inframe_stop, all_checks)
 
 def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None, all_checks=None):
 	'''

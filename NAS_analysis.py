@@ -33,7 +33,7 @@ def process_bam_per_individual(bam_files, other_arguments):
         NB! The RNA-seq data we're using is not stranded so contrary to what I had written before, we should NOT match strand in the intersect.
         **********
         '''
-        
+
         #count how many .bam alignments overlap each exon-exon junction
         bmo.intersect_bed(PTC_exon_junctions_file, bam_file, overlap = 1, output_file = "{0}_junction_hit_count.bed".format(bam_file[:-4]), force_strand = False, no_dups = False, hit_count = True, use_bedops = False)
 
@@ -54,8 +54,9 @@ def main():
     '''
 
     #extract and filter CDS coordinates and sequences
-    #NB! We need to add in a step during quality control to only leave one transcript isoform per gene!
-    #and also remove overlapping genes
+    #NB!
+    #To do: add in a step during quality control to only leave one transcript isoform per gene!
+    #To do: remove overlapping genes
     bo.extract_cds(gtf, CDS_fasta, genome_fasta, check_acgt=True, check_start=True, check_length=True, check_stop=True, check_inframe_stop=True)
 
     '''
@@ -81,6 +82,7 @@ def main():
     be flanked by exons that are not. This is why we couldn't do this filtering step earlier.
     **********
     '''
+
 
     '''
     **********
@@ -109,7 +111,7 @@ def main():
     Average results across paralogous families.
     Perform some sort of a paired comparison between PTC+ and PTC-.
     **********
-    '''    
-    
+    '''
+
 if __name__ == "__main__":
     main()

@@ -338,13 +338,11 @@ def get_snp_relative_exon_position(intersect_file):
         feature_start = intersect[1]
         feature = intersect[3]
         snp_start = intersect[7]
-        #get the meta about the snp
-        snp_meta = intersect[6:]
         #get the position of the snp compared with the feature
         relative_position = int(snp_start) - int(feature_start)
         #replace . field with relative position
-        snp_meta[5] = str(relative_position)
-        relative_positions.append(snp_meta)
+        intersect[11] = str(relative_position)
+        relative_positions.append(intersect)
     return(relative_positions)
 
 def get_snp_relative_cds_position(snp_exon_realtive_positions, snp_cds_position_output, fasta_interval_file):
@@ -390,13 +388,6 @@ def get_snp_relative_cds_position(snp_exon_realtive_positions, snp_cds_position_
 
 def get_snp_change_status(snp_cds_relative_positions, cds_fasta, cds_strands, ptcs_output_file, others_output_file):
 
-    reverse_comps = {
-        "A": "T",
-        "C": "G",
-        "G": "C",
-        "T": "A",
-    }
-
     strands = collections.defaultdict()
     for strand in cds_strands:
         strands[strand[0]] = strand[1]
@@ -438,9 +429,10 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, cds_strands, pt
                     #also check whether the variant type is annotated as a snp
                     if var_base_count == 1 and len(var_base) == 1 and var_type == "SNP":
                         var_base = var_base[0]
+
                         if strands[cds_id] == "-":
-                            ref_base = reverse_comps[ref_base]
-                            var_base = reverse_comps[var_base]
+                            ref_base = gen.reverse_complement(ref_base)
+                            var_base = gen.reverse_complement(var_base)
 
                         cds_base = cds_seqs[cds_names.index(cds_id)][snp_index]
 
