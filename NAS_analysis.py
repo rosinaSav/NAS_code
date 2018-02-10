@@ -66,14 +66,15 @@ def main():
 
     #group the CDS sequences into families based on sequence similarity
     print("Grouping sequences into families...")
-    gen.find_families(CDS_fasta, out_prefix + "5", "../blast_dbs", descriptions_file)
+    gen.find_families(CDS_fasta, out_prefix, "../blast_dbs", descriptions_file)
 
     #extract exon coordinates
     bo.extract_exons(gtf, exon_bed)
 
     #only leave exons from transcripts that passed quality control in the extract_cds step above.
+    #also only leave a single gene per family
     print("Extracting and filtering exons...")
-    bo.filter_bed_from_fasta(exon_bed, CDS_fasta, filtered_exon_bed)
+    bo.filter_bed_from_fasta(exon_bed, CDS_fasta, filtered_exon_bed, families_file = "{0}_families.txt".format(out_prefix))
 
     #extract exon-exon junction coordinates
     print("Extracting exon-exon junctions...")

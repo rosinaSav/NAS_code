@@ -17,7 +17,7 @@ def blast_all_against_all(db_name, fasta_file_name, output_file_name, blast_db_p
                  "-dbtype", "nucl"])
     run_process(["blastn", "-task", "blastn", "-query", fasta_file_name,
                  "-db", "{0}/{1}".format(blast_db_path, db_name),
-                 "-out", output_file_name, "-outfmt", "10", "-evalue", "1e-05", "-num_threads", str(int((os.cpu_count()/2)-1))])
+                 "-out", output_file_name, "-outfmt", "10", "-evalue", "1e-04", "-num_threads", str(int((os.cpu_count()/2)-1))])
 
 def create_directory(path):
     '''
