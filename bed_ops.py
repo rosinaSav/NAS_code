@@ -86,7 +86,7 @@ def check_sequence_quality(names, seqs, check_acgt=None, check_stop=None, check_
                 if [actg_pass, stop_pass, start_pass, length_pass, inframe_stop_pass] == [True, True, True, True, True]:
                         passed_names.append(names[i])
                         passed_seqs.append(seq)
-        print("After filtering, {0} sequences remain".format(len(seqs)))
+        print("After filtering, {0} sequences remain".format(len(passed_seqs)))
         return(passed_names, passed_seqs)
 
 def extract_cds(gtf, bed_output, output_fasta, genome_fasta, full_chr_name=None, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None, all_checks=None, uniquify = False):

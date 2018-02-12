@@ -4,6 +4,7 @@ import ftplib
 import itertools as it
 import multiprocessing
 import os
+import random
 import re
 import shutil
 import subprocess
@@ -148,7 +149,7 @@ def find_families(fasta_file_name, output_prefix, blast_db_path, descriptions_fi
     descriptions = read_many_fields(descriptions_file, "\t")
     descriptions = list_to_dict(descriptions, 0, 1)
     families_file = open(families_file_name,"w")
-    with open(families_descriptions_file, "w") as fd_file:
+    with open(families_descriptions_file_name, "w") as fd_file:
         for family in families:
             families_file.write("{0}\n".format(",".join(family)))
             fd = [descriptions[i] for i in family]
