@@ -34,7 +34,7 @@ def group_flags(input_bed, output_bed, flag_start):
             flags = ",".join(flags)
             new_row = i[0:flag_start]
             new_row.append(flags)
-            w4riter.writerow(new_row)
+            writer.writerow(new_row)
 
 def intersect_bed(bed_file1, bed_file2, use_bedops = False, overlap = False, write_both = False, sort = False, output_file = None,
                              force_strand = False, no_name_check = False, no_dups = True, chrom = None, intersect = False, hit_count = False, bed_path = None):
