@@ -9,17 +9,22 @@ from pathlib import Path
 import random
 import shutil
 
-def check_coding(exons_file, CDSs_file, outfile):
+def check_coding(exons_file, CDSs_file, outfile, remove_overlapping = False):
         '''
         Given a bed file of exon coordinates and a bed file of CDS coordinates,
         writes a new bed file that only contains those exon coordinates form the former file that
         1) are fully coding
         2) are internal
-        NB! Assumes that all the cooridnates are from non-overlapping transcripts.
+        NB! Assumes that all the coordinates are from non-overlapping transcripts.
+        If this is not the case, set remove_overlaps to True and it'll remove overlapping
+        intervals.
         '''
+        if remove_overlapping:
+                bmo.sort_bed(exons_file, exons_file)
+                remove_overlaps(exons_file, exons_file)
         #filter out anything that isn't fully coding
         temp_file = "temp_data/temp{0}.txt".format(random.random())
-        bmo.intersect_bed(exons_file, CDSs_file, overlap = 1, output_file = temp_file, force_strand = True, no_dups = True)
+        bmo.intersect_bed(exons_file, CDSs_file, overlap = 1, output_file = temp_file, force_strand = True, no_dups = True, no_name_check = True)
         #filter out terminal exons
         #in theory, there shouldn't be any left after the previous step
         #in practice, there may be unannotated UTRs, so it looks like we have a fully coding terminal exon,
@@ -86,7 +91,7 @@ def check_sequence_quality(names, seqs, check_acgt=None, check_stop=None, check_
                 if [actg_pass, stop_pass, start_pass, length_pass, inframe_stop_pass] == [True, True, True, True, True]:
                         passed_names.append(names[i])
                         passed_seqs.append(seq)
-        print("After filtering, {0} sequences remain".format(len(seqs)))
+        print("After filtering, {0} sequences remain".format(len(passed_seqs)))
         return(passed_names, passed_seqs)
 
 def extract_cds(gtf, bed_output, output_fasta, genome_fasta, full_chr_name=None, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None, all_checks=None, uniquify = False):
@@ -101,8 +106,8 @@ def extract_cds(gtf, bed_output, output_fasta, genome_fasta, full_chr_name=None,
     #filter the previous files to only include those that passed the filters
     filter_bed_from_fasta(bed_output, output_fasta, bed_output)
     fasta_interval_file = "{0}_intervals{1}".format(os.path.splitext(output_fasta)[0], os.path.splitext(output_fasta)[1])
-#I'm commenting this bit out cause there's a bug I don't understand
-##    filter_fasta_intervals_from_fasta(fasta_interval_file, output_fasta, fasta_interval_file)
+    #I've temporarily commented out the line below cause I get an error that I don't understand
+    #filter_fasta_intervals_from_fasta(fasta_interval_file, output_fasta, fasta_interval_file)
 
 def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None, all_checks=None, uniquify = False):
         '''
@@ -152,7 +157,7 @@ def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, check_acgt=None, 
                 #leave only one transcript per gene
                 gene_to_trans = link_genes_and_transcripts(bed_file)
                 names, seqs = uniquify_trans(names, seqs, gene_to_trans)
-                print("After leaving only one ranscript per gene, {0} sequences remain.".format(len(seqs)))
+                print("After leaving only one transcript per gene, {0} sequences remain.".format(len(seqs)))
         #write to output fasta file
         gen.write_to_fasta(names, seqs, output_fasta)
         #remove the temporary directory
@@ -303,7 +308,7 @@ def extract_features(gtf_file, out_file, features, full_chr_name=None):
                                                                 else:
                                                                         chr_name = str(chr_no)
                                                                 #output and convert to base 0
-                                                                output.write('\t'.join([chr_name, str(int(item[0])-1), item[1], '{0}.{1}.{2}'.format(trans, exon, gene), feature, item[2]]) + '\n')
+                                                                output.write('\t'.join(["chr{0}".format(chr_name), str(int(item[0])-1), item[1], '{0}.{1}.{2}'.format(trans, exon, gene), feature, item[2]]) + '\n')
 
 def fasta_from_intervals(bed_file, fasta_file, genome_fasta, force_strand = True, names = False):
         '''
@@ -349,10 +354,11 @@ def fasta_from_intervals_temp_file(bed_file, output_fasta, genome_fasta, random_
         fasta_from_intervals(bed_file, temp_fasta_file, genome_fasta, force_strand = True, names = True)
         return(temp_fasta_file, temp_directory_path)
 
-def filter_bed_from_fasta(bed, fasta, out_bed):
+def filter_bed_from_fasta(bed, fasta, out_bed, families_file = None):
         '''
         Given a bed file and a fasta file, filter the bed file to only leave records where the 'name' field appears
         among the names in the fasta file. Write to out_bed.
+        If a families_file is given, leave only one (randomly picked) member per family.
         '''
         #add feature in here that enables overwrite of current file
         output_exists = False
@@ -361,22 +367,36 @@ def filter_bed_from_fasta(bed, fasta, out_bed):
             temp_file_name = "{0}.{1}{2}".format(os.path.splitext(out_bed)[0], random.random(), os.path.splitext(out_bed)[1])
         else:
             temp_file_name = out_bed
-
+        
         #fish out the names in the fasta
         fasta_names = gen.run_process(["grep", ">", fasta])
         fasta_names = fasta_names.split("\n")
         #remove tag and newline from each name
         fasta_names = [(i.lstrip("\>")).rstrip("\n") for i in fasta_names]
+
+        #read in family information and pick one transcript per family
+        if families_file:
+                families = gen.read_families(families_file)
+                #make sure the families file doesn't contain transcripts that are not in the fasta 
+                for pos, family in enumerate(families):
+                        families[pos] = [i for i in family if i in fasta_names]
+                flat_families = gen.flatten(families)
+                #first fish out singletons
+                fasta_names = [i for i in fasta_names if i not in flat_families]
+                for family in families:
+                        if family:
+                                fasta_names.append(random.choice(family))
         bed_data = gen.read_many_fields(bed, "\t")
         #remove empty lines
         bed_data = [i for i in bed_data if len(i) > 3]
+        #I have to ask Liam cause I'm having a hard time understanding this regex
         id_regex = re.compile("^(\w+).*")
         with open(temp_file_name, "w") as file:
             for line in bed_data:
-                id = re.search(id_regex, line[3])
-                if id:
+                idn = re.search(id_regex, line[3])
+                if idn:
                     #filter bed data
-                    if id.group(1) in fasta_names:
+                    if idn.group(1) in fasta_names:
                         file.write("\t".join(line))
                         file.write("\n")
         #remove old file, replace with new
@@ -482,6 +502,33 @@ def link_genes_and_transcripts(bed):
         bed_data = gen.list_to_dict(bed_data, 2, 0, as_list = True, uniquify = True)
         return(bed_data)
 
+def remove_overlaps(in_bed, out_bed):
+        '''
+        Given a bed file, only leave non-overlapping elements, regardless of the strand of the overlap.
+        '''
+        #check how many columns there are in the bedfile
+        with open(in_bed) as file:
+                line = file.readline()
+                column_number = line.count("\t") + 1
+        #merge overlapping intervals and hav it count how many of the elements from the original file contribute to each
+        #interval in the new file
+        #note that bedops takes the column numbers in base 1
+        if column_number > 3:
+                columns = ",".join([str(i) for i in range(4, column_number + 1)] + ["1"])
+                operations = ",".join(["distinct" for i in range(4, column_number + 1)] + ["count"])
+        else:
+                columns = "1"
+                operations = "count"
+        merge_result = gen.run_process(["bedtools", "merge", "-i", in_bed, "-c", columns, "-o", operations])
+        #only leave those intervals that do not result from a merge and delete counts column
+        merge_result = merge_result.split("\n")
+        with open(out_bed, "w") as file:
+                for line in merge_result:
+                        if line[-2:] == "\t1":
+                                line = line[:-2]
+                                file.write(line)
+                                file.write("\n")
+        
 def uniquify_trans(names, seqs, gene_to_trans):
         '''
         Filter a set of transcript IDs and corresponding sequences to only leave one transcript per gene.
@@ -491,4 +538,3 @@ def uniquify_trans(names, seqs, gene_to_trans):
         seqs = [i for pos, i in enumerate(seqs) if names[pos] in gene_to_trans]
         names = [i for i in names if i in gene_to_trans]
         return(names, seqs)
-

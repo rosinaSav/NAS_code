@@ -28,7 +28,7 @@ def group_flags(input_bed, output_bed, flag_start):
     onwards into a single field, with the elements separated by commas.'''
     with open(input_bed) as input_file, open(output_bed, "w") as output_file:
         reader = csv.reader(input_file, delimiter = "\t")
-        w4riter = csv.writer(output_file, delimiter = "\t")
+        writer = csv.writer(output_file, delimiter = "\t")
         for i in reader:
             flags = i[flag_start:]
             flags = ",".join(flags)
@@ -83,7 +83,7 @@ def retrieve_bams(ftp_site, local_directory, remote_directory, password_file, su
     subset: only retrieve this many .bam files (useful for testing)
     '''
     #create local directory, if it doesn't exist
-    gen.make_dir(local_directory)
+    gen.create_directory(local_directory)
     #split the ftp_site address into host and the path
     ftp_site = ftp_site.split("/")
     host = ftp_site[0]

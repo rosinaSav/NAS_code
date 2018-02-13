@@ -173,6 +173,26 @@ def find_families(fasta_file_name, output_prefix, blast_db_path, descriptions_fi
     #close the output file
     families_file.close()
 
+def find_families_ensembl(ensembl_file, transcript_IDs, out_file):
+    '''
+    Extract family data from a file with Ensembl protein families data.
+    '''
+    family_data = read_many_fields(ensembl_file, "\t")
+    family_data = [i for i in family_data if len(i[2]) > 0 and i[1] in transcript_IDs]
+    #this is done so there'd be a more human-readable version of the families file
+    #the descriptions file is not for downstreama analysis
+    family_data_desc = list_to_dict(family_data, 2, 4, as_list = True)
+    family_data_desc = {i: family_data_desc[i] for i in family_data_desc if len(family_data_desc[i]) > 1}
+    family_data = list_to_dict(family_data, 2, 1, as_list = True)
+    family_data = {i: family_data[i] for i in family_data if len(family_data[i]) > 1}
+    desc_file = "{0}_descriptions.txt".format(out_file.split(".")[0])
+    with open(out_file, "w") as o_file, open(desc_file, "w") as d_file:
+        for family in sorted(family_data):
+            o_file.write(",".join(family_data[family]))
+            o_file.write("\n")
+            d_file.write(",".join(family_data_desc[family]))
+            d_file.write("\n")            
+
 def flatten(structured_list):
     '''
     Flatten a structured list.
@@ -291,13 +311,6 @@ def list_to_dict(input_list, index1, index2, as_list = False, uniquify = False, 
         output_dict = {i: sorted(list(set(output_dict[i]))) for i in output_dict}
     return(output_dict)
 
-def make_dir(dir_name):
-    '''
-    Check whether a directory exists and if not, create it.
-    '''
-    if not os.path.exists(dir_name):
-        os.mkdir(dir_name)
-
 def parse_arguments(description, arguments, floats = None, flags = None, ints = None):
     '''
     Use argparse to parse a set of input arguments from the command line.
@@ -322,6 +335,20 @@ def parse_arguments(description, arguments, floats = None, flags = None, ints = 
             parser.add_argument(argument, type = curr_type, help = argument)
     args = parser.parse_args()
     return(args)
+
+def read_families(file):
+    '''
+    Read a families file (one family of paralogous genes per line, the member genes separated by commas) into a list,
+    with each sublist containing the identifiers of the genes belonging to one family.
+    '''
+    families = []
+    with open(file) as families_file:
+        for line in families_file:
+            current_family = line.rstrip("\n")
+            current_family = current_family.split(",")
+            current_family = [i for i in current_family if i != ""]
+            families.append(current_family)
+    return(families)
 
 def read_fasta(input_file):
     '''

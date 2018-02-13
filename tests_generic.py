@@ -3,6 +3,19 @@ import unittest
 
 class Test_generic(unittest.TestCase):
 
+    def test_find_families_ensembl(self):
+        ensembl_file = "test_data/generic/test_find_families/ensembl_file.txt"
+        names = "ENST4, ENST1, ENST9, ENST2, ENST8, ENST3, ENST7, ENST5, ENST6"
+        observed = "test_data/generic/test_find_families/observed.txt"
+        expected = "test_data/generic/test_find_families/expected.txt"
+        remove_file(observed)
+        find_families_ensembl(ensembl_file, names, observed)
+        with open(expected) as file:
+            expected = "".join(file)
+        with open(observed) as file:
+            observed = "".join(file)
+        self.assertEqual(expected, observed)
+        
     def test_get_extension(self):
         file = "test.jpg"
         length = 3

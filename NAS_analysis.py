@@ -55,37 +55,34 @@ def main():
     CDS_fasta = "{0}_CDS.fasta".format(out_prefix)
     CDS_bed = "{0}_CDS.bed".format(out_prefix)
     print("Extracting and filtering CDSs...")
-    bo.extract_cds(gtf, CDS_bed, CDS_fasta, genome_fasta, all_checks = True, uniquify = True)
-
-    #match transcript identifiers with gene names so that you coud also generate
-    #a families output file that is meaningful to a human
-    descriptions_file = "{0}_descriptions.txt".format(out_prefix)
-    names = gen.read_fasta(CDS_fasta)[0]
-    print("Matching transcript identifiers with gene names...")
-    bo.get_descriptions(names, gtf, descriptions_file)
+##    bo.extract_cds(gtf, CDS_bed, CDS_fasta, genome_fasta, all_checks = True, uniquify = True)
 
     #group the CDS sequences into families based on sequence similarity
     print("Grouping sequences into families...")
-    gen.find_families(CDS_fasta, out_prefix, "../blast_dbs", descriptions_file)
+    names = gen.read_fasta(CDS_fasta)[0]
+    gen.find_families_ensembl("../source_data/GRCh37_ensembl_protein_families.txt", names, "{0}_families.txt".format(out_prefix))
 
+    print("Extracting and filtering exons...")
     #extract exon coordinates
+    exon_bed = "{0}_exons.bed".format(out_prefix)
     bo.extract_exons(gtf, exon_bed)
-
     #only leave exons from transcripts that passed quality control in the extract_cds step above.
     #also only leave a single gene per family
-    print("Extracting and filtering exons...")
+    filtered_exon_bed = "{0}_filtered_exons.bed".format(out_prefix)
     bo.filter_bed_from_fasta(exon_bed, CDS_fasta, filtered_exon_bed, families_file = "{0}_families.txt".format(out_prefix))
 
     #extract exon-exon junction coordinates
     print("Extracting exon-exon junctions...")
-    bo.extract_exon_junctions(filtered_exon_bed, exon_junctions_file, window_of_interest = 2)
+    exon_junctions_file = "{0}_exon_junctions.bed".format(out_prefix)
+    bo.extract_exon_junctions(exon_bed, exon_junctions_file, window_of_interest = 2)
 
     #make another exons bed that only contains fully coding exons.
-    #This is because in the final analysis we should only consider fully protein-coding exons.
+    #This is because in the final analysis, we should only consider fully protein-coding exons.
     #However, for getting the exon junctions we need the full exons file because fully protein-coding exons might
     #be flanked by exons that are not. This is why we couldn't do this filtering step earlier.
-    print("Filtering out non-coding and partially coding, as well as terminal exons...")
-    bo.check_coding(filtered_exon_bed, CDS_bed, filtered_coding_exon_bed)
+    print("Filtering out overlapping, non-coding and partially coding, as well as terminal exons...")
+    coding_exon_bed = "{0}_coding_exons.bed".format(out_prefix)
+    bo.check_coding(filtered_exon_bed, CDS_bed, coding_exon_bed, remove_overlapping = True)
         
 
     '''

@@ -1,0 +1,3 @@
+chr17	14	19	ENST20	.	+
+chr17	20	26	ENST20	.	+
+chr18	32	37	ENST26	.	+

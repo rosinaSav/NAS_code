@@ -105,7 +105,7 @@ class Test_bed_ops(unittest.TestCase):
         gen.remove_file(observed)
         bed_file = "test_data/bed_ops/test_fasta_from_intervals/test_bed_for_fasta_conversion.bed"
         expected = gen.read_fasta("test_data/bed_ops/test_fasta_from_intervals/expected_converted_fasta.fasta")
-        fasta_from_intervals(bed_file, observed, "./source_data/Genomes/test_genome/test_genome.fa")
+        fasta_from_intervals(bed_file, observed, "../source_data/Genomes/test_genome/test_genome.fa")
         observed = gen.read_fasta(observed)
         self.assertEqual(observed,expected)
 
@@ -129,6 +129,21 @@ class Test_bed_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(expected, observed)
 
+    def test_filter_bed_from_fasta_families(self):
+        bed = "test_data/bed_ops/test_filter_bed_from_fasta_families/test_filter_bed_from_fasta.bed"
+        fasta = "test_data/bed_ops/test_filter_bed_from_fasta_families/test_filter_bed_from_fasta.fasta"
+        families_file = "test_data/bed_ops/test_filter_bed_from_fasta_families/families.txt"
+        observed = "test_data/bed_ops/test_filter_bed_from_fasta_families/observed_test_filter_bed_from_fasta.bed"
+        gen.remove_file(observed)
+        expected1 = "test_data/bed_ops/test_filter_bed_from_fasta_families/expected1.txt"
+        expected2 = "test_data/bed_ops/test_filter_bed_from_fasta_families/expected2.txt"
+        filter_bed_from_fasta(bed, fasta, observed, families_file = families_file)
+        expected1 = gen.read_many_fields(expected1, "\t")
+        expected2 = gen.read_many_fields(expected2, "\t")
+        expected = [expected1, expected2]
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertIn(observed, expected)
+        
     def test_filter_fasta_intervals_from_fasta(self):
         fasta = "test_data/bed_ops/test_filter_fasta_intervals_from_fasta/test_filter_fasta_intervals_from_fasta_fasta.fasta"
         fasta_intervals = "test_data/bed_ops/test_filter_fasta_intervals_from_fasta/test_filter_fasta_intervals_from_fasta_intervals.fasta"
@@ -166,6 +181,26 @@ class Test_bed_ops(unittest.TestCase):
         bed = "test_data/bed_ops/test_link_genes_and_transcripts/input.bed"
         expected = {"ENSG000001": ["ENST0003246"], "ENSG00000223972": ["ENST00032132", "ENST00032323"]}
         observed = link_genes_and_transcripts(bed)
+        self.assertEqual(expected, observed)
+
+    def test_remove_overlaps(self):
+        in_bed = "test_data/bed_ops/test_remove_overlaps/in.bed"
+        expected = "test_data/bed_ops/test_remove_overlaps/expected.bed"
+        observed = "test_data/bed_ops/test_remove_overlaps/observed.bed"
+        gen.remove_file(observed)
+        remove_overlaps(in_bed, observed)
+        expected = gen.read_many_fields(expected, "\t")
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(expected, observed)
+
+    def test_remove_overlaps2(self):
+        in_bed = "test_data/bed_ops/test_remove_overlaps2/in.bed"
+        expected = "test_data/bed_ops/test_remove_overlaps2/expected.bed"
+        observed = "test_data/bed_ops/test_remove_overlaps2/observed.bed"
+        gen.remove_file(observed)
+        remove_overlaps(in_bed, observed)
+        expected = gen.read_many_fields(expected, "\t")
+        observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(expected, observed)
 
     def test_uniquify_trans(self):
