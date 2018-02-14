@@ -446,17 +446,11 @@ def get_snp_type(sequence, variant):
 
     #get the sequence with the snp in position
     snp_sequence = sequence[:int(variant[0])] + variant[1] + sequence[int(variant[0])+1:]
-    #extract the codons for both the cds and snp cds
-    codon_regex = re.compile('.{3}')
-    sequence_codons = re.findall(codon_regex, sequence)
-    snp_sequence_codons = re.findall(codon_regex, snp_sequence)
-    #find the index in the lists where the codon has changed, should be length 1
-    changed_indices = [i for i, x in enumerate(sequence_codons) if x != snp_sequence_codons[i]]
-    if len(changed_indices) == 1:
-        changed_index = changed_indices[0]
-        #get the cds and snp codon
-        cds_codon = sequence_codons[changed_index]
-        snp_codon = snp_sequence_codons[changed_index]
+    #extract the SNP codon both with the reference and the SNP allele
+    codon_start = (int(variant[0])//3) * 3
+    cds_codon = sequence[codon_start:codon_start + 3]
+    snp_codon = snp_sequence[codon_start:codon_start + 3]
+    if cds_codon != snp_codon:
         #determine the type of snp
         #if the snp generated an in frame stop
         if codon_map[snp_codon] == "*":
