@@ -1,0 +1,5 @@
+sample	pop	super_pop	gender		
+HG1	GBR	EUR	male
+HG2	GBR	EUR	female
+HG3	GBR	EUR	female
+HG4	GBR	EUR	female

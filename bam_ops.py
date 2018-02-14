@@ -210,6 +210,7 @@ def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom
         raise(Exception)
     if bed_path:
         bedtools_args[0] = "{0}{1}".format(bed_path, bedtools_args[0])
+    print(" ".join((bedtools_args)))
     bedtools_output = gen.run_process(bedtools_args, file_for_output = output_file)
     return(bedtools_output)
 

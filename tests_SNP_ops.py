@@ -127,3 +127,17 @@ class Test_SNP_ops(unittest.TestCase):
             cds_codon, snp_codon, mutation_type = get_snp_type(cds_list[i][0], snp)
             observed.append([cds_codon, snp_codon, mutation_type])
         self.assertEqual(observed, expected)
+
+    def test_get_snps_in_cds(self):
+        bed = "test_data/snp_ops/test_get_snps_in_cds/exons.bed"
+        fasta = "test_data/snp_ops/test_get_snps_in_cds/test_fasta.fa"
+        vcf_folder = "test_data/snp_ops/test_get_snps_in_cds/per_sample_vcfs"
+        names = ["HG1", "HG3"]
+        sample_file = "test_data/snp_ops/test_get_snps_in_cds/sample_file.txt"
+        panel_file = "test_data/snp_ops/test_get_snps_in_cds/panel_file.txt"
+        expected = gen.read_many_fields("test_data/snp_ops/test_get_snps_in_cds/expected.bed", "\t")
+        observed = "test_data/snp_ops/test_get_snps_in_cds/observed.bed"
+        gen.remove_file(observed)
+        get_snps_in_cds(bed, fasta, vcf_folder, panel_file, names, sample_file, observed, out_prefix = "test_data/snp_ops/test_get_snps_in_cds/test")
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(observed, expected)

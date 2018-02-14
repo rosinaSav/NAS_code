@@ -1,3 +1,4 @@
+import bam_ops as bmo
 import generic as gen
 import numpy as np
 import os
@@ -35,7 +36,7 @@ def tabix(bed_file, output_file, vcf, process_number = None):
     #run the core tabix function on the bed files
     parallel_tabix = gen.run_in_parallel(bed_names, ["foo", vcf], tabix_core, workers = process_number)
     [i.get() for i in parallel_tabix]
-    #this is how the output files have been anmed by the core tabix function
+    #this is how the output files have been named by the core tabix function
     output_files = ["{0}.out".format(i) for i in bed_names]
     #concatenate the output files
     gen.run_process(["cat {0}??.out".format(bed_file)], file_for_output = output_file, shell = True)
@@ -78,7 +79,7 @@ def tabix_core(bed_files, vcf):
                         file2.write(output)
                         file2.write("\n")
 
-def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop = None, subpop = None, samples = None, downsample_by = None, exclude_xy = False, vcftools_path = None):
+def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop = None, subpop = None, samples = None, downsample_by = None, exclude_xy = False, chr_prefix = False, remove_empty = False):
     '''
     Extract 1000Genomes SNPs for a subpopulation.
     bed_file: input bed file for the intervals you want
@@ -125,7 +126,8 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
 
     downsample_by: if you want to randomly pick only a subsample of the individuals. For example, 0.5 would give you half of the individuals.
     exclude_xy: if True, SNPs on sex chromosomes will not be returned
-    vcftools_path: path from current location to vcf-tools. Example: "../Software/vcftools"
+    chr_prefix: if True, prefix "chr" to chromosome names in the final output file
+    remove_empty: if True, don't report SNPs that don't appear in any of the selected samples
     '''
 
     sex_chromosomes = ["Y", "X"]
@@ -152,9 +154,6 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
 
     #turn list into comma-separated string
     samples = ",".join(samples)
-
-    if not vcftools_path:
-        vcftools_path = ""
 
     #get a list of all the files in the VCF folder
     vcf_files = os.listdir(vcf_folder)
@@ -193,12 +192,12 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
                 #get ALL SNPs (that is to say, for all samples) for current interval
                 gen.run_process(["tabix", "-h", current_vcf, "{0}:{1}-{2}".format(chrom, start, end)], file_for_output = temp_output_file)
                 #uncomment the following line for debug
-##                run_process(["cp", temp_output_file, "temp_data/{0}:{1}-{2}_tabix_slice.txt".format(chrom, start, end)])
+                gen.run_process(["cp", temp_output_file, "temp_data/{0}:{1}-{2}_tabix_slice.txt".format(chrom, start, end)])
                 #generate temporary output file for SNPs from your seleceted samples
                 sample_output_file = "temp_data/temp_sample_tabix{0}.txt".format(random.random())
                 sample_files.append(sample_output_file)
                 #filter the file you made with all the SNPs to only leave the SNPs that appear in your samples
-                gen.run_process(["{0}vcf-subset".format(vcftools_path), "-c", samples, temp_output_file], file_for_output = sample_output_file)
+                gen.run_process(["vcf-subset", "-c", samples, temp_output_file], file_for_output = sample_output_file)
                 gen.remove_file(temp_output_file)
 
     #you want to concatenate the sample files you made (one file per bed interval) but you can't in one go cause there's too many
@@ -209,7 +208,7 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
     concat_files = ["temp_data/temp_concat_file{0}.vcf".format(random.random()), "temp_data/temp_concat_file{0}.vcf".format(random.random())]
     current_sample_files = sample_files[-10:]
     del sample_files[-10:]
-    gen.run_process(["{0}vcf-concat".format(vcftools_path)] + current_sample_files, file_for_output = concat_files[0])
+    gen.run_process(["vcf-concat"] + current_sample_files, file_for_output = concat_files[0])
     local_counter = 0
     files_left = True
     while files_left:
@@ -224,10 +223,35 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
         else:
             current_concat_file = concat_files[1]
             previous_concat_file = concat_files[0]
-        gen.run_process(["{0}vcf-concat".format(vcftools_path)] + current_sample_files + [previous_concat_file], file_for_output = current_concat_file)
+        gen.run_process(["vcf-concat"] + current_sample_files + [previous_concat_file], file_for_output = current_concat_file)
     sort_file = "temp_data/temp_sort_file{0}.vcf".format(random.random())
-    #once everything is concatenated, sort the SNPs, make a compressed version of the file and make an index for tabix
-    gen.run_process(["vcf-sort".format(vcftools_path), current_concat_file], file_for_output = sort_file)
+    #once everything is concatenated, sort the SNPs, prefix "chr" if needed, make a compressed version of the file and make an index for tabix
+    gen.run_process(["vcf-sort", current_concat_file], file_for_output = sort_file)
+    if chr_prefix or remove_empty:
+        allele_regex = re.compile("[0-9]+\|[0-9]+")
+        temp_file = "temp_data/temp{0}.txt".format(random.random())
+        with open(sort_file) as infile, open(temp_file, "w") as outfile:
+            #this quaint detous is to make sure the allele_regex works if you have allele counts in 2+ digits
+            #as my tests don't check that
+            temp_line = "1	16	rs1	A	C	100	PASS	AC=4;AF=0.5;AN=8;NS=2504;DP=18321;EAS_AF=0.006;AMR_AF=0;AFR_AF=0;EUR_AF=0;SAS_AF=0;AA=G|||;VT=SNP	GT	155|0	0|1	14897|0	0|1"
+            temp_result = re.findall(allele_regex, temp_line)
+            expected = ['155|0', '0|1', '14897|0', '0|1']
+            if temp_result != expected:
+                print("Problem with allele regex!")
+                raise Exception
+            for line in infile:
+                dont_write = False
+                if line[0] != "#":
+                    if chr_prefix:
+                        line = "chr" + line
+                    if remove_empty:
+                        alleles = "".join(re.findall(allele_regex, line))
+                        alleles = [i for i in alleles if i != "0" and i != "|"]
+                        if not alleles:
+                            dont_write = True
+                if not dont_write:
+                    outfile.write(line)
+        gen.run_process(["mv", temp_file, sort_file])
     gen.run_process(["bgzip", "-c", sort_file], file_for_output = output_file_name)
     gen.run_process(["tabix", "-f", "-p", "vcf", output_file_name])
     #clean up
@@ -308,13 +332,14 @@ def get_snp_relative_exon_position(intersect_file):
         feature_start = intersect[1]
         feature_end = intersect[2]
         feature = intersect[3]
-        snp_start = intersect[7]
+        #-1 because VCF files are 1-based
+        snp_start = int(intersect[7]) - 1
         #get the position of the snp compared with the feature
         if strand == "+":
             relative_position = int(snp_start) - int(feature_start)
         elif strand == "-":
             #-1 because we're in base 0
-            relative_position = (int(feature_end) - 1) - int(snp_start)
+            relative_position = (int(feature_end) - 1) - snp_start
         else:
             print("Incorrect strand: {0}.".format(strand))
             print(intersect)
@@ -426,9 +451,9 @@ def get_snp_type(sequence, variant):
     sequence_codons = re.findall(codon_regex, sequence)
     snp_sequence_codons = re.findall(codon_regex, snp_sequence)
     #find the index in the lists where the codon has changed, should be length 1
-    changed_indicies = [i for i, x in enumerate(sequence_codons) if x != snp_sequence_codons[i]]
-    if len(changed_indicies) == 1:
-        changed_index = changed_indicies[0]
+    changed_indices = [i for i, x in enumerate(sequence_codons) if x != snp_sequence_codons[i]]
+    if len(changed_indices) == 1:
+        changed_index = changed_indices[0]
         #get the cds and snp codon
         cds_codon = sequence_codons[changed_index]
         snp_codon = snp_sequence_codons[changed_index]
@@ -449,3 +474,19 @@ def get_snp_type(sequence, variant):
         cds_codon, snp_codon, mutation_type = "error", "error", "error"
 
     return cds_codon, snp_codon, mutation_type
+
+def get_snps_in_cds(bed, fasta, vcf_folder, panel_file, names, sample_file, output_file, out_prefix):
+    '''
+    Given a bed file of CDS regions (with the corresponding interval fasta), a .vcf file, a panel file and a set of sample identifiers from 1000Genomes,
+    pick out SNPs that overlap with any of the bed intervals in any of the selected samples and calculate their relative
+    position in the full ORF. Also write a filtered vcf to sample_file.
+    '''
+    #get the relevant SNPs
+    tabix_samples(bed, sample_file, panel_file, vcf_folder, samples = names, chr_prefix = True, remove_empty = True)
+    #the tabix_samples and the intersec-bed are kind of redundant
+    #however, this way we have a proper vcf as a result of tabix_samples that we can query using tabix
+    #and we have intersect_bed, which has both the SNP and the exon information in a nice format
+    intersect_file = "{0}_CDS_SNP_intersect.bed"
+    bmo.intersect_bed(bed, sample_file, write_both = True, output_file = intersect_file, no_dups = False)
+    exon_pos = get_snp_relative_exon_position(intersect_file)
+    get_snp_relative_cds_position(exon_pos, output_file, fasta)
