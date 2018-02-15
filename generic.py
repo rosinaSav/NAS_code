@@ -8,6 +8,7 @@ import random
 import re
 import shutil
 import subprocess
+import time
 
 def blast_all_against_all(db_name, fasta_file_name, output_file_name, blast_db_path):
     '''
@@ -281,6 +282,14 @@ def get_extension(file_name, extension_length, valid_list = None):
             print("File format must be included in {0}!".format(valid_list))
             raise Exception
     return(extension)
+
+def get_time(start_time):
+    '''
+    Print out how many minutes have passed since start_time.
+    '''
+    current = time.time()
+    spent = round((current - start_time)/1000, 2)
+    print("{0} minutes.\n".format(spent))
 
 def line_count(file):
     '''
