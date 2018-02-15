@@ -127,7 +127,7 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
     downsample_by: if you want to randomly pick only a subsample of the individuals. For example, 0.5 would give you half of the individuals.
     exclude_xy: if True, SNPs on sex chromosomes will not be returned
     chr_prefix: if True, prefix "chr" to chromosome names in the final output file
-    remove_empty: if True, don't report SNPs that don't appear in any of the selected samples
+    remove_empty: if True, don't report SNPs that don't appear in any of the selected samples or that appear in all of them (i.e. allele frequency 1)
     '''
 
     sex_chromosomes = ["Y", "X"]
@@ -231,14 +231,6 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
         allele_regex = re.compile("[0-9]+\|[0-9]+")
         temp_file = "temp_data/temp{0}.txt".format(random.random())
         with open(sort_file) as infile, open(temp_file, "w") as outfile:
-            #this quaint detous is to make sure the allele_regex works if you have allele counts in 2+ digits
-            #as my tests don't check that
-            temp_line = "1	16	rs1	A	C	100	PASS	AC=4;AF=0.5;AN=8;NS=2504;DP=18321;EAS_AF=0.006;AMR_AF=0;AFR_AF=0;EUR_AF=0;SAS_AF=0;AA=G|||;VT=SNP	GT	155|0	0|1	14897|0	0|1"
-            temp_result = re.findall(allele_regex, temp_line)
-            expected = ['155|0', '0|1', '14897|0', '0|1']
-            if temp_result != expected:
-                print("Problem with allele regex!")
-                raise Exception
             for line in infile:
                 dont_write = False
                 if line[0] != "#":
@@ -246,8 +238,9 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
                         line = "chr" + line
                     if remove_empty:
                         alleles = "".join(re.findall(allele_regex, line))
-                        alleles = [i for i in alleles if i != "0" and i != "|"]
-                        if not alleles:
+                        alleles_ones = [i for i in alleles if i != "0" and i != "|"]
+                        alleles_zeroes = [i for i in alleles if i != "1" and i != "|"]
+                        if not alleles_ones or not alleles_zeroes:
                             dont_write = True
                 if not dont_write:
                     outfile.write(line)
