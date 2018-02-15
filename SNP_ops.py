@@ -354,36 +354,34 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
     snps = gen.read_many_fields(snp_cds_relative_positions, "\t")
     cds_names, cds_seqs = gen.read_fasta(cds_fasta)
     entry_regex = re.compile("(\w+)\.(\d+)(\..*)*")
+    var_type_reg = re.compile("VT=([A-z]+)")
 
-    ptc_outputs = open(ptcs_output_file, "w")
-    other_outputs = open(others_output_file, "w")
 
-    refbase_error = 0
-    snp_count = 0
-    for snp in snps:
-        cds_id = re.search(entry_regex, snp[3]).group(1)
-        snp_index = int(snp[11])
-        #get and split the snp info
-        snp_info = snp[12].split("$")
-        #get the strand
-        strand = snp[5]
-        #get ancestral based
-        ref_base = snp_info[1]
-        #get the information on the variant type
-        var_base = snp_info[2].split(",")
-        var_base_count = len(var_base)
-        var_base = [i for i in var_base if i in ["A", "C", "G", "T"]]
+    with open(ptcs_output_file, "w") as ptc_outputs, open(others_output_file, "w") as other_outputs: 
+        refbase_error = 0
+        snp_count = 0
+        for snp in snps:
+            cds_id = re.search(entry_regex, snp[3]).group(1)
+            snp_index = int(snp[11])
+            #get the strand
+            strand = snp[5]
+            #get ancestral base
+            ref_base = snp[9]
+            #get the information on the variant type
+            var_base = snp[10].split(",")
+            var_base_count = len(var_base)
+            var_base = [i for i in var_base if i in ["A", "C", "G", "T"]]
 
-        #get the feature type
-        var_type_reg = re.compile('VT=(.+);')
-        var_type = re.search(var_type_reg, snp_info[4])
-        if var_type:
-            var_type = var_type.group(1)
+            #get the feature type
+            var_type = re.search(var_type_reg, snp[13])
+            if var_type:
+                var_type = var_type.group(1)
 
-        #check whether the cds is in the fasta (can be after the quality control filterings)
-        if cds_id in cds_names:
-            #if the snp index exists
-            if snp_index:
+            #check whether the cds is in the fasta (can be after the quality control filterings)
+            if cds_id in cds_names:
+                #I need to ask Liam what he means by the line below
+                #I've commented it out for the moment because otherwise it'll skip cases where the SNP index is 0
+##                if snp_index:
                 snp_count += 1
                 #check that the snp is only one base
                 if len(ref_base) == 1:
@@ -402,27 +400,29 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
                         #check whether cds base and ref base are the same
                         if cds_base != ref_base:
                             refbase_error += 1
-                            # print("Cds base and reference base not the same (id: {0})".format(snp_info[0]))
-                            # print("Cds base: {0}".format(cds_base))
-                            # print("Ref base: {0}".format(ref_base))
-                            # print("Variant base: {0}".format(var_base))
-                            # print("\n")
+##                            print("Cds base and reference base not the same (id: {0})".format(snp[8]))
+##                            print("Cds base: {0}".format(cds_base))
+##                            print("Ref base: {0}".format(ref_base))
+##                            print("Variant base: {0}".format(var_base))
+##                            print("\n")
                             pass
                         else:
                             cds_codon, snp_codon, mutation_type = get_snp_type(cds_seqs[cds_names.index(cds_id)], [snp_index, var_base])
-                            snp[6] = "CDS_CODON={0}$SNP_CODON={1}${2}".format(cds_codon, snp_codon, snp[6])
-                            snp[5] = mutation_type
+                            #I temporarily took out snp[6] from the line below cause I wasn't sure what you meant and whether I had to change it around now that
+                            #the file format had changed
+                            snp[13] = "CDS_CODON={0}$SNP_CODON={1}".format(cds_codon, snp_codon)
+                            snp[12] = mutation_type
                             if(mutation_type == "ptc"):
                                 ptc_outputs.write("{0}\n".format("\t".join(snp)))
                             else:
                                 other_outputs.write("{0}\n".format("\t".join(snp)))
 
-
-    print("Number of ref errors: {0} ({1}%)".format(refbase_error, np.divide(refbase_error, snp_count)*100))
-
-    ptc_outputs.close()
-    other_outputs.close()
-
+    if snp_count:
+        print("Number of ref errors: {0}/{1} ({2}%)".format(refbase_error, snp_count, np.divide(refbase_error, snp_count)*100))
+    else:
+        print("No SNPs were extracted!")
+        raise Exception
+    
 def get_snp_type(sequence, variant):
 
     codon_map = {
@@ -480,7 +480,7 @@ def get_snps_in_cds(bed, fasta, vcf_folder, panel_file, names, sample_file, outp
     #the tabix_samples and the intersec-bed are kind of redundant
     #however, this way we have a proper vcf as a result of tabix_samples that we can query using tabix
     #and we have intersect_bed, which has both the SNP and the exon information in a nice format
-    intersect_file = "{0}_CDS_SNP_intersect.bed"
+    intersect_file = "{0}_CDS_SNP_intersect.bed".format(out_prefix)
     bmo.intersect_bed(bed, sample_file, write_both = True, output_file = intersect_file, no_dups = False)
     exon_pos = get_snp_relative_exon_position(intersect_file)
     get_snp_relative_cds_position(exon_pos, output_file, fasta)
