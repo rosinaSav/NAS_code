@@ -1,0 +1,40 @@
+#!genome-build GRCh37.p13
+#!genome-version GRCh37
+#!genome-date 2009-02
+#!genome-build-accession NCBI:GCA_000001405.14
+#!genebuild-last-updated 2013-09
+GL1.3	ensembl	CDS	55	61	.	+	.	gene_id "ENSG000002234324"; gene_version "4"; transcript_id "ENST0010"; gene_biotype "protein_coding";  exon_number "2";
+GL1.3	ensembl	CDS	87	98	.	+	.	gene_id "ENSG000002234324"; gene_version "4"; transcript_id "ENST0010"; gene_biotype "protein_coding";  exon_number "3";
+GL1.3	ensembl	CDS	61	78	.	-	.	gene_id "ENSG0000032849"; gene_version "4"; transcript_id "ENST00014"; gene_biotype "protein_coding";  exon_number "1";
+GL1.3	ensembl	CDS	29	39	.	-	.	gene_id "ENSG00000564644"; gene_version "4"; transcript_id "ENST0012"; gene_biotype "protein_coding";  exon_number "4";
+GL1.3	ensembl	CDS	61	64	.	-	.	gene_id "ENSG00000564644"; gene_version "4"; transcript_id "ENST0012"; gene_biotype "protein_coding";  exon_number "2";
+1	ensembl_havana	gene	11869	14412	.	+	.	gene_id "ENSG00000223972"; gene_version "4"; gene_name "SAMPLE0001"; gene_source "ensembl_havana"; gene_biotype "pseudogene";
+5	ensembl	stop_codon	11	13	.	-	.	gene_id "ENSG0000032849"; gene_version "4"; transcript_id "ENST0006"; gene_biotype "protein_coding";  exon_number "3";
+4	ensembl	CDS	43	54	.	+	.	gene_id "ENSG00000986768"; gene_version "4"; transcript_id "ENST0005"; gene_biotype "protein_coding";  exon_number "3";
+4	ensembl	stop_codon	56	58	.	+	.	gene_id "ENSG00000986768"; gene_version "4"; transcript_id "ENST0005"; gene_biotype "protein_coding";  exon_number "3";
+1	ensembl	CDS	33	49	.	+	.	gene_id "ENSG00000223972"; gene_version "4"; transcript_id "ENST0001"; gene_biotype "protein_coding";  exon_number "2";
+1	havana	exon	13221	14409	.	+	.	gene_id "ENSG00000223972"; gene_version "4"; transcript_id "ENST00000456328"; exon_number "2"; gene_biotype "protein_coding";
+5	ensembl	CDS	13	23	.	-	.	gene_id "ENSG0000032849"; gene_version "4"; transcript_id "ENST0006"; gene_biotype "protein_coding";  exon_number "3";
+2	ensembl	CDS	47	56	.	+	.	gene_id "ENSG000002233224"; gene_version "4"; transcript_id "ENST0003"; gene_biotype "protein_coding";  exon_number "2";
+1	havana	exon	11869	12227	.	+	.	gene_id "ENSG00000223972"; gene_version "4"; transcript_id "ENST00000456328"; gene_biotype "protein_coding";
+3	ensembl	transcript	11874	14409	.	+	.	gene_id "ENSG00000223972"; gene_version "4"; transcript_id "ENST00000518655"; gene_biotype "protein_coding";
+3	ensembl	exon	13403	13655	.	+	.	gene_id "ENSG00000223972"; gene_version "4"; transcript_id "ENST00000518655"; exon_number "3"; gene_biotype "protein_coding";
+1	havana	transcript	11869	14409	.	+	.	gene_id "ENSG00000223973"; gene_version "4"; transcript_id "ENST00000456328"; gene_biotype "pseudogene";
+4	ensembl	CDS	31	39	.	+	.	gene_id "ENSG00000986768"; gene_version "4"; transcript_id "ENST0005"; gene_biotype "protein_coding";  exon_number "2";
+2	ensembl	CDS	21	41	.	+	.	gene_id "ENSG000002233224"; gene_version "4"; transcript_id "ENST0003"; gene_biotype "protein_coding";  exon_number "1";
+4	ensembl	CDS	12	23	.	+	.	gene_id "ENSG00000986768"; gene_version "4"; transcript_id "ENST0005"; gene_biotype "protein_coding";  exon_number "1";
+3	ensembl	CDS	45	57	.	-	.	gene_id "ENSG00000564644"; gene_version "4"; transcript_id "ENST0004"; gene_biotype "protein_coding";  exon_number "3";
+2	ensembl	CDS	85	98	.	+	.	gene_id "ENSG000002233224"; gene_version "4"; transcript_id "ENST0003"; gene_biotype "protein_coding";  exon_number "4";
+1	havana	CDS	18	27	.	+	.	gene_id "ENSG00000223972"; gene_version "4"; transcript_id "ENST0001"; gene_biotype "protein_coding"; exon_number "1";
+2	ensembl	CDS	72	77	.	+	.	gene_id "ENSG000002233224"; gene_version "4"; transcript_id "ENST0003"; gene_biotype "protein_coding";  exon_number "3";
+1	ensembl	CDS	26	36	.	+	.	gene_id "ENSG000002234324"; gene_version "4"; transcript_id "ENST0002"; gene_biotype "protein_coding";  exon_number "1";
+1	ensembl	CDS	93	98	.	+	.	gene_id "ENSG00000223972"; gene_version "4"; transcript_id "ENST0001"; gene_biotype "protein_coding";  exon_number "3";
+3	ensembl	CDS	71	84	.	-	.	gene_id "ENSG00000564644"; gene_version "4"; transcript_id "ENST0004"; gene_biotype "protein_coding";  exon_number "1";
+5	ensembl	CDS	43	55	.	-	.	gene_id "ENSG0000032849"; gene_version "4"; transcript_id "ENST0006"; gene_biotype "protein_coding";  exon_number "2";
+3	ensembl	CDS	29	39	.	-	.	gene_id "ENSG00000564644"; gene_version "4"; transcript_id "ENST0004"; gene_biotype "protein_coding";  exon_number "4";
+3	ensembl	exon	6460	6601	.	+	.	gene_id "ENSG00000223972"; gene_version "4"; transcript_id "ENST00032323"; exon_number "3"; gene_biotype "protein_coding";
+1	ensembl	CDS	55	61	.	+	.	gene_id "ENSG000002234324"; gene_version "4"; transcript_id "ENST0002"; gene_biotype "protein_coding";  exon_number "2";
+1	ensembl	CDS	87	98	.	+	.	gene_id "ENSG000002234324"; gene_version "4"; transcript_id "ENST0002"; gene_biotype "protein_coding";  exon_number "3";
+5	ensembl	CDS	61	78	.	-	.	gene_id "ENSG0000032849"; gene_version "4"; transcript_id "ENST0006"; gene_biotype "protein_coding";  exon_number "1";
+3	ensembl	CDS	29	39	.	-	.	gene_id "ENSG00000564644"; gene_version "4"; transcript_id "ENST0004"; gene_biotype "protein_coding";  exon_number "4";
+3	ensembl	CDS	61	64	.	-	.	gene_id "ENSG00000564644"; gene_version "4"; transcript_id "ENST0004"; gene_biotype "protein_coding";  exon_number "2";

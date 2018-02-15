@@ -94,13 +94,14 @@ def check_sequence_quality(names, seqs, check_acgt=None, check_stop=None, check_
         print("After filtering, {0} sequences remain".format(len(passed_seqs)))
         return(passed_names, passed_seqs)
 
-def extract_cds(gtf, bed_output, output_fasta, genome_fasta, full_chr_name=None, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None, all_checks=None, uniquify = False):
+def extract_cds(gtf, bed_output, output_fasta, genome_fasta, full_chr_name=None, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None, all_checks=None, uniquify = False,clean_chrom_only=False):
     '''
     Given a .gtf file, extract the coding sequences to a fasta file.
+    clean_chrom_only: do not include CDSs from contigs that haven't been assigned to a particular chromosome.
     EX.: extract_exons("../source_data/Homo_sapiens.GRCh37.87.gtf", "../output_data/Homo_sapiens.GRCh37.87_cds.fasta", "../source_data/Genomes/Homo_sapiens.GRCh37.dna.primary_assembly.fa")
     '''
     #extract required cds features
-    extract_features(gtf, bed_output, ['CDS', 'stop_codon'], full_chr_name)
+    extract_features(gtf, bed_output, ['CDS', 'stop_codon'], full_chr_name, clean_chrom_only = clean_chrom_only)
     #extract to fasta
     extract_cds_from_bed(bed_output, output_fasta, genome_fasta, check_acgt, check_start, check_length, check_stop, check_inframe_stop, all_checks, uniquify)
     #filter the previous files to only include those that passed the filters
@@ -264,7 +265,7 @@ def extract_exon_junctions(exons, bed, window_of_interest=None):
         #close file
         out_file.close()
 
-def extract_features(gtf_file, out_file, features, full_chr_name=None):
+def extract_features(gtf_file, out_file, features, full_chr_name=None, clean_chrom_only = False):
         '''
         Given a GTF file, extract exon coordinates for specific features and write to .bed.
         EX.: extract_features("../source_data/Homo_sapiens.GRCh37.87.gtf", "../source_data/Homo_sapiens.GRCh37.87_exons.bed", ['CDS', 'stop_codon'])
@@ -274,6 +275,9 @@ def extract_features(gtf_file, out_file, features, full_chr_name=None):
                 list_feature = True
         else:
                 list_feature = False
+
+        if clean_chrom_only:
+                allowed = [str(i) for i in range(1, 23)] + ["X", "Y"]
 
         lines = gen.read_many_fields(gtf_file, "\t")
         #ensure protein coding and not entry meta
@@ -292,7 +296,12 @@ def extract_features(gtf_file, out_file, features, full_chr_name=None):
                         trans = re.search(trans_regex, meta).group(0)
                         exon_no = re.search(exon_no_regex, meta).group(0)
                         chr_no = line[0]
-                        feature_list[chr_no][gene][trans][exon_no][line[2]].append([line[3], line[4], line[6]])
+                        add = True
+                        if clean_chrom_only:
+                                if chr_no not in allowed:
+                                        add = False
+                        if add:
+                                feature_list[chr_no][gene][trans][exon_no][line[2]].append([line[3], line[4], line[6]])
         #output features sorted by feature, chr, gene, transcript id
         with open(out_file, 'w') as output:
                 for chr_no in sorted(feature_list):

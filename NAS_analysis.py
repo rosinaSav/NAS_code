@@ -11,7 +11,8 @@ def process_bam_per_individual(bam_files, other_arguments):
 
         '''
         **********
-        MISSING: code to filter the bam file to only leave split alignments (i.e. ones that overlap an exon-exon junction).
+        MISSING: Intersect junctions and .bam, and write down the overlapping .bam alignments, without counting.
+        Filter the bam file to only leave split alignments (i.e. ones that overlap an exon-exon junction).
         Information contained in the cigar.
         **********
         '''
@@ -19,18 +20,13 @@ def process_bam_per_individual(bam_files, other_arguments):
         '''
         **********
         MISSING: filter remaining .bam alignments by quality.
+        Find cases where both of the reads in a pair have been retained in step 1, and randomly remove one of them.
         **********
         '''
 
         '''
         **********
-        MISSING: our reads are paired-end, so we need to split the intersect step in two.
-        1) Intersect junctions and .bam, and write down the overlapping .bam alignments, without counting.
-        Intermediate stage: Find cases where both of the reads in a pair have been retained in step 1, and randomly remove one of them.
-        This is because you can theoretically imagine a situation where one read overlaps with one junction and
-        the other read maps with another junction. I think it's better to only count one of them because the two reads from the same
-        fragment are not independent data points. Do you agree?
-        2) An intersect like the one below where you just count the number of overlapping alignments.
+        MISSING: an intersect like the one below where you just count the number of overlapping alignments.
         NB! The RNA-seq data we're using is not stranded so contrary to what I had written before, we should NOT match strand in the intersect.
         **********
         '''
@@ -58,16 +54,8 @@ def main():
     CDS_fasta = "{0}_CDS.fasta".format(out_prefix)
     CDS_bed = "{0}_CDS.bed".format(out_prefix)
     print("Extracting and filtering CDSs...")
-    #bo.extract_cds(gtf, CDS_bed, CDS_fasta, genome_fasta, all_checks = True, uniquify = True)
+    #bo.extract_cds(gtf, CDS_bed, CDS_fasta, genome_fasta, all_checks = True, uniquify = True, clean_chrom_only = True)
     gen.get_time(start)
-
-    #match transcript identifiers with gene names so that you coud also generate
-    #a families output file that is meaningful to a human
-    descriptions_file = "{0}_descriptions.txt".format(out_prefix)
-    names = gen.read_fasta(CDS_fasta)[0]
-    print("Matching transcript identifiers with gene names...")
-    #bo.get_descriptions(names, gtf, descriptions_file)
-    gen.get_time.start()
 
     #group the CDS sequences into families based on sequence similarity
     print("Grouping sequences into families...")

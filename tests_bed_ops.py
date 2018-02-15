@@ -26,6 +26,17 @@ class Test_bed_ops(unittest.TestCase):
         observed = gen.read_fasta(observed)
         self.assertEqual(observed, expected)
 
+    def test_extract_cds_clean_chrom(self):
+        gtf_file = "./test_data/bed_ops/test_extract_cds_clean_chrom/test_extract_cds.gtf"
+        genome_file = "./test_data/bed_ops/test_extract_cds_clean_chrom/test_extract_cds_genome.fa"
+        bed_output = "./test_data/bed_ops/test_extract_cds_clean_chrom/test_extract_cds.bed"
+        observed = "./test_data/bed_ops/test_extract_cds_clean_chrom/observed_test_extract_cds_fasta.fasta"
+        gen.remove_file(observed)
+        expected = gen.read_fasta("./test_data/bed_ops/test_extract_cds_clean_chrom/expected_test_extract_cds_fasta.fasta")
+        extract_cds(gtf_file, bed_output, observed, genome_file, clean_chrom_only = True)
+        observed = gen.read_fasta(observed)
+        self.assertEqual(observed, expected)
+
     def test_extract_cds_quality_control(self):
         gtf_file = "./test_data/bed_ops/test_extract_cds_quality_control/test_extract_cds_quality_control.gtf"
         genome_file = "./test_data/bed_ops/test_extract_cds_quality_control/test_extract_cds_quality_control_genome.fa"
