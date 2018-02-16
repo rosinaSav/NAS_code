@@ -288,7 +288,7 @@ def get_time(start_time):
     Print out how many minutes have passed since start_time.
     '''
     current = time.time()
-    spent = round((current - start_time)/1000, 2)
+    spent = round((current - start_time)/60, 2)
     print("{0} minutes.\n".format(spent))
 
 def line_count(file):

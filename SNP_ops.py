@@ -11,6 +11,9 @@ def get_snp_relative_cds_position(snp_exon_relative_positions, snp_cds_position_
     '''
     Get the position of the snp within a CDS using the relative positions of snps in the features they are found
     '''
+    #read in the filtered CDS identifiers so you can filter the fasta intervals
+    #this is mainly so you'd only do one transcript per gene
+    filtered_CDSs = [(i[3].split("."))[0] for i in snp_exon_relative_positions]
     #get the fasta entries of the features
     interval_names, interval_seqs =  gen.read_fasta(fasta_interval_file)
     cds_exons = collections.defaultdict(lambda: collections.defaultdict())
@@ -21,21 +24,22 @@ def get_snp_relative_cds_position(snp_exon_relative_positions, snp_cds_position_
     for i, name in enumerate(interval_names):
         name_regex = re.search(entry_regex, name)
         trans_name = name_regex.group(1)
-        #if you had an internal micro-exon that had the sequence of a stop, the below procedure would lead to an error
-        #this is extremely unlikely
-        #however, I'm adding a check just to be sure
-        if interval_seqs[i] in stops:
-            #set stop codon id to arbitrarily high number
-            exon = stop_dummy
-            if trans_name in cds_exons:
-                if stop_dummy in cds_exons[trans_name]:
-                    print("The CDS from transcript {0} appears to contain two stops!".format(trans_name))
-                    print(cds_exons[trans_name])
-                    raise Exception
-        else:
-            exon = int(name_regex.group(2))
-        #I changed it to store the length and not the sequence itself to go easier on RAM
-        cds_exons[trans_name][exon] = len(interval_seqs[i])
+        if trans_name in filtered_CDSs:
+            #if you had an internal micro-exon that had the sequence of a stop, the below procedure would lead to an error
+            #this is extremely unlikely
+            #however, I'm adding a check just to be sure
+            if interval_seqs[i] in stops:
+                #set stop codon id to arbitrarily high number
+                exon = stop_dummy
+                if trans_name in cds_exons:
+                    if stop_dummy in cds_exons[trans_name]:
+                        print("The CDS from transcript {0} appears to contain two stops!".format(trans_name))
+                        print(cds_exons[trans_name])
+                        raise Exception
+            else:
+                exon = int(name_regex.group(2))
+            #I changed it to store the length and not the sequence itself to go easier on RAM
+            cds_exons[trans_name][exon] = len(interval_seqs[i])
 
     #set up dict to hold the feature positions relative to the cds
     cds_features_relative_positions = collections.defaultdict(lambda: collections.defaultdict())
@@ -54,6 +58,9 @@ def get_snp_relative_cds_position(snp_exon_relative_positions, snp_cds_position_
             snp_cds = cds_id_meta.group(1)
             snp_exon_id = cds_id_meta.group(2)
             snp_exon_position = int(snp[11])
+            print(snp)
+            print(cds_features_relative_positions[snp_cds])
+            print("\n")
             #snp position in cds is the position in the exon plus the exons position in the cds
             snp_cds_position = snp_exon_position + cds_features_relative_positions[snp_cds][int(snp_exon_id)]
             snp[11] = str(snp_cds_position)
@@ -222,12 +229,12 @@ def get_snps_in_cds(bed, fasta, vcf_folder, panel_file, names, sample_file, outp
     position in the full ORF. Also write a filtered vcf to sample_file.
     '''
     #get the relevant SNPs
-    tabix_samples(bed, sample_file, panel_file, vcf_folder, samples = names, chr_prefix = True, remove_empty = True)
+    #tabix_samples(bed, sample_file, panel_file, vcf_folder, samples = names, chr_prefix = True, remove_empty = True, exclude_xy = True)
     #the tabix_samples and the intersec-bed are kind of redundant
     #however, this way we have a proper vcf as a result of tabix_samples that we can query using tabix
     #and we have intersect_bed, which has both the SNP and the exon information in a nice format
     intersect_file = "{0}_CDS_SNP_intersect.bed".format(out_prefix)
-    bmo.intersect_bed(bed, sample_file, write_both = True, output_file = intersect_file, no_dups = False)
+    #bmo.intersect_bed(bed, sample_file, write_both = True, output_file = intersect_file, no_dups = False)
     exon_pos = get_snp_relative_exon_position(intersect_file)
     get_snp_relative_cds_position(exon_pos, output_file, fasta)
 
@@ -395,7 +402,7 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
             line = line.split("\t")
             chrom = line[0].lstrip("chr")
             if chrom in sex_chromosomes and exclude_xy:
-                print("Only autosomes are processed!")
+                pass
             else:
                 #add 1 to start coordinate because bed files are 0-based, whereas the vcf files are 1-based
                 start = int(line[1]) + 1

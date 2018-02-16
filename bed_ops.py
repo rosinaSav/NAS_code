@@ -103,14 +103,13 @@ def extract_cds(gtf, bed_output, output_fasta, genome_fasta, full_chr_name=None,
     #extract required cds features
     extract_features(gtf, bed_output, ['CDS', 'stop_codon'], full_chr_name, clean_chrom_only = clean_chrom_only)
     #extract to fasta
-    extract_cds_from_bed(bed_output, output_fasta, genome_fasta, check_acgt, check_start, check_length, check_stop, check_inframe_stop, all_checks, uniquify)
+    fasta_interval_file = "{0}_intervals{1}".format(os.path.splitext(output_fasta)[0], os.path.splitext(output_fasta)[1])    
+    extract_cds_from_bed(bed_output, output_fasta, genome_fasta, fasta_interval_file, check_acgt, check_start, check_length, check_stop, check_inframe_stop, all_checks, uniquify)
     #filter the previous files to only include those that passed the filters
     filter_bed_from_fasta(bed_output, output_fasta, bed_output)
-    fasta_interval_file = "{0}_intervals{1}".format(os.path.splitext(output_fasta)[0], os.path.splitext(output_fasta)[1])
-    #I've temporarily commented out the line below cause I get an error that I don't understand
-    #filter_fasta_intervals_from_fasta(fasta_interval_file, output_fasta, fasta_interval_file)
+    filter_fasta_intervals_from_fasta(fasta_interval_file, output_fasta, fasta_interval_file)
 
-def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None, all_checks=None, uniquify = False):
+def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, fasta_interval_file, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None, all_checks=None, uniquify = False):
         '''
         Extract the CDS to fasta file
         Ex.: extract_cds('../feature_file.bed', '../output_file_fasta.fasta', '../source_data/genome_fasta_file.fa')
@@ -119,10 +118,10 @@ def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, check_acgt=None, 
         cds_list = collections.defaultdict(lambda: collections.defaultdict())
         stop_list = {}
         concat_list = collections.defaultdict(lambda: collections.UserList())
-        #create temp fasta file with extracted parts
-        temp_fasta_file, temp_directory_path = fasta_from_intervals_temp_file(bed_file, output_fasta, genome_fasta, random_directory = True)
-        #read the temp fasta file
-        entries = gen.read_fasta(temp_fasta_file)
+        #create fasta file with extracted parts
+        fasta_from_intervals_temp_file(bed_file, fasta_interval_file, genome_fasta)
+        #read the fasta interval file
+        entries = gen.read_fasta(fasta_interval_file)
         # get the entry names and seqs
         sample_names = entries[0]
         seqs = entries[1]
@@ -161,8 +160,6 @@ def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, check_acgt=None, 
                 print("After leaving only one transcript per gene, {0} sequences remain.".format(len(seqs)))
         #write to output fasta file
         gen.write_to_fasta(names, seqs, output_fasta)
-        #remove the temporary directory
-        shutil.rmtree(temp_directory_path)
 
 def extract_exons(gtf, bed):
         '''Given a GTF file, extract exon coordinates and write them to .bed.
