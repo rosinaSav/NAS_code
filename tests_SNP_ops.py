@@ -7,41 +7,53 @@ class Test_SNP_ops(unittest.TestCase):
 
     def test_get_snp_relative_cds_position(self):
         relative_exon_position_file = gen.read_many_fields("test_data/snp_ops/test_get_snp_relative_cds_position/test_snp_relative_exon_position.bed", "\t")
-        fasta_interval_file = "test_data/snp_ops/test_get_snp_relative_cds_position/test_get_snp_relative_exon_position_exon_intervals.fasta"
+        full_bed_file = "test_data/snp_ops/test_get_snp_relative_cds_position/test_full_bed.bed"
         expected = gen.read_many_fields("test_data/snp_ops/test_get_snp_relative_cds_position/expected_test_snp_relative_cds_position.bed", "\t")
         observed = "test_data/snp_ops/test_get_snp_relative_cds_position/observed_test_snp_relative_cds_position.bed"
         gen.remove_file(observed)
-        get_snp_relative_cds_position(relative_exon_position_file, observed, fasta_interval_file)
+        get_snp_relative_cds_position(relative_exon_position_file, observed, full_bed_file)
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(observed, expected)
 
-    def test_get_snp_relative_cds_position_error(self):
-        relative_exon_position_file = gen.read_many_fields("test_data/snp_ops/test_get_snp_relative_cds_position_error/test_snp_relative_exon_position.bed", "\t")
-        fasta_interval_file = "test_data/snp_ops/test_get_snp_relative_cds_position_error/test_get_snp_relative_exon_position_exon_intervals.fasta"
-        observed = "test_data/snp_ops/test_get_snp_relative_cds_position_error/observed_test_snp_relative_cds_position.bed"
-        gen.remove_file(observed)
-        with self.assertRaises(Exception):
-            get_snp_relative_cds_position(relative_exon_position_file, observed, fasta_interval_file)
-
     def test_get_snp_relative_cds_position_minus_strand(self):
         relative_exon_position_file = gen.read_many_fields("test_data/snp_ops/test_get_snp_relative_cds_position_minus_strand/test_snp_relative_exon_position.bed", "\t")
-        fasta_interval_file = "test_data/snp_ops/test_get_snp_relative_cds_position_minus_strand/test_get_snp_relative_exon_position_exon_intervals.fasta"
+        bed_file = "test_data/snp_ops/test_get_snp_relative_cds_position_minus_strand/full_bed.bed"
         expected = gen.read_many_fields("test_data/snp_ops/test_get_snp_relative_cds_position_minus_strand/expected_test_snp_relative_cds_position.bed", "\t")
         observed = "test_data/snp_ops/test_get_snp_relative_cds_position_minus_strand/observed_test_snp_relative_cds_position.bed"
         gen.remove_file(observed)
-        get_snp_relative_cds_position(relative_exon_position_file, observed, fasta_interval_file)
+        get_snp_relative_cds_position(relative_exon_position_file, observed, bed_file)
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(observed, expected)
 
     def test_get_snp_relative_cds_position_plus_strand(self):
         relative_exon_position_file = gen.read_many_fields("test_data/snp_ops/test_get_snp_relative_cds_position_plus_strand/test_snp_relative_exon_position.bed", "\t")
-        fasta_interval_file = "test_data/snp_ops/test_get_snp_relative_cds_position_plus_strand/test_get_snp_relative_exon_position_exon_intervals.fasta"
+        bed_file = "test_data/snp_ops/test_get_snp_relative_cds_position_plus_strand/full_bed.bed"
         expected = gen.read_many_fields("test_data/snp_ops/test_get_snp_relative_cds_position_plus_strand/expected_test_snp_relative_cds_position.bed", "\t")
         observed = "test_data/snp_ops/test_get_snp_relative_cds_position_plus_strand/observed_test_snp_relative_cds_position.bed"
         gen.remove_file(observed)
-        get_snp_relative_cds_position(relative_exon_position_file, observed, fasta_interval_file)
+        get_snp_relative_cds_position(relative_exon_position_file, observed, bed_file)
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(observed, expected)
+
+    def test_get_snp_relative_cds_position_minus_strand_split(self):
+        relative_exon_position_file = gen.read_many_fields("test_data/snp_ops/test_get_snp_relative_cds_position_minus_strand_split/test_snp_relative_exon_position.bed", "\t")
+        bed_file = "test_data/snp_ops/test_get_snp_relative_cds_position_minus_strand_split/full_bed.bed"
+        expected = gen.read_many_fields("test_data/snp_ops/test_get_snp_relative_cds_position_minus_strand_split/expected_test_snp_relative_cds_position.bed", "\t")
+        observed = "test_data/snp_ops/test_get_snp_relative_cds_position_minus_strand_split/observed_test_snp_relative_cds_position.bed"
+        gen.remove_file(observed)
+        get_snp_relative_cds_position(relative_exon_position_file, observed, bed_file)
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(observed, expected)
+
+    def test_get_snp_relative_cds_position_plus_strand_split(self):
+        relative_exon_position_file = gen.read_many_fields("test_data/snp_ops/test_get_snp_relative_cds_position_plus_strand_split/test_snp_relative_exon_position.bed", "\t")
+        bed_file = "test_data/snp_ops/test_get_snp_relative_cds_position_plus_strand_split/full_bed.bed"
+        expected = gen.read_many_fields("test_data/snp_ops/test_get_snp_relative_cds_position_plus_strand_split/expected_test_snp_relative_cds_position.bed", "\t")
+        observed = "test_data/snp_ops/test_get_snp_relative_cds_position_plus_strand_split/observed_test_snp_relative_cds_position.bed"
+        gen.remove_file(observed)
+        get_snp_relative_cds_position(relative_exon_position_file, observed, bed_file)
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(observed, expected)        
 
     def test_get_snp_relative_exon_position(self):
         intersect_file = "test_data/snp_ops/test_get_snp_relative_exon_position/test_cds_bed_snps_vcf_intersect.bed"
@@ -82,7 +94,6 @@ class Test_SNP_ops(unittest.TestCase):
 
     def test_get_snps_in_cds(self):
         bed = "test_data/snp_ops/test_get_snps_in_cds/exons.bed"
-        fasta = "test_data/snp_ops/test_get_snps_in_cds/test_fasta.fa"
         vcf_folder = "test_data/snp_ops/test_get_snps_in_cds/per_sample_vcfs"
         names = ["HG1", "HG3"]
         sample_file = "test_data/snp_ops/test_get_snps_in_cds/sample_file.txt"
@@ -90,7 +101,7 @@ class Test_SNP_ops(unittest.TestCase):
         expected = gen.read_many_fields("test_data/snp_ops/test_get_snps_in_cds/expected.bed", "\t")
         observed = "test_data/snp_ops/test_get_snps_in_cds/observed.bed"
         gen.remove_file(observed)
-        get_snps_in_cds(bed, fasta, vcf_folder, panel_file, names, sample_file, observed, out_prefix = "test_data/snp_ops/test_get_snps_in_cds/test")
+        get_snps_in_cds(bed, bed, vcf_folder, panel_file, names, sample_file, observed, out_prefix = "test_data/snp_ops/test_get_snps_in_cds/test")
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(observed, expected)
 

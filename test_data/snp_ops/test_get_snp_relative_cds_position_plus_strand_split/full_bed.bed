@@ -1,0 +1,10 @@
+chr1	15	22	ENST1.1	CDS	+
+chr1	25	29	ENST1.2	CDS	+
+chr1	33	37	ENST1.3	CDS	+
+chr1	36	37	ENST1.3	stop	+
+chr1	47	49	ENST1.4	stop	+
+chr2	15	22	ENST2.1	CDS	+
+chr2	25	29	ENST2.2	CDS	+
+chr2	35	37	ENST2.3	stop	+
+chr2	33	37	ENST2.3	CDS	+
+chr2	48	49	ENST2.4	stop	+

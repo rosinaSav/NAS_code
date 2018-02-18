@@ -119,7 +119,7 @@ def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, fasta_interval_fi
         stop_list = {}
         concat_list = collections.defaultdict(lambda: collections.UserList())
         #create fasta file with extracted parts
-        fasta_from_intervals_temp_file(bed_file, fasta_interval_file, genome_fasta)
+        fasta_from_intervals(bed_file, fasta_interval_file, genome_fasta, names = True)
         #read the fasta interval file
         entries = gen.read_fasta(fasta_interval_file)
         # get the entry names and seqs
@@ -167,7 +167,7 @@ def extract_exons(gtf, bed):
         #extract exons from GTF
         exons = gen.run_process(["grep", "\texon\t", gtf])
         #filter down to only protein-coding ones
-        exons = gen.run_process(["grep", "gene_biotype \"protein_coding\""], input_to_pipe = exons)
+        exons = gen.run_process(["grep", "transcript_biotype \"protein_coding\""], input_to_pipe = exons)
         #split lines
         exons = [i.split("\t") for i in exons.split("\n")]
         #format as .bed. Switch to base 0.
@@ -314,7 +314,7 @@ def extract_features(gtf_file, out_file, features, full_chr_name=None, clean_chr
                                                                 else:
                                                                         chr_name = str(chr_no)
                                                                 #output and convert to base 0
-                                                                output.write('\t'.join(["chr{0}".format(chr_name), str(int(item[0])-1), item[1], '{0}.{1}.{2}'.format(trans, exon, gene), feature, item[2]]) + '\n')
+                                                                output.write('\t'.join([chr_name, str(int(item[0])-1), item[1], '{0}.{1}.{2}'.format(trans, exon, gene), feature, item[2]]) + '\n')
 
 def fasta_from_intervals(bed_file, fasta_file, genome_fasta, force_strand = True, names = False):
         '''
@@ -336,6 +336,7 @@ def fasta_from_intervals(bed_file, fasta_file, genome_fasta, force_strand = True
                 del bedtools_args[2]
         if names:
                 bedtools_args.append("-name")
+        print(" ".join(bedtools_args))
         gen.run_process(bedtools_args)
         names, seqs = gen.read_fasta(fasta_file)
         seqs = [i.upper() for i in seqs]

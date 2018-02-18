@@ -7,64 +7,128 @@ import string
 import collections
 import re
 
-def get_snp_relative_cds_position(snp_exon_relative_positions, snp_cds_position_output, fasta_interval_file):
+def get_snp_relative_cds_position(snp_exon_relative_positions, snp_cds_position_output, full_bed):
     '''
     Get the position of the snp within a CDS using the relative positions of snps in the features they are found
     '''
-    #read in the filtered CDS identifiers so you can filter the fasta intervals
-    #this is mainly so you'd only do one transcript per gene
-    filtered_CDSs = [(i[3].split("."))[0] for i in snp_exon_relative_positions]
-    #get the fasta entries of the features
-    interval_names, interval_seqs =  gen.read_fasta(fasta_interval_file)
-    cds_exons = collections.defaultdict(lambda: collections.defaultdict())
-    entry_regex = re.compile("(\w+)\.(\d+)(\..*)*")
-    stops = ["TAA", "TAG", "TGA"]
-    stop_dummy = 99999
-    #iterate through the fasta entries, sorting by exon (needed in case fasta is not sorted)
-    for i, name in enumerate(interval_names):
-        name_regex = re.search(entry_regex, name)
-        trans_name = name_regex.group(1)
-        if trans_name in filtered_CDSs:
-            #if you had an internal micro-exon that had the sequence of a stop, the below procedure would lead to an error
-            #this is extremely unlikely
-            #however, I'm adding a check just to be sure
-            if interval_seqs[i] in stops:
-                #set stop codon id to arbitrarily high number
-                exon = stop_dummy
-                if trans_name in cds_exons:
-                    if stop_dummy in cds_exons[trans_name]:
-                        print("The CDS from transcript {0} appears to contain two stops!".format(trans_name))
-                        print(cds_exons[trans_name])
-                        raise Exception
-            else:
-                exon = int(name_regex.group(2))
-            #I changed it to store the length and not the sequence itself to go easier on RAM
-            cds_exons[trans_name][exon] = len(interval_seqs[i])
+    #read in the coordinates from the full_bed
+    bed_data = gen.read_many_fields(full_bed, "\t")
+    cds_exons = {}
+    #iterate through the bed entries, sorting by exon (needed in case bed is not sorted)
+    #NB! check if two of the exons have the same end coordinates
+    #if yes, delete the shorter one
+    #if not, concatenate
+    for i, bed_line in enumerate(bed_data):
+        name_field = bed_line[3].split(".")
+        trans_name = name_field[0]
+        exon = int(name_field[1])
+        #store the length of the exon
+        length = int(bed_line[2]) - int(bed_line[1])
+        if trans_name not in cds_exons:
+            cds_exons[trans_name] = {}
+        if exon in cds_exons[trans_name]:
+            cds_exons[trans_name][exon].append([bed_line, length])
+        else:
+            cds_exons[trans_name][exon] = [[bed_line, length]]
 
+    #when you have the same exon number for two features (CDS and stop),
+    #sometimes the relative exon position will need to be increased to account for this
+    #I will make a dicionary that contains such cases
+    add_to_rel_coords = {}
+
+    entry_regex = re.compile("(\w+)\.(\d+)(\..*)*")
     #set up dict to hold the feature positions relative to the cds
     cds_features_relative_positions = collections.defaultdict(lambda: collections.defaultdict())
     #get the relative start positions of each exon
     for cds in cds_exons:
         total = 0
         for exon in sorted(cds_exons[cds]):
+            exon_info = cds_exons[cds][exon]
+            if len(exon_info) == 1:
+                to_add = exon_info[0][1]
+            elif len(exon_info) == 2:
+                strand = exon_info[0][0][5]
+                if strand == "+":
+                    ends = [int(i[0][2]) for i in exon_info]
+                elif strand == "-":
+                    ends = [int(i[0][1]) for i in exon_info]
+                else:
+                    print("Problem with strand information!")
+                    print(exon_info)
+                    raise Exception
+                if ends[0] == ends[1]:
+                    #this is the case where a stop has been split in two
+                    #and so the first chunk overlaps with the last CDS feature (same region annotated twice)
+                    #and the second chunk is annotated only as stop
+                    #so you need to make sure you don't count the overlapping region twice
+                    to_add = max([exon_info[0][1], exon_info[1][1]])
+                    #this bit it because you don't want to count the SNPs in the overlapping bits twice
+                    if strand == "+":
+                        if int(exon_info[0][0][1]) > int(exon_info[1][0][1]):
+                            #means the stop is the first element
+                            #store both the coordinates of the stop bit
+                            #and the length of the CDS bit
+                            add_to_rel_coords[".".join([cds, str(exon)])] = [exon_info[0][0], "remove"]
+                        else:
+                            add_to_rel_coords[".".join([cds, str(exon)])] = [exon_info[1][0], "remove"]
+                    elif strand == "-":
+                        #means the stop is the first element
+                        if int(exon_info[0][0][2]) < int(exon_info[1][0][2]):
+                            add_to_rel_coords[".".join([cds, str(exon)])] = [exon_info[0][0], "remove"]
+                        else:
+                            add_to_rel_coords[".".join([cds, str(exon)])] = [exon_info[1][0], "remove"]
+                else:
+                    #this is the case of a normal stop that appears after
+                    #a CDS so you add up the lengths for the total
+                    #and store the length of the CDS chunk in the dictionary for coords
+                    #where the relative exon position must be augmented
+                    to_add = exon_info[0][1] + exon_info[1][1]
+                    if strand == "+":
+                        if ends[0] > ends[1]:
+                            #means the stop is the first element
+                            #store both the coordinates of the stop bit
+                            #and the length of the CDS bit
+                            add_to_rel_coords[".".join([cds, str(exon)])] = [exon_info[0][0], exon_info[1][1]]
+                        else:
+                            add_to_rel_coords[".".join([cds, str(exon)])] = [exon_info[1][0], exon_info[0][1]]
+                    elif strand == "-":
+                        if ends[0] < ends[1]:
+                            add_to_rel_coords[".".join([cds, str(exon)])] = [exon_info[0][0], exon_info[1][1]]
+                        else:
+                            add_to_rel_coords[".".join([cds, str(exon)])] = [exon_info[1][0], exon_info[0][1]]
+            else:
+                print("This makes no sense, there's more than two elements with the same exon number!")
+                print(cds_exons[cds])
+                raise Exception
             cds_features_relative_positions[cds][exon] = total
-            total += cds_exons[cds][exon]
 
+            total += to_add
+    
     #now get the relative position of the snp within the cds
     with open(snp_cds_position_output, "w") as output:
+        error_count = 0
         for snp in snp_exon_relative_positions:
             cds_id = snp[3]
             cds_id_meta = re.search(entry_regex, cds_id)
             snp_cds = cds_id_meta.group(1)
             snp_exon_id = cds_id_meta.group(2)
             snp_exon_position = int(snp[11])
-            print(snp)
-            print(cds_features_relative_positions[snp_cds])
-            print("\n")
             #snp position in cds is the position in the exon plus the exons position in the cds
-            snp_cds_position = snp_exon_position + cds_features_relative_positions[snp_cds][int(snp_exon_id)]
-            snp[11] = str(snp_cds_position)
-            output.write("{0}\n".format("\t".join(snp)))
+            #plus handling stops
+            full_ID = cds_id_meta.group(0)
+            extra = 0
+            if full_ID in add_to_rel_coords:
+                #this check is to make sure that you're processing the stop and not the CDS bit from the same exon
+                if (snp[1] == add_to_rel_coords[full_ID][0][1]) and (snp[2] == add_to_rel_coords[full_ID][0][2]):
+                    extra = add_to_rel_coords[full_ID][1]
+            if extra != "remove":
+                try:
+                    snp_cds_position = snp_exon_position + cds_features_relative_positions[snp_cds][int(snp_exon_id)] + extra
+                    snp[11] = str(snp_cds_position)
+                    output.write("{0}\n".format("\t".join(snp)))
+                except KeyError:
+                    error_count = error_count + 1
+    print("Errors: {0}.".format(error_count))
 
 def get_snp_relative_exon_position(intersect_file):
     '''
@@ -222,11 +286,12 @@ def get_snp_type(sequence, variant):
 
     return cds_codon, snp_codon, mutation_type
 
-def get_snps_in_cds(bed, fasta, vcf_folder, panel_file, names, sample_file, output_file, out_prefix):
+def get_snps_in_cds(bed, full_bed, vcf_folder, panel_file, names, sample_file, output_file, out_prefix):
     '''
     Given a bed file of CDS regions (with the corresponding interval fasta), a .vcf file, a panel file and a set of sample identifiers from 1000Genomes,
     pick out SNPs that overlap with any of the bed intervals in any of the selected samples and calculate their relative
-    position in the full ORF. Also write a filtered vcf to sample_file.
+    position in the full ORF. full_bed is a bed_file that has all of the exons from the relevant transcripts,
+    whereas the bed might only have some exons. Also write a filtered vcf to sample_file.
     '''
     #get the relevant SNPs
     #tabix_samples(bed, sample_file, panel_file, vcf_folder, samples = names, chr_prefix = True, remove_empty = True, exclude_xy = True)
@@ -236,7 +301,7 @@ def get_snps_in_cds(bed, fasta, vcf_folder, panel_file, names, sample_file, outp
     intersect_file = "{0}_CDS_SNP_intersect.bed".format(out_prefix)
     #bmo.intersect_bed(bed, sample_file, write_both = True, output_file = intersect_file, no_dups = False)
     exon_pos = get_snp_relative_exon_position(intersect_file)
-    get_snp_relative_cds_position(exon_pos, output_file, fasta)
+    get_snp_relative_cds_position(exon_pos, output_file, full_bed)
 
 def tabix(bed_file, output_file, vcf, process_number = None):
     '''

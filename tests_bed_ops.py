@@ -22,7 +22,7 @@ class Test_bed_ops(unittest.TestCase):
         observed = "./test_data/bed_ops/test_extract_cds/observed_test_extract_cds_fasta.fasta"
         gen.remove_file(observed)
         expected = gen.read_fasta("./test_data/bed_ops/test_extract_cds/expected_test_extract_cds_fasta.fasta")
-        extract_cds(gtf_file, bed_output, observed, genome_file)
+        extract_cds(gtf_file, bed_output, observed, genome_file, full_chr_name = True)
         observed = gen.read_fasta(observed)
         self.assertEqual(observed, expected)
 
@@ -31,38 +31,47 @@ class Test_bed_ops(unittest.TestCase):
         genome_file = "./test_data/bed_ops/test_extract_cds_clean_chrom/test_extract_cds_genome.fa"
         bed_output = "./test_data/bed_ops/test_extract_cds_clean_chrom/test_extract_cds.bed"
         observed = "./test_data/bed_ops/test_extract_cds_clean_chrom/observed_test_extract_cds_fasta.fasta"
+        intervals = "./test_data/bed_ops/test_extract_cds_clean_chrom/observed_intervals.fasta"
         gen.remove_file(observed)
+        gen.remove_file(intervals)
         expected = gen.read_fasta("./test_data/bed_ops/test_extract_cds_clean_chrom/expected_test_extract_cds_fasta.fasta")
-        extract_cds(gtf_file, bed_output, observed, genome_file, clean_chrom_only = True)
+        extract_cds(gtf_file, bed_output, observed, genome_file, intervals, clean_chrom_only = True)
         observed = gen.read_fasta(observed)
         self.assertEqual(observed, expected)
 
     def test_extract_cds_quality_control(self):
         gtf_file = "./test_data/bed_ops/test_extract_cds_quality_control/test_extract_cds_quality_control.gtf"
         genome_file = "./test_data/bed_ops/test_extract_cds_quality_control/test_extract_cds_quality_control_genome.fa"
-        bed_output = "./test_data/bed_ops/test_extract_cds_quality_control/test_extract_cds_quality_control_cds.bed"
+        bed_output = "./test_data/bed_ops/test_extract_cds_quality_control/observed_test_extract_cds_quality_control_cds.bed"
         observed = "./test_data/bed_ops/test_extract_cds_quality_control/observed_test_extract_cds_quality_control_fasta.fasta"
+        intervals = "./test_data/bed_ops/test_extract_cds_quality_control/observed_intervals.fasta"        
         gen.remove_file(observed)
+        gen.remove_file(intervals)
+        gen.remove_file(bed_output)
         expected = gen.read_fasta("./test_data/bed_ops/test_extract_cds_quality_control/expected_test_extract_cds_quality_control_fasta.fasta")
-        extract_cds(gtf_file, bed_output, observed, genome_file,  check_acgt=True, check_start=True, check_length=True, check_stop=True, check_inframe_stop=True)
+        extract_cds(gtf_file, bed_output, observed, genome_file, intervals, check_acgt=True, check_start=True, check_length=True, check_stop=True, check_inframe_stop=True)
         observed = gen.read_fasta(observed)
         self.assertEqual(observed, expected)
 
     def test_extract_cds_from_bed(self):
         bed_file = "./test_data/bed_ops/test_extract_cds_from_bed/test_extract_cds_from_bed_bed.bed"
         observed = "./test_data/bed_ops/test_extract_cds_from_bed/observed_test_extract_cds_from_bed_fasta.fasta"
+        intervals = "./test_data/bed_ops/test_extract_cds_from_bed/observed_intervals.fasta"
         gen.remove_file(observed)
+        gen.remove_file(intervals)
         expected = gen.read_fasta("./test_data/bed_ops/test_extract_cds_from_bed/expected_test_extract_cds_from_bed_fasta.fasta")
-        extract_cds_from_bed(bed_file, observed, "./test_data/bed_ops/test_extract_cds_from_bed/test_extract_cds_from_bed_genome.fa")
+        extract_cds_from_bed(bed_file, observed, "./test_data/bed_ops/test_extract_cds_from_bed/test_extract_cds_from_bed_genome.fa", intervals)
         observed = gen.read_fasta(observed)
         self.assertEqual(observed, expected)
 
     def test_extract_cds_from_bed_quality_control(self):
         bed_file = "./test_data/bed_ops/test_extract_cds_from_bed_quality_control/test_extract_cds_from_bed_quality_control_bed.bed"
         observed = "./test_data/bed_ops/test_extract_cds_from_bed_quality_control/observed_test_extract_cds_from_bed_quality_control_fasta.fasta"
+        intervals = "./test_data/bed_ops/test_extract_cds_from_bed_quality_control/observed_intervals.fasta"
         gen.remove_file(observed)
+        gen.remove_file(intervals)
         expected = gen.read_fasta("./test_data/bed_ops/test_extract_cds_from_bed_quality_control/expected_test_extract_cds_from_bed_quality_control_fasta.fasta")
-        extract_cds_from_bed(bed_file, observed, "./test_data/bed_ops/test_extract_cds_from_bed_quality_control/test_extract_cds_from_bed_quality_control_genome.fa",  check_acgt=True, check_start=True, check_length=True, check_stop=True, check_inframe_stop=True)
+        extract_cds_from_bed(bed_file, observed, "./test_data/bed_ops/test_extract_cds_from_bed_quality_control/test_extract_cds_from_bed_quality_control_genome.fa", intervals, check_acgt=True, check_start=True, check_length=True, check_stop=True, check_inframe_stop=True)
         observed = gen.read_fasta(observed)
         self.assertEqual(observed, expected)
 
