@@ -174,7 +174,6 @@ def run_bedops(A_file, B_file, force_strand = False, write_both = False, chrom =
         print("Bedops hasn't been set up to count the number of overlapping elements. Use bedtools!")
     if no_dups:
         print("Bedops doesn't print duplicates by default!")
-    print(bedops_args)
     bedops_output = gen.run_process(bedops_args, file_for_output = output_file)
     return(bedops_output)
 

@@ -302,6 +302,19 @@ def get_snps_in_cds(bed, full_bed, vcf_folder, panel_file, names, sample_file, o
     bmo.intersect_bed(bed, sample_file, write_both = True, output_file = intersect_file, no_dups = False)
     exon_pos = get_snp_relative_exon_position(intersect_file)
     get_snp_relative_cds_position(exon_pos, output_file, full_bed)
+    #this last bit is just to add a header to the final output file
+    #so you'd know which sample is which
+    header_line = "echrom\testart\teend\teID\tfeature\tstrand\tschr\tspos\tsID\taa\tma\trel_pos\tstatus\tinfo\tformat"
+    samples_header = gen.run_process(["grep", "CHROM", "{0}_uncompressed.txt".format(sample_file)])
+    samples_header = re.search("(?<=FORMAT)[\tA-Z0-9]*\n", samples_header).group(0)
+    header_line = header_line + samples_header
+    temp_file = "temp_data/temp{0}.txt".format(random.random())
+    temp_file2 = "temp_data/temp{0}.txt".format(random.random())
+    with open(temp_file, "w") as file:
+        file.write(header_line)
+    gen.run_process(["cat", temp_file, output_file], file_for_output = temp_file2)
+    gen.run_process(["mv", temp_file2, output_file])
+    gen.remove_file(temp_file)
 
 def tabix(bed_file, output_file, vcf, process_number = None):
     '''
@@ -520,7 +533,7 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
             current_concat_file = concat_files[1]
             previous_concat_file = concat_files[0]
         gen.run_process(["vcf-concat"] + current_sample_files + [previous_concat_file], file_for_output = current_concat_file)
-    sort_file = "temp_data/temp_sort_file{0}.vcf".format(random.random())
+    sort_file = "{0}_uncompressed.txt".format(output_file_name)
     #once everything is concatenated, sort the SNPs, prefix "chr" if needed, make a compressed version of the file and make an index for tabix
     gen.run_process(["vcf-sort", current_concat_file], file_for_output = sort_file)
     if chr_prefix or remove_empty:
@@ -548,5 +561,4 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
         gen.remove_file(sample_file)
     for concat_file in concat_files:
         gen.remove_file(concat_file)
-    gen.remove_file(sort_file)
 

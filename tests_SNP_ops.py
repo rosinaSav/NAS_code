@@ -101,6 +101,7 @@ class Test_SNP_ops(unittest.TestCase):
         expected = gen.read_many_fields("test_data/snp_ops/test_get_snps_in_cds/expected.bed", "\t")
         observed = "test_data/snp_ops/test_get_snps_in_cds/observed.bed"
         gen.remove_file(observed)
+        gen.remove_file(sample_file)
         get_snps_in_cds(bed, bed, vcf_folder, panel_file, names, sample_file, observed, out_prefix = "test_data/snp_ops/test_get_snps_in_cds/test")
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(observed, expected)
