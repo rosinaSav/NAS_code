@@ -294,12 +294,12 @@ def get_snps_in_cds(bed, full_bed, vcf_folder, panel_file, names, sample_file, o
     whereas the bed might only have some exons. Also write a filtered vcf to sample_file.
     '''
     #get the relevant SNPs
-    #tabix_samples(bed, sample_file, panel_file, vcf_folder, samples = names, chr_prefix = True, remove_empty = True, exclude_xy = True)
+    tabix_samples(bed, sample_file, panel_file, vcf_folder, samples = names, chr_prefix = True, remove_empty = True, exclude_xy = True)
     #the tabix_samples and the intersec-bed are kind of redundant
     #however, this way we have a proper vcf as a result of tabix_samples that we can query using tabix
     #and we have intersect_bed, which has both the SNP and the exon information in a nice format
     intersect_file = "{0}_CDS_SNP_intersect.bed".format(out_prefix)
-    #bmo.intersect_bed(bed, sample_file, write_both = True, output_file = intersect_file, no_dups = False)
+    bmo.intersect_bed(bed, sample_file, write_both = True, output_file = intersect_file, no_dups = False)
     exon_pos = get_snp_relative_exon_position(intersect_file)
     get_snp_relative_cds_position(exon_pos, output_file, full_bed)
 
