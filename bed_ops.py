@@ -549,7 +549,7 @@ def uniquify_trans(names, seqs, gene_to_trans):
         '''
         to_keep = []
         for gene in sorted(gene_to_trans):
-                lengths = [len(seqs[names.index(i)]) for i in gene_to_trans[gene]]
+                lengths = [len(seqs[names.index(i)]) for i in gene_to_trans[gene] if i in names]
                 to_keep.append(gene_to_trans[gene][lengths.index(max(lengths))])
         seqs = [i for pos, i in enumerate(seqs) if names[pos] in to_keep]
         names = [i for i in names if i in to_keep]
