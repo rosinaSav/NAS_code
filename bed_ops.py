@@ -374,11 +374,7 @@ def filter_bed_from_fasta(bed, fasta, out_bed, families_file = None):
         else:
             temp_file_name = out_bed
         
-        #fish out the names in the fasta
-        fasta_names = gen.run_process(["grep", ">", fasta])
-        fasta_names = fasta_names.split("\n")
-        #remove tag and newline from each name
-        fasta_names = [(i.lstrip("\>")).rstrip("\n") for i in fasta_names]
+        fasta_names, fasta_seqs = gen.read_fasta(fasta)
 
         #read in family information and pick one transcript per family
         if families_file:
@@ -388,10 +384,12 @@ def filter_bed_from_fasta(bed, fasta, out_bed, families_file = None):
                         families[pos] = [i for i in family if i in fasta_names]
                 flat_families = gen.flatten(families)
                 #first fish out singletons
-                fasta_names = [i for i in fasta_names if i not in flat_families]
+                fasta_names_new = [i for i in fasta_names if i not in flat_families]
                 for family in families:
                         if family:
-                                fasta_names.append(random.choice(family))
+                                family_lengths = [len(fasta_seqs[fasta_names.index(i)]) for i in family]
+                                fasta_names_new.append(family[family_lengths.index(max(family_lengths))])
+                fasta_names = fasta_names_new.copy()
         bed_data = gen.read_many_fields(bed, "\t")
         #remove empty lines
         bed_data = [i for i in bed_data if len(i) > 3]

@@ -155,14 +155,11 @@ class Test_bed_ops(unittest.TestCase):
         families_file = "test_data/bed_ops/test_filter_bed_from_fasta_families/families.txt"
         observed = "test_data/bed_ops/test_filter_bed_from_fasta_families/observed_test_filter_bed_from_fasta.bed"
         gen.remove_file(observed)
-        expected1 = "test_data/bed_ops/test_filter_bed_from_fasta_families/expected1.txt"
-        expected2 = "test_data/bed_ops/test_filter_bed_from_fasta_families/expected2.txt"
+        expected = "test_data/bed_ops/test_filter_bed_from_fasta_families/expected.txt"
         filter_bed_from_fasta(bed, fasta, observed, families_file = families_file)
-        expected1 = gen.read_many_fields(expected1, "\t")
-        expected2 = gen.read_many_fields(expected2, "\t")
-        expected = [expected1, expected2]
+        expected = gen.read_many_fields(expected, "\t")
         observed = gen.read_many_fields(observed, "\t")
-        self.assertIn(observed, expected)
+        self.assertEqual(expected, observed)
         
     def test_filter_fasta_intervals_from_fasta(self):
         fasta = "test_data/bed_ops/test_filter_fasta_intervals_from_fasta/test_filter_fasta_intervals_from_fasta_fasta.fasta"
