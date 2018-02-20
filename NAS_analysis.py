@@ -10,11 +10,9 @@ def process_bam_per_individual(bam_files, other_arguments):
 
     for bam_file in bam_files:
 
-        '''
-        **********
-        MISSING: Intersect junctions and .bam, and write down the overlapping .bam alignments, without counting.
-        **********
-        '''
+		##Intersect junctions and .bam, and write down the overlapping .bam alignments, without counting.
+		#this uses intersect bed, with the intersect bam paramter
+		bmo.intersect_bed(PTC_exon_junctions_file, bam_file, output_file="{0}_exon_junction_intersect.bed".format(bam_file[-4:]), intersect_bam=True)
 
         '''
         **********
@@ -30,9 +28,9 @@ def process_bam_per_individual(bam_files, other_arguments):
 
         '''
         **********
-        MISSING: Based on the filtered reads, count how many reads support each exon-exon junction. 
+        MISSING: Based on the filtered reads, count how many reads support each exon-exon junction.
         NB! The RNA-seq data we're using is not stranded so contrary to what I had written before, we should NOT match strand in the intersect.
-        Make sure that the reads 
+        Make sure that the reads
         **********
         '''
 
@@ -93,7 +91,7 @@ def main():
     coding_exon_bed = "{0}_coding_exons.bed".format(out_prefix)
     bo.check_coding(filtered_exon_bed, CDS_bed, coding_exon_bed, remove_overlapping = True)
     gen.get_time(start)
-        
+
     #check which individuals were included in Geuvadis
     sample_names = os.listdir(bams_folder)
     sample_names = [(i.split("."))[0] for i in sample_names]
@@ -110,7 +108,7 @@ def main():
     sample_file = "{0}_sample_file.txt".format(out_prefix)
     SNP_file = "{0}_SNP_file.txt".format(out_prefix)
     PTC_file = "{0}_ptc_file.txt".format(out_prefix)
-    syn_nonsyn_file = "{0}_syn_nonsyn_file.txt".format(out_prefix)   
+    syn_nonsyn_file = "{0}_syn_nonsyn_file.txt".format(out_prefix)
     #get SNPs for the sample
     print("Getting SNP data...")
     CDS_interval_file = "{0}_intervals{1}".format(os.path.splitext(CDS_fasta)[0], os.path.splitext(CDS_fasta)[1])
