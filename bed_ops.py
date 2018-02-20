@@ -336,7 +336,6 @@ def fasta_from_intervals(bed_file, fasta_file, genome_fasta, force_strand = True
                 del bedtools_args[2]
         if names:
                 bedtools_args.append("-name")
-        print(" ".join(bedtools_args))
         gen.run_process(bedtools_args)
         names, seqs = gen.read_fasta(fasta_file)
         seqs = [i.upper() for i in seqs]
@@ -538,10 +537,12 @@ def remove_overlaps(in_bed, out_bed):
         
 def uniquify_trans(names, seqs, gene_to_trans):
         '''
-        Filter a set of transcript IDs and corresponding sequences to only leave one transcript per gene.
+        Filter a set of transcript IDs and corresponding sequences to only leave one transcript per gene (the longest).
         '''
-        gene_to_trans = {i: random.choice(gene_to_trans[i]) for i in gene_to_trans}
-        gene_to_trans = list(gene_to_trans.values())
-        seqs = [i for pos, i in enumerate(seqs) if names[pos] in gene_to_trans]
-        names = [i for i in names if i in gene_to_trans]
+        to_keep = []
+        for gene in sorted(gene_to_trans):
+                lengths = [len(seqs[names.index(i)]) for i in gene_to_trans[gene]]
+                to_keep.append(gene_to_trans[gene][lengths.index(max(lengths))])
+        seqs = [i for pos, i in enumerate(seqs) if names[pos] in to_keep]
+        names = [i for i in names if i in to_keep]
         return(names, seqs)

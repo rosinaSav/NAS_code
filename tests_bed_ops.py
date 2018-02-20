@@ -224,9 +224,9 @@ class Test_bed_ops(unittest.TestCase):
         self.assertEqual(expected, observed)
 
     def test_uniquify_trans(self):
-        gene_to_trans = {"ENSG000001": ["ENST0003246"], "ENSG00000223972": ["ENST00032132", "ENST00032323"]}
-        names = ["ENST00032132", "ENST0003246", "ENST00032323"]
-        seqs = ["ATCGCGG", "GGGCAG", "CCATAG"]
-        expected = [(["ENST00032132", "ENST0003246"], ["ATCGCGG", "GGGCAG"]), (["ENST0003246", "ENST00032323"], ["GGGCAG", "CCATAG"])]
+        gene_to_trans = {"ENSG1": ["ENST6"], "ENSG2": ["ENST2", "ENST3"], "ENSG3": ["ENST66", "ENST8", "ENST5"]}
+        names = ["ENST66", "ENST3", "ENST6", "ENST8", "ENST2", "ENST5"]
+        seqs = ["ATGGA", "ATGT", "ATTGGATAGT", "ATTT", "ATGATGATGAT", "ATGGGTTTTTT"]
+        expected = (["ENST6", "ENST2", "ENST5"], ["ATTGGATAGT", "ATGATGATGAT", "ATGGGTTTTTT"])
         observed = uniquify_trans(names, seqs, gene_to_trans)
-        self.assertIn(observed, expected)
+        self.assertEqual(expected, observed)
