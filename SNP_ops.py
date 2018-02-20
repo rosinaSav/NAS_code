@@ -212,6 +212,10 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
                             ref_base = gen.reverse_complement(ref_base)
                             var_base = gen.reverse_complement(var_base)
                         #get the base of reference cds where the snp occured
+##                        print(snp)
+##                        print(cds_seqs[cds_names.index(cds_id)])
+##                        print(len(cds_seqs[cds_names.index(cds_id)]))
+##                        print("\n")
                         cds_base = cds_seqs[cds_names.index(cds_id)][snp_index]
 
                         #check whether cds base and ref base are the same

@@ -23,27 +23,37 @@ def check_coding(exons_file, CDSs_file, outfile, remove_overlapping = False):
                 bmo.sort_bed(exons_file, exons_file)
                 remove_overlaps(exons_file, exons_file)
         #filter out anything that isn't fully coding
+        #you have to write_both because you want to make sure that they
+        #haven't been kept because of an overlap to a ranscript that doens't appear in the exons file
         temp_file = "temp_data/temp{0}.txt".format(random.random())
-        bmo.intersect_bed(exons_file, CDSs_file, overlap = 1, output_file = temp_file, force_strand = True, no_dups = True, no_name_check = True)
+        bmo.intersect_bed(exons_file, CDSs_file, overlap = 1, overlap_rec = True, output_file = temp_file, force_strand = True, write_both = True, no_dups = False, no_name_check = False)
         #filter out terminal exons
         #in theory, there shouldn't be any left after the previous step
         #in practice, there may be unannotated UTRs, so it looks like we have a fully coding terminal exon,
         #whereas in reality, the exon is only partially coding
-        with open(outfile, "w") as o_file:
-                filt_exons = gen.read_many_fields(temp_file, "\t")
+        temp_file2 = "temp_data/temp{0}.txt".format(random.random())
+        with open(temp_file2, "w") as o_file:
+                #figure out the rank of the last exon for each transcript
+                filt_exons = gen.read_many_fields(exons_file, "\t")
                 filt_exons = [i for i in filt_exons if len(i) > 3]
                 names = [i[3].split(".") for i in filt_exons]
                 names = gen.list_to_dict(names, 0, 1, as_list = True)
-                names = {i: [int(j) for j in names[i]] for i in names}
-                for exon in filt_exons:
-                        name = exon[3].split(".")
-                        if name[-1] != "1":
-                                last_exon = max(names[name[0]])
-                                if int(name[-1]) != last_exon:
-                                        exon = [str(i) for i in exon]
-                                        o_file.write("\t".join(exon))
-                                        o_file.write("\n")
+                names = {i: max([int(j) for j in names[i]]) for i in names}
+                coding_exons = gen.read_many_fields(temp_file, "\t")
+                for exon in coding_exons:
+                        overlap_name = exon[9].split(".")
+                        if overlap_name[0] in names:
+                                name = exon[3].split(".")
+                                if name[-1] != "1":
+                                        last_exon = names[name[0]]
+                                        if int(name[-1]) != last_exon:
+                                                exon = [str(i) for i in exon[:6]]
+                                                o_file.write("\t".join(exon))
+                                                o_file.write("\n")
+        bmo.sort_bed(temp_file2, temp_file2)
+        gen.run_process(["mergeBed", "-i", temp_file2, "-c", "4,5,6", "-o", "distinct,distinct,distinct"], file_for_output = outfile)
         gen.remove_file(temp_file)
+        gen.remove_file(temp_file2)
 
 def check_sequence_quality(names, seqs, check_acgt=None, check_stop=None, check_start=None, check_length=None, check_inframe_stop=None, all_checks=None):
         '''

@@ -7,8 +7,8 @@ class Test_bed_ops(unittest.TestCase):
     def test_check_coding(self):
         exon_file = "test_data/bed_ops/test_check_coding/exons.bed"
         CDS_file = "test_data/bed_ops/test_check_coding/CDSs.bed"
-        expected = "test_data/bed_ops/test_check_coding/expected_check_coding.txt"
-        observed = "test_data/bed_ops/test_check_coding/observed_check_coding.txt"
+        expected = "test_data/bed_ops/test_check_coding/expected_check_coding.bed"
+        observed = "test_data/bed_ops/test_check_coding/observed_check_coding.bed"
         gen.remove_file(observed)
         check_coding(exon_file, CDS_file, observed)
         expected = gen.read_many_fields(expected, "\t")
