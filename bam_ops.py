@@ -37,7 +37,7 @@ def group_flags(input_bed, output_bed, flag_start):
             writer.writerow(new_row)
 
 def intersect_bed(bed_file1, bed_file2, use_bedops = False, overlap = False, write_both = False, sort = False, output_file = None,
-                             force_strand = False, no_name_check = False, no_dups = True, chrom = None, intersect = False, hit_count = False, bed_path = None):
+                             force_strand = False, no_name_check = False, no_dups = True, chrom = None, intersect = False, hit_count = False, bed_path = None, intersect_bam=None):
     '''Use bedtools/bedops to intersect coordinates from two bed files.
     Return those lines in bed file 1 that overlap with intervals in bed file 2.
     OPTIONS
@@ -60,9 +60,9 @@ def intersect_bed(bed_file1, bed_file2, use_bedops = False, overlap = False, wri
     temp_file_name = "temp_data/temp_bed_file{0}.bed".format(random.random())
     #have it write the output to a temporary file
     if use_bedops:
-        bedtools_output = run_bedops(bed_file1, bed_file2, force_strand, write_both, chrom, overlap, sort, output_file = temp_file_name, intersect = intersect, hit_number = hit_count, no_dups = no_dups)
+        bedtools_output = run_bedops(bed_file1, bed_file2, force_strand, write_both, chrom, overlap, sort, output_file = temp_file_name, intersect = intersect, hit_number = hit_count, no_dups = no_dups, intersect_bam = intersect_bam)
     else:
-        bedtools_output = run_bedtools(bed_file1, bed_file2, force_strand, write_both, chrom, overlap, sort, no_name_check, no_dups, output_file = temp_file_name, intersect = intersect, hit_number = hit_count, bed_path = bed_path)
+        bedtools_output = run_bedtools(bed_file1, bed_file2, force_strand, write_both, chrom, overlap, sort, no_name_check, no_dups, output_file = temp_file_name, intersect = intersect, hit_number = hit_count, bed_path = bed_path, intersect_bam = intersect_bam)
     #move it to a permanent location only if you want to keep it
     if output_file:
         gen.run_process(["mv", temp_file_name, output_file])
@@ -142,7 +142,7 @@ def retrieve_bams_core(all_files, local_directory, host, user, password, ftp_dir
     ftp = gen.ftp_check(ftp, host, user, password, ftp_directory)
     ftp.quit()
 
-def run_bedops(A_file, B_file, force_strand = False, write_both = False, chrom = None, overlap = None, sort = False, output_file = None, intersect = False, hit_number = None, no_dups = False):
+def run_bedops(A_file, B_file, force_strand = False, write_both = False, chrom = None, overlap = None, sort = False, output_file = None, intersect = False, hit_number = None, no_dups = False, intersect_bam=None):
     '''
     See intersect_bed for details.
     '''
@@ -174,10 +174,13 @@ def run_bedops(A_file, B_file, force_strand = False, write_both = False, chrom =
         print("Bedops hasn't been set up to count the number of overlapping elements. Use bedtools!")
     if no_dups:
         print("Bedops doesn't print duplicates by default!")
+    if write_both:
+        print("Use bedtools to intersect bam and bed!")
+        raise Exception
     bedops_output = gen.run_process(bedops_args, file_for_output = output_file)
     return(bedops_output)
 
-def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom = None, overlap = None, sort = False, no_name_check = False, no_dups = True, hit_number = False, output_file = None, intersect = False, bed_path = None):
+def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom = None, overlap = None, sort = False, no_name_check = False, no_dups = True, hit_number = False, output_file = None, intersect = False, bed_path = None, intersect_bam=None):
     '''
     See intersect_bed for details.
     '''
@@ -209,6 +212,14 @@ def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom
         raise(Exception)
     if bed_path:
         bedtools_args[0] = "{0}{1}".format(bed_path, bedtools_args[0])
+    if intersect_bam:
+        if A_file[-4:] != ".bam":
+            print("Bam file must be called first")
+            raise Exception
+        if B_file[-4:] != ".bed":
+            print("Bed file must be called second")
+            raise Exception
+        bedtools_args = ["intersectBed", "-wa", "-abam", A_file, "-b", B_file]
     bedtools_output = gen.run_process(bedtools_args, file_for_output = output_file)
     return(bedtools_output)
 

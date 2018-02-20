@@ -15,6 +15,21 @@ class Test_bam_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(expected, observed)
 
+    def test_intersect_bam(self):
+        bam_file = "test_data/bam_ops/test_intersect_bam/test_input_bam.bam"
+        bed_file = "test_data/bam_ops/test_intersect_bam/test_input_bed.bed"
+        observed_bam_output = "test_data/bam_ops/test_intersect_bam/observed_bam_intersect.bam"
+        observed_bed_output = "test_data/bam_ops/test_intersect_bam/observed_bam_intersect.bed"
+        expected_bed_output = "test_data/bam_ops/test_intersect_bam/expected_intersect_bed.bed"
+        intersect_bed(bam_file, bed_file, output_file=observed_bam_output, intersect_bam=True)
+        expected = gen.read_many_fields(expected_bed_output, "\t")
+        #convert bam to bed to check correct output
+        #use samtools to extract in the same format as bed
+        samtools_args = ["samtools", "view", observed_bam_output]
+        gen.run_process(samtools_args, file_for_output=observed_bed_output)
+        observed = gen.read_many_fields(observed_bed_output, "\t")
+        self.assertEqual(observed, expected)
+
     def test_intersect_bed_default(self):
         A_file = "test_data/bam_ops/test_intersect_bed_default/test_intersect_bed_A_file.bed"
         B_file = "test_data/bam_ops/test_intersect_bed_default/test_intersect_bed_B_file.bed"
