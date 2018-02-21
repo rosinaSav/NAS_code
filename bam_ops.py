@@ -1,6 +1,7 @@
 import bed_ops as bo
 import csv
 import generic as gen
+import numpy as np
 import os
 import random
 import re
@@ -117,6 +118,31 @@ def intersect_bed(bed_file1, bed_file2, use_bedops = False, overlap = False, ove
         bedtools_output = [i.split("\t") for i in bedtools_output]
     gen.remove_file(temp_file_name)
     return(bedtools_output)
+
+def map_from_cigar(cigar, sam_start):
+    '''
+    Given the cigar and the start coordinate (base 1) of an exon-exon read in a bam file,
+    determine the (base 0) coordinates of both the 3'-most nucleotide in the 5' exon and the 5'-most
+    nucleotide in the 3' exon.
+    '''
+    #check if one gap in alignment
+    gaps = re.findall("\d+N", cigar)
+    if len(gaps) != 1:
+        return None
+    #intron length
+    length = int(gaps[0][:-1])
+    #where the intron starts in the alignment
+    before_gap = cigar.split("N")[0]
+    pairs = re.findall("\d+(?=[MD])", before_gap)
+    rel_start = 0
+    if pairs:
+        pairs = [int(i) for i in pairs]
+        rel_start = np.sum(pairs)
+    #where the intron starts on the chromosome
+    abs_start = (sam_start - 1) + rel_start - 1
+    #where the intron ends (actually the base after that)
+    abs_end = abs_start + length + 1
+    return(abs_start, abs_end)
 
 def retrieve_bams(ftp_site, local_directory, remote_directory, password_file, subset = None):
     '''

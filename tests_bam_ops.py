@@ -203,6 +203,12 @@ class Test_bam_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed_file, "\t")
         self.assertEqual(expected, observed)
 
+    def test_map_from_cigar(self):
+        cigars = [["75M", 55], ["21M1I3M1I4M3I42M", 845], ["10M2N65M", 48], ["18M16N57M", 40], ["10M82N60M5N", 555], ["18M3I16N57M", 40]]
+        expected = [None, None, (56, 59), (56, 73), None, (56, 73)]
+        observed = [map_from_cigar(i[0], i[1]) for i in cigars]
+        self.assertEqual(expected, observed)
+
     def test_read_exon_junctions(self):
         junctions_file = "test_data/bam_ops/test_read_exon_junctions/junctions.bed"
         expected = {"chr1": {51: {54: {"count": 0, "exon": ["ENST1.1", "ENST1.2"], "type": ["incl", "incl"]},
