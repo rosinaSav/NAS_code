@@ -75,7 +75,9 @@ def count_junction_reads(sam, junctions, outfile):
     '''
     out_dict = {}
     with open(sam) as file:
+        counter = 0
         for line in file:
+            counter = counter + 1
             line = line.split("\t")
             sam_start = int(line[3])
             cigar = line[5]
@@ -97,9 +99,9 @@ def count_junction_reads(sam, junctions, outfile):
             else:
                 print("Chromosome {0} not found!".format(chrom))
     with open(outfile, "w") as file:
-        file.write("exon\tskippedx2\tincluded\n")
+        file.write("exon\tskippedx2\tincluded\ttotal_reads\n")
         for exon in sorted(out_dict):
-            file.write("{0}\t{1}\t{2}\n".format(exon, out_dict[exon]["skip"] * 2, out_dict[exon]["incl"]))
+            file.write("{0}\t{1}\t{2}\t{3}\n".format(exon, out_dict[exon]["skip"] * 2, out_dict[exon]["incl"], counter))
 
 def group_flags(input_bed, output_bed, flag_start):
     '''Takes an input bed file and converts all the fields from the flag_start'th

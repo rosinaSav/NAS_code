@@ -5,7 +5,7 @@ import os
 import SNP_ops as so
 import time
 
-def process_bam_per_individual(bam_files, other_arguments):
+def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder):
     #add other arguments
 
     for bam_file in bam_files:
@@ -26,25 +26,9 @@ def process_bam_per_individual(bam_files, other_arguments):
         **********
         '''
 
-        '''
-        **********
-        MISSING: Based on the filtered reads, count how many reads support each exon-exon junction.
-        NB! The RNA-seq data we're using is not stranded so contrary to what I had written before, we should NOT match strand in the intersect.
-        Make sure that the reads
-        **********
-        '''
-
-        #this intersect will probably not be kept in the final version, I'll take it out once the above MISSING bit is done.
-        #count how many .bam alignments overlap each exon-exon junction
-        bmo.intersect_bed(PTC_exon_junctions_file, bam_file, overlap = 1, output_file = "{0}_junction_hit_count.bed".format(bam_file[:-4]), force_strand = False, no_dups = False, hit_count = True, use_bedops = False)
-
-        '''
-        **********
-        MISSING: for each fully protein-coding exon,
-        1) estimate PSI in this individual (no. of alignments that support exon inclusion/(no. of alignments that support exon inclusion + number of alignments that support exon skipping))
-        2) calculate (no. of alignments that support exon inclusion)/(total no. of alignments in sample)
-        **********
-        '''
+                #count the number of reads supporting either the skipping or the inclusion of each exon
+                junctions = bmo.read_exon_junctions(PTC_exon_junctions_file)
+                bmo.count_junction_reads(clean_sam, junctions, "{0}/{1}.txt".format(out_folder, bam_file.split(".")[0])
 
 def main():
 
@@ -127,8 +111,9 @@ def main():
     bam_files = ["{0}/{1}".format(bam_folder, i) for i in sample_names if i[-4:] == ".bam"]
 
     #in parallel, do the processing on individual .bam files
-    #fill in 'other_arguments' later
-    processes = gen.run_in_parallel(bam_files, ["foo", other_arguments], process_bam_per_individual)
+    bam_analysis_folder = "{0}_bam_analysis".format(out_prefix)
+    gen.create_directory(bam_analysis_folder)
+    processes = gen.run_in_parallel(bam_files, ["foo", PTC_exon_junctions_file, bam_analysis_folder], process_bam_per_individual)
     print("Processing RNA-seq data...")
     for process in processes:
         process.get()
