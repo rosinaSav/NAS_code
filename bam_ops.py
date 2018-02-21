@@ -161,6 +161,61 @@ def retrieve_bams(ftp_site, local_directory, remote_directory, password_file, su
     for process in processes:
         process.get()
 
+def read_exon_junctions(junctions_file):
+    '''
+    Read the exon junctions in a bed file into a dictionary that tells you how the junctions are matched
+    and what information they contain on skipping events.
+    '''
+    out_dict = {}
+    work_dict = {}
+    ends_list = []
+    junctions = gen.read_many_fields(junctions_file, "\t")
+    #loop over intervals, only consider 3' exon ends on first go
+    for junction in junctions:
+        if len(junction) > 1:
+            chrom = junction[0]
+            if chrom not in out_dict:
+                out_dict[chrom] = {}
+            #if it's a 3' exon end, just create the record in the output dictionary
+            if junction[3][-1] == "3":
+                start = int(junction[1])
+                if start not in out_dict[chrom]:
+                    out_dict[chrom][start] = {}
+                #record where 
+                work_dict[junction[3]] = start
+            #otherwise put it aside
+            elif junction[3][-1] == "5":
+                ends_list.append(junction)
+
+    #now go over the 5' exon ends and match them up with the 3' exon ends
+    for junction in ends_list:
+        name = junction[3].split(".")
+        trans = name[0]
+        exon = int(name[1])
+        #the corresponding 3' exon end can either be that of the previous exon or of that of
+        #the exon before it
+        expected_starts = ["{0}.{1}.3".format(name[0], exon - 1)]
+        if exon > 2:
+            expected_starts.append("{0}.{1}.3".format(name[0], exon - 2))
+        end = int(junction[1])
+        chrom = junction[0]
+        for expected_start in expected_starts:
+            if expected_start in work_dict:
+                start = work_dict[expected_start]
+                current_exon = int(expected_start.split(".")[1])
+                #if it's the previous exon, reads overlapping that junction support the splicing in of
+                #both this and the current exon
+                if exon - current_exon == 1:
+                    exons = ["{0}.{1}".format(trans, current_exon), "{0}.{1}".format(trans, exon)]
+                    types = ["incl", "incl"]
+                #if it's the 3'end of n-2th exon, then reads overlapping that junction support the skipping
+                #of n-1th exon
+                elif exon - current_exon == 2:
+                    exons = ["{0}.{1}".format(trans, current_exon + 1)]
+                    types = ["skip"]
+                out_dict[chrom][start][end] = {"count": 0, "exon": exons, "type": types}
+    return(out_dict)                
+
 def retrieve_bams_core(all_files, local_directory, host, user, password, ftp_directory, expect_string):
     '''
     Core function parallelized in retrieve_bams above.
