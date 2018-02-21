@@ -47,6 +47,27 @@ class Test_bam_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed_sam_output, "\t")
         self.assertEqual(expected, observed)
 
+    def test_count_junction_reads(self):
+        sam = "test_data/bam_ops/test_count_junction_reads/reads.sam"
+        junctions = {"chr1": {51: {54: {"exon": ["ENST1.1", "ENST1.2"], "type": ["incl", "incl"]},
+                             59: {"exon": ["ENST1.2"], "type": ["skip"]}},
+                    56: {59: {"exon": ["ENST1.2", "ENST1.3"], "type": ["incl", "incl"]},
+                         67: {"exon": ["ENST1.3"], "type": ["skip"]}},
+                    63: {67: {"exon": ["ENST1.3", "ENST1.4"], "type": ["incl", "incl"]}},
+                    76: {79: {"exon": ["ENST1.5", "ENST1.6"], "type": ["incl", "incl"]}}},
+                    "chr2": {34: {37: {"exon": ["ENST2.1", "ENST2.2"], "type": ["incl", "incl"]}},
+                    46: {50: {"exon": ["ENST2.3", "ENST2.4"], "type": ["incl", "incl"]},
+                         57: {"exon": ["ENST2.4"], "type": ["skip"]}},
+                    54: {57: {"exon": ["ENST2.4", "ENST2.5"], "type": ["incl", "incl"]},
+                         62: {"exon": ["ENST2.5"], "type": ["skip"]}},
+                    59: {62: {"exon": ["ENST2.5", "ENST2.6"], "type": ["incl", "incl"]}}}}
+        expected = gen.read_many_fields("test_data/bam_ops/test_count_junction_reads/expected.txt", "\t")
+        observed = "test_data/bam_ops/test_count_junction_reads/observed.txt"
+        gen.remove_file(observed)
+        count_junction_reads(sam, junctions, observed)
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(expected, observed)
+
     def test_group_flags(self):
         input_bed = "test_data/bam_ops/test_group_flags/test_tabix.bed"
         observed = "test_data/bam_ops/test_group_flags/observed_test_group_flags.bed"
@@ -211,17 +232,17 @@ class Test_bam_ops(unittest.TestCase):
 
     def test_read_exon_junctions(self):
         junctions_file = "test_data/bam_ops/test_read_exon_junctions/junctions.bed"
-        expected = {"chr1": {51: {54: {"count": 0, "exon": ["ENST1.1", "ENST1.2"], "type": ["incl", "incl"]},
-                             59: {"count": 0, "exon": ["ENST1.2"], "type": ["skip"]}},
-                    56: {59: {"count": 0, "exon": ["ENST1.2", "ENST1.3"], "type": ["incl", "incl"]},
-                         67: {"count": 0, "exon": ["ENST1.3"], "type": ["skip"]}},
-                    63: {67: {"count": 0, "exon": ["ENST1.3", "ENST1.4"], "type": ["incl", "incl"]}},
-                    76: {79: {"count": 0, "exon": ["ENST1.5", "ENST1.6"], "type": ["incl", "incl"]}}},
-                    "chr2": {34: {37: {"count": 0, "exon": ["ENST2.1", "ENST2.2"], "type": ["incl", "incl"]}},
-                    46: {50: {"count": 0, "exon": ["ENST2.3", "ENST2.4"], "type": ["incl", "incl"]},
-                         57: {"count": 0, "exon": ["ENST2.4"], "type": ["skip"]}},
-                    54: {57: {"count": 0, "exon": ["ENST2.4", "ENST2.5"], "type": ["incl", "incl"]},
-                         62: {"count": 0, "exon": ["ENST2.5"], "type": ["skip"]}},
-                    59: {62: {"count": 0, "exon": ["ENST2.5", "ENST2.6"], "type": ["incl", "incl"]}}}}
+        expected = {"chr1": {51: {54: {"exon": ["ENST1.1", "ENST1.2"], "type": ["incl", "incl"]},
+                             59: {"exon": ["ENST1.2"], "type": ["skip"]}},
+                    56: {59: {"exon": ["ENST1.2", "ENST1.3"], "type": ["incl", "incl"]},
+                         67: {"exon": ["ENST1.3"], "type": ["skip"]}},
+                    63: {67: {"exon": ["ENST1.3", "ENST1.4"], "type": ["incl", "incl"]}},
+                    76: {79: {"exon": ["ENST1.5", "ENST1.6"], "type": ["incl", "incl"]}}},
+                    "chr2": {34: {37: {"exon": ["ENST2.1", "ENST2.2"], "type": ["incl", "incl"]}},
+                    46: {50: {"exon": ["ENST2.3", "ENST2.4"], "type": ["incl", "incl"]},
+                         57: {"exon": ["ENST2.4"], "type": ["skip"]}},
+                    54: {57: {"exon": ["ENST2.4", "ENST2.5"], "type": ["incl", "incl"]},
+                         62: {"exon": ["ENST2.5"], "type": ["skip"]}},
+                    59: {62: {"exon": ["ENST2.5", "ENST2.6"], "type": ["incl", "incl"]}}}}
         observed = read_exon_junctions(junctions_file)
         self.assertEqual(expected, observed)

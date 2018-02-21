@@ -67,6 +67,40 @@ def convert2bed(input_file_name, output_file_name, group_flags = None):
         print("Grouped flags.")
     print("Converted data from {0} to bed.".format(extension))
 
+def count_junction_reads(sam, junctions, outfile):
+    '''
+    Given a sam file and a dictionary of exon-exon junctions, count how many reads overlap each junction.
+    For each exon, count how many reads support its skipping and how many support its inclusion.
+    Multiply the former count by 2.
+    '''
+    out_dict = {}
+    with open(sam) as file:
+        for line in file:
+            line = line.split("\t")
+            sam_start = int(line[3])
+            cigar = line[5]
+            chrom = line[2]
+            if chrom in junctions:
+                #get intron position in chromosome coordinates based on the alignment cigar
+                putative_junctions = map_from_cigar(cigar, sam_start)
+                if putative_junctions:
+                    for junction in putative_junctions:
+                        #if the 3'end of the exon is in the junctions dict
+                        if junction[0] in junctions[chrom]:
+                            #if the 5' end of the exon is in the junctions dict
+                            if junction[1] in junctions[chrom][junction[0]]:
+                                current_dict = junctions[chrom][junction[0]][junction[1]]
+                                for pos, exon in enumerate(current_dict["exon"]):
+                                    if exon not in out_dict:
+                                        out_dict[exon] = {"skip": 0, "incl": 0}
+                                    out_dict[exon][current_dict["type"][pos]] = out_dict[exon][current_dict["type"][pos]] + 1
+            else:
+                print("Chromosome {0} not found!".format(chrom))
+    with open(outfile, "w") as file:
+        file.write("exon\tskippedx2\tincluded\n")
+        for exon in sorted(out_dict):
+            file.write("{0}\t{1}\t{2}\n".format(exon, out_dict[exon]["skip"] * 2, out_dict[exon]["incl"]))
+
 def group_flags(input_bed, output_bed, flag_start):
     '''Takes an input bed file and converts all the fields from the flag_start'th
     onwards into a single field, with the elements separated by commas.'''
@@ -242,7 +276,7 @@ def read_exon_junctions(junctions_file):
                 elif exon - current_exon == 2:
                     exons = ["{0}.{1}".format(trans, current_exon + 1)]
                     types = ["skip"]
-                out_dict[chrom][start][end] = {"count": 0, "exon": exons, "type": types}
+                out_dict[chrom][start][end] = {"exon": exons, "type": types}
     return(out_dict)                
 
 def retrieve_bams_core(all_files, local_directory, host, user, password, ftp_directory, expect_string):
