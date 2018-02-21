@@ -106,7 +106,6 @@ def main():
     samples_in_vcf = [i.rstrip("\n") for i in samples_in_vcf]
     sample_names = [i for i in sample_names if i in samples_in_vcf]
     print(len(sample_names))
-    sample_names = []
     sample_file = "{0}_sample_file.txt".format(out_prefix)
     SNP_file = "{0}_SNP_file.txt".format(out_prefix)
     PTC_file = "{0}_ptc_file.txt".format(out_prefix)
@@ -114,7 +113,7 @@ def main():
     #get SNPs for the sample
     print("Getting SNP data...")
     CDS_interval_file = "{0}_intervals{1}".format(os.path.splitext(CDS_fasta)[0], os.path.splitext(CDS_fasta)[1])
-    #so.get_snps_in_cds(coding_exon_bed, CDS_bed, vcf_folder, panel_file, sample_names, sample_file, SNP_file, out_prefix)
+    so.get_snps_in_cds(coding_exon_bed, CDS_bed, vcf_folder, panel_file, sample_names, sample_file, SNP_file, out_prefix)
     gen.get_time(start)
     print("Determining SNP type...")
     so.get_snp_change_status(SNP_file, CDS_fasta, PTC_file, syn_nonsyn_file)
