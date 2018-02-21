@@ -123,26 +123,29 @@ def map_from_cigar(cigar, sam_start):
     '''
     Given the cigar and the start coordinate (base 1) of an exon-exon read in a bam file,
     determine the (base 0) coordinates of both the 3'-most nucleotide in the 5' exon and the 5'-most
-    nucleotide in the 3' exon.
+    nucleotide in the 3' exon. Can handle reads that map multiple exon-exon junctions.
     '''
+    result = []
     #check if one gap in alignment
-    gaps = re.findall("\d+N", cigar)
-    if len(gaps) != 1:
+    gaps = [i for i in re.finditer("\d+N", cigar)]
+    if len(gaps) < 1:
         return None
-    #intron length
-    length = int(gaps[0][:-1])
-    #where the intron starts in the alignment
-    before_gap = cigar.split("N")[0]
-    pairs = re.findall("\d+(?=[MD])", before_gap)
-    rel_start = 0
-    if pairs:
-        pairs = [int(i) for i in pairs]
-        rel_start = np.sum(pairs)
-    #where the intron starts on the chromosome
-    abs_start = (sam_start - 1) + rel_start - 1
-    #where the intron ends (actually the base after that)
-    abs_end = abs_start + length + 1
-    return(abs_start, abs_end)
+    for gap in gaps:
+        #intron length
+        length = int(gap.group(0)[:-1])
+        #where the intron starts in the alignment
+        before_gap = cigar[:gap.start()]
+        pairs = re.findall("\d+(?=[MDN])", before_gap)
+        rel_start = 0
+        if pairs:
+            pairs = [int(i) for i in pairs]
+            rel_start = np.sum(pairs)
+        #where the intron starts on the chromosome
+        abs_start = (sam_start - 1) + rel_start - 1
+        #where the intron ends (actually the base after that)
+        abs_end = abs_start + length + 1
+        result.append([abs_start, abs_end])
+    return(result)
 
 def retrieve_bams(ftp_site, local_directory, remote_directory, password_file, subset = None):
     '''

@@ -204,8 +204,8 @@ class Test_bam_ops(unittest.TestCase):
         self.assertEqual(expected, observed)
 
     def test_map_from_cigar(self):
-        cigars = [["75M", 55], ["21M1I3M1I4M3I42M", 845], ["10M2N65M", 48], ["18M16N57M", 40], ["10M82N60M5N", 555], ["18M3I16N57M", 40]]
-        expected = [None, None, (56, 59), (56, 73), None, (56, 73)]
+        cigars = [["75M", 55], ["21M1I3M1I4M3I42M", 845], ["10M2N65M", 48], ["4I18M16N53M", 40], ["10M2N5M3N3M3N4M", 48], ["18M3I16N57M", 40]]
+        expected = [None, None, [[56, 59]], [[56, 73]], [[56, 59], [63, 67], [69, 73]], [[56, 73]]]
         observed = [map_from_cigar(i[0], i[1]) for i in cigars]
         self.assertEqual(expected, observed)
 
