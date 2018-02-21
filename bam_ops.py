@@ -33,13 +33,13 @@ def bam_quality_filter(input_bam, output_bam, quality_greater_than_equal_to=None
         gen.run_process(args)
         #second get everything above the lower threshold
         args = samtools_args.copy()
-        args.extend(["-q", quality_greater_than_equal_to, temp_file])
+        args.extend(["-bq", quality_greater_than_equal_to, temp_file])
         gen.run_process(args, file_for_output=output_bam)
         # #cleanup files
         gen.remove_file(temp_file)
     #if only the lower threshold is specified
     elif quality_greater_than_equal_to and not quality_less_than_equal_to:
-        samtools_args.extend(["-q", quality_greater_than_equal_to, input_bam])
+        samtools_args.extend(["-bq", quality_greater_than_equal_to, input_bam])
         gen.run_process(samtools_args, file_for_output=output_bam)
     #if only the upper threshold is specified
     elif quality_less_than_equal_to and not quality_greater_than_equal_to:

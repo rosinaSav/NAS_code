@@ -12,13 +12,13 @@ def process_bam_per_individual(bam_files, other_arguments):
 
 		##Intersect junctions and .bam, and write down the overlapping .bam alignments, without counting.
 		#this uses intersect bed, with the intersect bam paramter
-		bmo.intersect_bed(PTC_exon_junctions_file, bam_file, output_file="{0}_exon_junction_intersect.bed".format(bam_file[-4:]), intersect_bam=True)
+		bmo.intersect_bed(PTC_exon_junctions_file, bam_file, output_file="{0}_exon_junction_intersect.bam".format(bam_file[-4:]), intersect_bam=True)
 
-        '''
-        **********
-        MISSING: filter remaining .bam alignments by quality.
-        **********
-        '''
+
+        #filter remaining .bam alignments by quality.
+        #takes both upper and lower bam thresholds
+        #outputs bam file with "_quality_filter_{lower_lim}_{upper_lim}" appended
+        bmo.bam_quality_filter("{0}_exon_junction_intersect.bam".format(bam_file[-4:]), "{0}_exon_junction_intersect_quality_filter_{1}_{2}.bam".format(bam_file[-4:], lower_threshold, upper_threshold), quality_greater_than_equal_to=lower_threshold, quality_less_than_equal_to=upper_threshold)
 
         '''
         **********
