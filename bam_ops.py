@@ -7,6 +7,31 @@ import re
 import time
 import copy
 
+def bam_flag_filter(input_bam, output_bam, get_paired_reads=None):
+
+    samtools_args = ["samtools", "view", "-h"]
+
+    include_flags = []
+    # exclude_flags = []
+    if get_paired_reads is not None:
+        #add 1 to account for paired reads
+        if get_paired_reads:
+            include_flags.append(1)
+        # else:
+        #     exclude_flags.append(1)
+
+    include_flags = sum(include_flags)
+    # exclude_flags = sum(exclude_flags)
+
+    if include_flags > 0:
+        samtools_args.extend(["-f", include_flags])
+    # if exclude_flags > 0:
+    #     samtools_args.extend(["-F", exclude_flags])
+
+    samtools_args.append(input_bam)
+    gen.run_process(samtools_args, file_for_output=output_bam)
+
+
 def bam_quality_filter(input_bam, output_bam, quality_greater_than_equal_to=None, quality_less_than_equal_to=None):
     '''
     Filters bam reads by quality.

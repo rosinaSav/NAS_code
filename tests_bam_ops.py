@@ -5,6 +5,19 @@ import unittest
 
 class Test_bam_ops(unittest.TestCase):
 
+    def test_bam_flag_filter_paired_reads(self):
+        input_bam = "test_data/bam_ops/test_bam_flag_filter_paired_reads/input_bam.bam"
+        expected = "test_data/bam_ops/test_bam_flag_filter_paired_reads/expected_flag_filtered_bam.sam"
+        observed = "test_data/bam_ops/test_bam_flag_filter_paired_reads/observed_flag_filtered_bam.bam"
+        observed_sam_output = "test_data/bam_ops/test_bam_flag_filter_paired_reads/observed_flag_filtered_bam.sam"
+        bam_flag_filter(input_bam, observed, get_paired_reads=True)
+        #convert bam to sam to check correct output
+        samtools_args = ["samtools", "view", observed]
+        gen.run_process(samtools_args, file_for_output=observed_sam_output)
+        expected = gen.read_many_fields(expected, "\t")
+        observed = gen.read_many_fields(observed_sam_output, "\t")
+        self.assertEqual(expected, observed)
+
     def test_bam_quality_filter(self):
         input_bam = "test_data/bam_ops/test_bam_quality_filter/test_bam.bam"
         expected = "test_data/bam_ops/test_bam_quality_filter/expected_bam_quality_filter.sam"
