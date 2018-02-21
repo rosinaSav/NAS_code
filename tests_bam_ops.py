@@ -5,6 +5,48 @@ import unittest
 
 class Test_bam_ops(unittest.TestCase):
 
+    def test_bam_quality_filter(self):
+        input_bam = "test_data/bam_ops/test_bam_quality_filter/test_bam.bam"
+        expected = "test_data/bam_ops/test_bam_quality_filter/expected_bam_quality_filter.sam"
+        observed = "test_data/bam_ops/test_bam_quality_filter/observed_bam_quality_filter.bam"
+        observed_sam_output = "test_data/bam_ops/test_bam_quality_filter/observed_bam_quality_filter.sam"
+        expected = gen.read_many_fields(expected, "\t")
+        bam_quality_filter(input_bam, observed, quality_greater_than_equal_to=100, quality_less_than_equal_to=200)
+        #convert bam to sam to check correct output
+        #use samtools to extract in the same format as sam
+        samtools_args = ["samtools", "view", observed]
+        gen.run_process(samtools_args, file_for_output=observed_sam_output)
+        observed = gen.read_many_fields(observed_sam_output, "\t")
+        self.assertEqual(expected, observed)
+
+    def test_bam_quality_filter_greater_than(self):
+        input_bam = "test_data/bam_ops/test_bam_quality_filter_greater_than/test_bam.bam"
+        expected = "test_data/bam_ops/test_bam_quality_filter_greater_than/expected_bam_quality_filter_greater_than.sam"
+        observed = "test_data/bam_ops/test_bam_quality_filter_greater_than/observed_bam_quality_filter_greater_than.bam"
+        observed_sam_output = "test_data/bam_ops/test_bam_quality_filter_greater_than/observed_bam_quality_filter_greater_than.sam"
+        expected = gen.read_many_fields(expected, "\t")
+        bam_quality_filter(input_bam, observed, quality_greater_than_equal_to=200)
+        #convert bam to sam to check correct output
+        #use samtools to extract in the same format as sam
+        samtools_args = ["samtools", "view", observed]
+        gen.run_process(samtools_args, file_for_output=observed_sam_output)
+        observed = gen.read_many_fields(observed_sam_output, "\t")
+        self.assertEqual(expected, observed)
+
+    def test_bam_quality_filter_less_than(self):
+        input_bam = "test_data/bam_ops/test_bam_quality_filter_less_than/test_bam.bam"
+        expected = "test_data/bam_ops/test_bam_quality_filter_less_than/expected_bam_quality_filter_less_than.sam"
+        observed = "test_data/bam_ops/test_bam_quality_filter_less_than/observed_bam_quality_filter_less_than.bam"
+        observed_sam_output = "test_data/bam_ops/test_bam_quality_filter_less_than/observed_bam_quality_filter_less_than.sam"
+        expected = gen.read_many_fields(expected, "\t")
+        bam_quality_filter(input_bam, observed, quality_less_than_equal_to=250)
+        #convert bam to sam to check correct output
+        #use samtools to extract in the same format as sam
+        samtools_args = ["samtools", "view", observed]
+        gen.run_process(samtools_args, file_for_output=observed_sam_output)
+        observed = gen.read_many_fields(observed_sam_output, "\t")
+        self.assertEqual(expected, observed)
+
     def test_group_flags(self):
         input_bed = "test_data/bam_ops/test_group_flags/test_tabix.bed"
         observed = "test_data/bam_ops/test_group_flags/observed_test_group_flags.bed"

@@ -5,6 +5,49 @@ import os
 import random
 import re
 import time
+import copy
+
+def bam_quality_filter(input_bam, output_bam, quality_greater_than_equal_to=None, quality_less_than_equal_to=None):
+    '''
+    Filters bam reads by quality.
+    quality_less_than_equal_to: the lower threshold for quality control
+    quality_greater_than_equal_to: the upper threshold for quality control
+    '''
+
+    samtools_args = ["samtools", "view", "-h"]
+    #if neither thresholds are specified
+    if not quality_greater_than_equal_to and not quality_less_than_equal_to:
+        print("You must specify one threshold to filter reads by.")
+        raise Exception
+    #if both thresholds are specified
+    if quality_greater_than_equal_to and quality_less_than_equal_to:
+        #create temp file
+        gen.create_directory("temp_data/")
+        temp_file = "temp_data/{0}.{1}.bam".format(os.path.split(output_bam)[1][:-4], random.random())
+        #first get everything below the upper threshold
+        #need to account for the fact samtools removes everything below threshold
+        #so when inversing need to add 1 to total
+        args = samtools_args.copy()
+        upper_limit = quality_less_than_equal_to + 1
+        args.extend(["-q", upper_limit, input_bam, "-U", temp_file])
+        gen.run_process(args)
+        #second get everything above the lower threshold
+        args = samtools_args.copy()
+        args.extend(["-q", quality_greater_than_equal_to, temp_file])
+        gen.run_process(args, file_for_output=output_bam)
+        # #cleanup files
+        gen.remove_file(temp_file)
+    #if only the lower threshold is specified
+    elif quality_greater_than_equal_to and not quality_less_than_equal_to:
+        samtools_args.extend(["-q", quality_greater_than_equal_to, input_bam])
+        gen.run_process(samtools_args, file_for_output=output_bam)
+    #if only the upper threshold is specified
+    elif quality_less_than_equal_to and not quality_greater_than_equal_to:
+        #need to account for the fact samtools removes everything below threshold
+        #so when inversing need to add 1 to total
+        upper_limit = quality_less_than_equal_to + 1
+        samtools_args.extend(["-q", upper_limit, input_bam, "-U", output_bam])
+        gen.run_process(samtools_args)
 
 def convert2bed(input_file_name, output_file_name, group_flags = None):
     '''
@@ -57,7 +100,8 @@ def intersect_bed(bed_file1, bed_file2, use_bedops = False, overlap = False, ove
     bed file 2 will be returned several times (as many times as there are overlaps with different elements in bed file 2)
     chrom: limit search to a specific chromosome (only valid with bedops, can help in terms of efficiency)
     intersect: rather than returning the entire interval, only return the part of the interval that overlaps an interval in bed file 2.
-    hit_count: for each element in bed file 1, return the number of elements it overlaps in bed file 2 (only valid with bedtools)'''
+    hit_count: for each element in bed file 1, return the number of elements it overlaps in bed file 2 (only valid with bedtools)
+    intersect_bam: intersect a bam file with a bed file. Requires bam file to be called first.'''
     gen.create_directory("temp_data/")
     temp_file_name = "temp_data/temp_bed_file{0}.bed".format(random.random())
     #have it write the output to a temporary file
