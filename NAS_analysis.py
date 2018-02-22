@@ -22,7 +22,25 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder):
         #takes both upper and lower bam thresholds
         #outputs bam file with "_quality_filter_{lower_lim}_{upper_lim}" appended
         # need to do this twice and merge, so we use both intervals used by Geuvadis
-        bmo.bam_quality_filter("{0}_exon_junction_intersect.bam".format(bam_file[-4:]), "{0}_exon_junction_intersect_quality_filter_{1}_{2}.bam".format(bam_file[-4:], lower_threshold, upper_threshold), quality_greater_than_equal_to=lower_threshold, quality_less_than_equal_to=upper_threshold)
+
+        #set the mapq filter paramters here
+        mapq_intervals = [["lower1", "upper1"], ["lower", "upper2"]]
+        mapq_filter_filelist = []
+
+        for mapq_interval in mapq_intervals:
+            lower_threshold, upper_threshold = mapq_interval[0], mapq_interval[1]
+            mapq_filter_file = "{0}_mapq_filter_{1}_{2}.bam".format(bam_file[-4:], lower_threshold, upper_threshold)
+            mapq_filter_filelist.append(mapq_filter_file)
+            #run the mapq filter
+            bmo.bam_quality_filter(bam_file, mapq_filter_file, quality_greater_than_equal_to=lower_threshold, quality_less_than_equal_to=upper_threshold)
+
+        #merge files in filelist
+        ### this needs proper testing, outputs are in a differnt order to expected (dont know if its just a sorting issue)
+        bam_file_parts = os.path.split(bam_file)
+        #setup the filename for the mapq filtered bam file
+        mapq_filtered_bam = "{0}/{0}_mapq_filtered.bam".format(bam_file_parts[0], bam_file_parts[1])
+        bmo.merge_bams(mapq_filter_filelist, mapq_filtered_bam)
+
 
         '''
         **********
@@ -31,13 +49,14 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder):
         '''
         #2. Get cases where there are both read pairs, retain 1.
         # Leave: unpaired reads, single reads from paired reads (all with the mapped flag?)
-        bmo.bam_flag_filter()
+        mapq_filtered_flag_filtered_bam = "{0}_flag_filtered.bam".format(mapq_filtered_bam[-4:])
+        bmo.bam_flag_filter(mapq_filtered_bam, mapq_filtered_flag_filtered_bam, get_mapped_reads=True)
 
         #extra1: We can then get a count of the total reads possible which can be used for normalisation
 
 		##3. Intersect junctions and .bam, and write down the overlapping .bam alignments, without counting.
 		#this uses intersect bed, with the intersect bam paramter
-		bmo.intersect_bed(PTC_exon_junctions_file, bam_file, output_file="{0}_exon_junction_intersect.bam".format(bam_file[-4:]), intersect_bam=True)
+		bmo.intersect_bed(PTC_exon_junctions_file, mapq_filtered_flag_filtered_bam, output_file="{0}_exon_junction_filtered_bam_intersect.bam".format(bam_file[-4:]), intersect_bam=True)
 
 
 

@@ -250,6 +250,16 @@ def map_from_cigar(cigar, sam_start):
         result.append([abs_start, abs_end])
     return(result)
 
+def merge_bams(bam_list, output_file):
+    '''
+    Merge a list of bams files to defined output file.
+    '''
+    args = ["samtools", "merge", "-h", output_file]
+    for file in bam_list:
+        args.append(file)
+    gen.run_process(args)
+
+
 def retrieve_bams(ftp_site, local_directory, remote_directory, password_file, subset = None):
     '''
     For each .bam file at the ftp site, downsload it, transfer it to
