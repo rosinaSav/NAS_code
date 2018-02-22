@@ -8,6 +8,45 @@ import re
 import time
 import copy
 
+def bam_flag_filter(input_bam, output_bam, get_paired_reads=None, get_unpaired_reads=None, get_mapped_reads=None, get_unmapped_reads=None, get_mate_mapped_reads=None):
+    '''
+    Filters bam reads by flag.
+    get_paired_reads: get all reads that are tagged as paired
+    get_unpaired_reads: get all reads that are not tagged as paired
+    get_mapped_reads: get all reads that are not tagged unmapped
+    get_unmapped_reads: get all reads that are tagged unmapped
+    '''
+    samtools_args = ["samtools", "view", "-h"]
+
+    include_flags = []
+    exclude_flags = []
+
+    if get_paired_reads:
+        #add 1 to include for paired reads, code -f 1
+        include_flags.append(1)
+    if get_unpaired_reads:
+        #add 1 to exclude for unpaired reads, code -F 1
+        exclude_flags.append(1)
+    if get_mapped_reads:
+        #get reads not unmapped, i.e. get mapped reads, code -F 4
+        exclude_flags.append(4)
+    if get_unmapped_reads:
+        #get reads unmapped, code -f 4
+        include_flags.append(4)
+
+    include_flags = sum(include_flags)
+    exclude_flags = sum(exclude_flags)
+
+
+    if include_flags > 0:
+        samtools_args.extend(["-f", include_flags])
+    if exclude_flags > 0:
+        samtools_args.extend(["-F", exclude_flags])
+
+    samtools_args.append(input_bam)
+    gen.run_process(samtools_args, file_for_output=output_bam)
+
+
 def bam_quality_filter(input_bam, output_bam, quality_greater_than_equal_to=None, quality_less_than_equal_to=None):
     '''
     Filters bam reads by quality.
@@ -34,13 +73,13 @@ def bam_quality_filter(input_bam, output_bam, quality_greater_than_equal_to=None
         gen.run_process(args)
         #second get everything above the lower threshold
         args = samtools_args.copy()
-        args.extend(["-q", quality_greater_than_equal_to, temp_file])
+        args.extend(["-bq", quality_greater_than_equal_to, temp_file])
         gen.run_process(args, file_for_output=output_bam)
         # #cleanup files
         gen.remove_file(temp_file)
     #if only the lower threshold is specified
     elif quality_greater_than_equal_to and not quality_less_than_equal_to:
-        samtools_args.extend(["-q", quality_greater_than_equal_to, input_bam])
+        samtools_args.extend(["-bq", quality_greater_than_equal_to, input_bam])
         gen.run_process(samtools_args, file_for_output=output_bam)
     #if only the upper threshold is specified
     elif quality_less_than_equal_to and not quality_greater_than_equal_to:
