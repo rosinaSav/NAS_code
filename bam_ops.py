@@ -7,26 +7,40 @@ import re
 import time
 import copy
 
-def bam_flag_filter(input_bam, output_bam, get_paired_reads=None):
-
+def bam_flag_filter(input_bam, output_bam, get_paired_reads=None, get_unpaired_reads=None, get_mapped_reads=None, get_unmapped_reads=None, get_mate_mapped_reads=None):
+    '''
+    Filters bam reads by flag.
+    get_paired_reads: get all reads that are tagged as paired
+    get_unpaired_reads: get all reads that are not tagged as paired
+    get_mapped_reads: get all reads that are not tagged unmapped
+    get_unmapped_reads: get all reads that are tagged unmapped
+    '''
     samtools_args = ["samtools", "view", "-h"]
 
     include_flags = []
-    # exclude_flags = []
-    if get_paired_reads is not None:
-        #add 1 to account for paired reads
-        if get_paired_reads:
-            include_flags.append(1)
-        # else:
-        #     exclude_flags.append(1)
+    exclude_flags = []
+
+    if get_paired_reads:
+        #add 1 to include for paired reads, code -f 1
+        include_flags.append(1)
+    if get_unpaired_reads:
+        #add 1 to exclude for unpaired reads, code -F 1
+        exclude_flags.append(1)
+    if get_mapped_reads:
+        #get reads not unmapped, i.e. get mapped reads, code -F 4
+        exclude_flags.append(4)
+    if get_unmapped_reads:
+        #get reads unmapped, code -f 4
+        include_flags.append(4)
 
     include_flags = sum(include_flags)
-    # exclude_flags = sum(exclude_flags)
+    exclude_flags = sum(exclude_flags)
+
 
     if include_flags > 0:
         samtools_args.extend(["-f", include_flags])
-    # if exclude_flags > 0:
-    #     samtools_args.extend(["-F", exclude_flags])
+    if exclude_flags > 0:
+        samtools_args.extend(["-F", exclude_flags])
 
     samtools_args.append(input_bam)
     gen.run_process(samtools_args, file_for_output=output_bam)
