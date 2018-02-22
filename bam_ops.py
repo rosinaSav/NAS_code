@@ -11,13 +11,14 @@ import copy
 def bam_flag_filter(input_bam, output_bam, get_paired_reads=None, get_unpaired_reads=None, get_mapped_reads=None, get_unmapped_reads=None, get_proper_paired_reads=None, get_improper_paired_reads=None, get_mate_mapped_reads=None, get_mate_unmapped_reads=None):
     '''
     Filters bam reads by flag.
-    get_paired_reads: get all reads that are tagged as paired
-    get_unpaired_reads: get all reads that are not tagged as paired
-    get_mapped_reads: get all reads that are not tagged unmapped
-    get_unmapped_reads: get all reads that are tagged unmapped
-    get_proper_paired_reads: get all reads that are read mapped in a proper pair
-    get_mate_mapped_reads: get all reads where the mate is mapped
-    get_mate_unmapped_reads: get all reads where the mate is unmapped
+    get_paired_reads: get all reads from paired-end (or multiple-segment) sequencing technology
+    get_unpaired_reads: get all reads that not from paired-end (or multiple-segment) sequencing technology
+    get_mapped_reads: get all reads where the segment is mapped
+    get_unmapped_reads: get all reads where the segment is unmapped
+    get_proper_paired_reads: get all reads that where each segment is properly aligned according to the aligner
+    get_improper_paired_reads: get all reads that where each segment is not properly aligned according to the aligner
+    get_mate_mapped_reads: get all reads where the next segment in the template is mapped
+    get_mate_unmapped_reads: get all reads where the next segment in the template is unmapped
     '''
     samtools_args = ["samtools", "view", "-bh"]
 

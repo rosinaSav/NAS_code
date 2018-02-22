@@ -109,6 +109,19 @@ class Test_bam_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed_sam_output, "\t")
         self.assertEqual(expected, observed)
 
+    def test_bam_flag_filter_unpaired_mapped_reads(self):
+        input_bam = "test_data/bam_ops/test_bam_flag_filter_unpaired_mapped_reads/input_bam.bam"
+        expected = "test_data/bam_ops/test_bam_flag_filter_unpaired_mapped_reads/expected_flag_filtered_unpaired_mapped_reads.sam"
+        observed = "test_data/bam_ops/test_bam_flag_filter_unpaired_mapped_reads/observed_flag_filtered_unpaired__reads_bam.bam"
+        observed_sam_output = "test_data/bam_ops/test_bam_flag_filter_unpaired_mapped_reads/observed_flag_filtered_unpaired_mapped_reads.sam"
+        bam_flag_filter(input_bam, observed, get_unpaired_reads= True, get_mapped_reads=True)
+        #convert bam to sam to check correct output
+        samtools_args = ["samtools", "view", observed]
+        gen.run_process(samtools_args, file_for_output=observed_sam_output)
+        expected = gen.read_many_fields(expected, "\t")
+        observed = gen.read_many_fields(observed_sam_output, "\t")
+        self.assertEqual(expected, observed)
+
     def test_bam_flag_filter_unpaired_reads(self):
         input_bam = "test_data/bam_ops/test_bam_flag_filter_unpaired_reads/input_bam.bam"
         expected = "test_data/bam_ops/test_bam_flag_filter_unpaired_reads/expected_flag_filtered_unpaired_reads.sam"
