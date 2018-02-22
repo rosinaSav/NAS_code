@@ -5,6 +5,32 @@ import unittest
 
 class Test_bam_ops(unittest.TestCase):
 
+    def test_bam_flag_filter_improper_paired_reads(self):
+        input_bam = "test_data/bam_ops/test_bam_flag_filter_improper_paired_reads/input_bam.bam"
+        expected = "test_data/bam_ops/test_bam_flag_filter_improper_paired_reads/expected_flag_filtered_improper_paired_reads.sam"
+        observed = "test_data/bam_ops/test_bam_flag_filter_improper_paired_reads/observed_flag_improper_paired_reads_filtered_bam.bam"
+        observed_sam_output = "test_data/bam_ops/test_bam_flag_filter_improper_paired_reads/observed_flag_improper_paired_reads_filtered.sam"
+        bam_flag_filter(input_bam, observed, get_paired_reads=True, get_improper_paired_reads=True)
+        #convert bam to sam to check correct output
+        samtools_args = ["samtools", "view", observed]
+        gen.run_process(samtools_args, file_for_output=observed_sam_output)
+        expected = gen.read_many_fields(expected, "\t")
+        observed = gen.read_many_fields(observed_sam_output, "\t")
+        self.assertEqual(expected, observed)
+
+    def test_bam_flag_filter_mapped_proper_reads(self):
+        input_bam = "test_data/bam_ops/test_bam_flag_filter_mapped_proper_reads/input_bam.bam"
+        expected = "test_data/bam_ops/test_bam_flag_filter_mapped_proper_reads/expected_flag_filtered_mapped_proper_reads.sam"
+        observed = "test_data/bam_ops/test_bam_flag_filter_mapped_proper_reads/observed_flag_filtered_mapped_proper_reads_bam.bam"
+        observed_sam_output = "test_data/bam_ops/test_bam_flag_filter_mapped_proper_reads/observed_flag_filtered_mapped_proper_reads.sam"
+        bam_flag_filter(input_bam, observed, get_mapped_reads=True, get_paired_reads=True, get_proper_paired_reads=True)
+        #convert bam to sam to check correct output
+        samtools_args = ["samtools", "view", observed]
+        gen.run_process(samtools_args, file_for_output=observed_sam_output)
+        expected = gen.read_many_fields(expected, "\t")
+        observed = gen.read_many_fields(observed_sam_output, "\t")
+        self.assertEqual(expected, observed)
+
     def test_bam_flag_filter_mapped_reads(self):
         input_bam = "test_data/bam_ops/test_bam_flag_filter_mapped_reads/input_bam.bam"
         expected = "test_data/bam_ops/test_bam_flag_filter_mapped_reads/expected_flag_filtered_mapped_reads.sam"
@@ -23,7 +49,20 @@ class Test_bam_ops(unittest.TestCase):
         expected = "test_data/bam_ops/test_bam_flag_filter_mate_mapped_reads/expected_flag_filtered_mate_mapped_reads.sam"
         observed = "test_data/bam_ops/test_bam_flag_filter_mate_mapped_reads/observed_flag_filtered_mate_mapped_reads_bam.bam"
         observed_sam_output = "test_data/bam_ops/test_bam_flag_filter_mate_mapped_reads/observed_flag_filtered_mate_mapped_reads.sam"
-        bam_flag_filter(input_bam, observed, get_mate_mapped_reads=True)
+        bam_flag_filter(input_bam, observed, get_paired_reads=True, get_mate_mapped_reads=True)
+        #convert bam to sam to check correct output
+        samtools_args = ["samtools", "view", observed]
+        gen.run_process(samtools_args, file_for_output=observed_sam_output)
+        expected = gen.read_many_fields(expected, "\t")
+        observed = gen.read_many_fields(observed_sam_output, "\t")
+        self.assertEqual(expected, observed)
+
+    def test_bam_flag_filter_mate_unmapped_reads(self):
+        input_bam = "test_data/bam_ops/test_bam_flag_filter_mate_unmapped_reads/input_bam.bam"
+        expected = "test_data/bam_ops/test_bam_flag_filter_mate_unmapped_reads/expected_flag_filtered_mate_unmapped_reads.sam"
+        observed = "test_data/bam_ops/test_bam_flag_filter_mate_unmapped_reads/observed_flag_filtered_mate_unmapped_reads_bam.bam"
+        observed_sam_output = "test_data/bam_ops/test_bam_flag_filter_mate_unmapped_reads/observed_flag_filtered_mate_unmapped_reads.sam"
+        bam_flag_filter(input_bam, observed, get_paired_reads=True, get_mate_unmapped_reads=True)
         #convert bam to sam to check correct output
         samtools_args = ["samtools", "view", observed]
         gen.run_process(samtools_args, file_for_output=observed_sam_output)
@@ -44,12 +83,38 @@ class Test_bam_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed_sam_output, "\t")
         self.assertEqual(expected, observed)
 
+    def test_bam_flag_filter_proper_paired_reads(self):
+        input_bam = "test_data/bam_ops/test_bam_flag_filter_proper_paired_reads/input_bam.bam"
+        expected = "test_data/bam_ops/test_bam_flag_filter_proper_paired_reads/expected_flag_filtered_proper_paired_reads.sam"
+        observed = "test_data/bam_ops/test_bam_flag_filter_proper_paired_reads/observed_flag_proper_paired_reads_filtered_bam.bam"
+        observed_sam_output = "test_data/bam_ops/test_bam_flag_filter_proper_paired_reads/observed_flag_proper_paired_reads_filtered.sam"
+        bam_flag_filter(input_bam, observed, get_paired_reads=True, get_proper_paired_reads=True)
+        #convert bam to sam to check correct output
+        samtools_args = ["samtools", "view", observed]
+        gen.run_process(samtools_args, file_for_output=observed_sam_output)
+        expected = gen.read_many_fields(expected, "\t")
+        observed = gen.read_many_fields(observed_sam_output, "\t")
+        self.assertEqual(expected, observed)
+
     def test_bam_flag_filter_unmapped_reads(self):
         input_bam = "test_data/bam_ops/test_bam_flag_filter_unmapped_reads/input_bam.bam"
         expected = "test_data/bam_ops/test_bam_flag_filter_unmapped_reads/expected_flag_filtered_unmapped_reads.sam"
         observed = "test_data/bam_ops/test_bam_flag_filter_unmapped_reads/observed_flag_filtered_unmapped_reads_bam.bam"
         observed_sam_output = "test_data/bam_ops/test_bam_flag_filter_unmapped_reads/observed_flag_filtered_unmapped_reads.sam"
         bam_flag_filter(input_bam, observed, get_unmapped_reads=True)
+        #convert bam to sam to check correct output
+        samtools_args = ["samtools", "view", observed]
+        gen.run_process(samtools_args, file_for_output=observed_sam_output)
+        expected = gen.read_many_fields(expected, "\t")
+        observed = gen.read_many_fields(observed_sam_output, "\t")
+        self.assertEqual(expected, observed)
+
+    def test_bam_flag_filter_unpaired_mapped_reads(self):
+        input_bam = "test_data/bam_ops/test_bam_flag_filter_unpaired_mapped_reads/input_bam.bam"
+        expected = "test_data/bam_ops/test_bam_flag_filter_unpaired_mapped_reads/expected_flag_filtered_unpaired_mapped_reads.sam"
+        observed = "test_data/bam_ops/test_bam_flag_filter_unpaired_mapped_reads/observed_flag_filtered_unpaired__reads_bam.bam"
+        observed_sam_output = "test_data/bam_ops/test_bam_flag_filter_unpaired_mapped_reads/observed_flag_filtered_unpaired_mapped_reads.sam"
+        bam_flag_filter(input_bam, observed, get_unpaired_reads= True, get_mapped_reads=True)
         #convert bam to sam to check correct output
         samtools_args = ["samtools", "view", observed]
         gen.run_process(samtools_args, file_for_output=observed_sam_output)
@@ -261,16 +326,6 @@ class Test_bam_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed_file, "\t")
         self.assertEqual(expected, observed)
 
-    def test_sort_bed(self):
-        infile = "test_data/bam_ops/test_sort_bed/test_intersect_bed_A_file_unsorted.bed"
-        expected_file = "test_data/bam_ops/test_sort_bed/expected_test_intersect_bed_A_file.bed"
-        observed_file = "test_data/bam_ops/test_sort_bed/observed_test_sort_bed.bed"
-        gen.remove_file(observed_file)
-        sort_bed(infile, observed_file)
-        expected = gen.read_many_fields(expected_file, "\t")
-        observed = gen.read_many_fields(observed_file, "\t")
-        self.assertEqual(expected, observed)
-
     def test_intersect_bed_intersect(self):
         A_file = "test_data/bam_ops/test_intersect_bed_intersect/test_intersect_bed_A_file.bed"
         B_file = "test_data/bam_ops/test_intersect_bed_intersect/test_intersect_bed_B_file.bed"
@@ -314,4 +369,29 @@ class Test_bam_ops(unittest.TestCase):
                          62: {"exon": ["ENST2.5"], "type": ["skip"]}},
                     59: {62: {"exon": ["ENST2.5", "ENST2.6"], "type": ["incl", "incl"]}}}}
         observed = read_exon_junctions(junctions_file)
+        self.assertEqual(expected, observed)
+
+    def test_merge_bams(self):
+        input_bam1 = "test_data/bam_ops/test_merge_bams/input1.bam"
+        input_bam2 = "test_data/bam_ops/test_merge_bams/input2.bam"
+        input_list = [input_bam1, input_bam2]
+        expected = "test_data/bam_ops/test_merge_bams/expected_merge_bams.sam"
+        observed = "test_data/bam_ops/test_merge_bams/observed_merge_bams.bam"
+        observed_sam_output = "test_data/bam_ops/test_merge_bams/observed_merge_bams.sam"
+        merge_bams(input_list, observed)
+        #convert bam to sam to check correct output
+        samtools_args = ["samtools", "view", observed]
+        gen.run_process(samtools_args, file_for_output=observed_sam_output)
+        expected = gen.read_many_fields(expected, "\t")
+        observed = gen.read_many_fields(observed_sam_output, "\t")
+        self.assertEqual(expected, observed)
+
+    def test_sort_bed(self):
+        infile = "test_data/bam_ops/test_sort_bed/test_intersect_bed_A_file_unsorted.bed"
+        expected_file = "test_data/bam_ops/test_sort_bed/expected_test_intersect_bed_A_file.bed"
+        observed_file = "test_data/bam_ops/test_sort_bed/observed_test_sort_bed.bed"
+        gen.remove_file(observed_file)
+        sort_bed(infile, observed_file)
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = gen.read_many_fields(observed_file, "\t")
         self.assertEqual(expected, observed)
