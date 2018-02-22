@@ -38,7 +38,7 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder):
         ### this needs proper testing, outputs are in a differnt order to expected (dont know if its just a sorting issue)
         bam_file_parts = os.path.split(bam_file)
         #setup the filename for the mapq filtered bam file
-        mapq_filtered_bam = "{0}/{0}_mapq_filtered.bam".format(bam_file_parts[0], bam_file_parts[1])
+        mapq_filtered_bam = "{0}/{1}_mapq_filtered.bam".format(bam_file_parts[0], bam_file_parts[1])
         bmo.merge_bams(mapq_filter_filelist, mapq_filtered_bam)
 
 
@@ -56,7 +56,7 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder):
 
 		##3. Intersect junctions and .bam, and write down the overlapping .bam alignments, without counting.
 		#this uses intersect bed, with the intersect bam paramter
-		bmo.intersect_bed(PTC_exon_junctions_file, mapq_filtered_flag_filtered_bam, output_file="{0}_exon_junction_filtered_bam_intersect.bam".format(bam_file[-4:]), intersect_bam=True)
+		bmo.intersect_bed(PTC_exon_junctions_file, mapq_filtered_flag_filtered_bam, output_file="{0}_exon_junction_filtered_bam_intersect.bam".format(mapq_filtered_flag_filtered_bam[-4:]), intersect_bam=True)
 
 
 
