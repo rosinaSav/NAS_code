@@ -21,6 +21,7 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder):
         #1. filter .bam alignments by quality.
         #takes both upper and lower bam thresholds
         #outputs bam file with "_quality_filter_{lower_lim}_{upper_lim}" appended
+        # need to do this twice and merge, so we use both intervals used by Geuvadis
         bmo.bam_quality_filter("{0}_exon_junction_intersect.bam".format(bam_file[-4:]), "{0}_exon_junction_intersect_quality_filter_{1}_{2}.bam".format(bam_file[-4:], lower_threshold, upper_threshold), quality_greater_than_equal_to=lower_threshold, quality_less_than_equal_to=upper_threshold)
 
         '''
