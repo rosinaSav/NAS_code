@@ -1,6 +1,7 @@
 import bed_ops as bo
 import csv
 import generic as gen
+import numpy as np
 import os
 import random
 import re
@@ -105,6 +106,42 @@ def convert2bed(input_file_name, output_file_name, group_flags = None):
         print("Grouped flags.")
     print("Converted data from {0} to bed.".format(extension))
 
+def count_junction_reads(sam, junctions, outfile):
+    '''
+    Given a sam file and a dictionary of exon-exon junctions, count how many reads overlap each junction.
+    For each exon, count how many reads support its skipping and how many support its inclusion.
+    Multiply the former count by 2.
+    '''
+    out_dict = {}
+    with open(sam) as file:
+        counter = 0
+        for line in file:
+            counter = counter + 1
+            line = line.split("\t")
+            sam_start = int(line[3])
+            cigar = line[5]
+            chrom = line[2]
+            if chrom in junctions:
+                #get intron position in chromosome coordinates based on the alignment cigar
+                putative_junctions = map_from_cigar(cigar, sam_start)
+                if putative_junctions:
+                    for junction in putative_junctions:
+                        #if the 3'end of the exon is in the junctions dict
+                        if junction[0] in junctions[chrom]:
+                            #if the 5' end of the exon is in the junctions dict
+                            if junction[1] in junctions[chrom][junction[0]]:
+                                current_dict = junctions[chrom][junction[0]][junction[1]]
+                                for pos, exon in enumerate(current_dict["exon"]):
+                                    if exon not in out_dict:
+                                        out_dict[exon] = {"skip": 0, "incl": 0}
+                                    out_dict[exon][current_dict["type"][pos]] = out_dict[exon][current_dict["type"][pos]] + 1
+            else:
+                print("Chromosome {0} not found!".format(chrom))
+    with open(outfile, "w") as file:
+        file.write("exon\tskippedx2\tincluded\ttotal_reads\n")
+        for exon in sorted(out_dict):
+            file.write("{0}\t{1}\t{2}\t{3}\n".format(exon, out_dict[exon]["skip"] * 2, out_dict[exon]["incl"], counter))
+
 def group_flags(input_bed, output_bed, flag_start):
     '''Takes an input bed file and converts all the fields from the flag_start'th
     onwards into a single field, with the elements separated by commas.'''
@@ -157,6 +194,34 @@ def intersect_bed(bed_file1, bed_file2, use_bedops = False, overlap = False, ove
     gen.remove_file(temp_file_name)
     return(bedtools_output)
 
+def map_from_cigar(cigar, sam_start):
+    '''
+    Given the cigar and the start coordinate (base 1) of an exon-exon read in a bam file,
+    determine the (base 0) coordinates of both the 3'-most nucleotide in the 5' exon and the 5'-most
+    nucleotide in the 3' exon. Can handle reads that map multiple exon-exon junctions.
+    '''
+    result = []
+    #check if one gap in alignment
+    gaps = [i for i in re.finditer("\d+N", cigar)]
+    if len(gaps) < 1:
+        return None
+    for gap in gaps:
+        #intron length
+        length = int(gap.group(0)[:-1])
+        #where the intron starts in the alignment
+        before_gap = cigar[:gap.start()]
+        pairs = re.findall("\d+(?=[MDN])", before_gap)
+        rel_start = 0
+        if pairs:
+            pairs = [int(i) for i in pairs]
+            rel_start = np.sum(pairs)
+        #where the intron starts on the chromosome
+        abs_start = (sam_start - 1) + rel_start - 1
+        #where the intron ends (actually the base after that)
+        abs_end = abs_start + length + 1
+        result.append([abs_start, abs_end])
+    return(result)
+
 def retrieve_bams(ftp_site, local_directory, remote_directory, password_file, subset = None):
     '''
     For each .bam file at the ftp site, downsload it, transfer it to
@@ -199,6 +264,61 @@ def retrieve_bams(ftp_site, local_directory, remote_directory, password_file, su
     processes = gen.run_in_parallel(all_files, ["foo", local_directory, host, user, password, ftp_directory, expect_string], retrieve_bams_core, workers = 6)
     for process in processes:
         process.get()
+
+def read_exon_junctions(junctions_file):
+    '''
+    Read the exon junctions in a bed file into a dictionary that tells you how the junctions are matched
+    and what information they contain on skipping events.
+    '''
+    out_dict = {}
+    work_dict = {}
+    ends_list = []
+    junctions = gen.read_many_fields(junctions_file, "\t")
+    #loop over intervals, only consider 3' exon ends on first go
+    for junction in junctions:
+        if len(junction) > 1:
+            chrom = junction[0]
+            if chrom not in out_dict:
+                out_dict[chrom] = {}
+            #if it's a 3' exon end, just create the record in the output dictionary
+            if junction[3][-1] == "3":
+                start = int(junction[1])
+                if start not in out_dict[chrom]:
+                    out_dict[chrom][start] = {}
+                #record where 
+                work_dict[junction[3]] = start
+            #otherwise put it aside
+            elif junction[3][-1] == "5":
+                ends_list.append(junction)
+
+    #now go over the 5' exon ends and match them up with the 3' exon ends
+    for junction in ends_list:
+        name = junction[3].split(".")
+        trans = name[0]
+        exon = int(name[1])
+        #the corresponding 3' exon end can either be that of the previous exon or of that of
+        #the exon before it
+        expected_starts = ["{0}.{1}.3".format(name[0], exon - 1)]
+        if exon > 2:
+            expected_starts.append("{0}.{1}.3".format(name[0], exon - 2))
+        end = int(junction[1])
+        chrom = junction[0]
+        for expected_start in expected_starts:
+            if expected_start in work_dict:
+                start = work_dict[expected_start]
+                current_exon = int(expected_start.split(".")[1])
+                #if it's the previous exon, reads overlapping that junction support the splicing in of
+                #both this and the current exon
+                if exon - current_exon == 1:
+                    exons = ["{0}.{1}".format(trans, current_exon), "{0}.{1}".format(trans, exon)]
+                    types = ["incl", "incl"]
+                #if it's the 3'end of n-2th exon, then reads overlapping that junction support the skipping
+                #of n-1th exon
+                elif exon - current_exon == 2:
+                    exons = ["{0}.{1}".format(trans, current_exon + 1)]
+                    types = ["skip"]
+                out_dict[chrom][start][end] = {"exon": exons, "type": types}
+    return(out_dict)                
 
 def retrieve_bams_core(all_files, local_directory, host, user, password, ftp_directory, expect_string):
     '''
