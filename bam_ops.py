@@ -8,15 +8,18 @@ import re
 import time
 import copy
 
-def bam_flag_filter(input_bam, output_bam, get_paired_reads=None, get_unpaired_reads=None, get_mapped_reads=None, get_unmapped_reads=None, get_mate_mapped_reads=None):
+def bam_flag_filter(input_bam, output_bam, get_paired_reads=None, get_unpaired_reads=None, get_mapped_reads=None, get_unmapped_reads=None, get_proper_paired_reads=None, get_improper_paired_reads=None, get_mate_mapped_reads=None, get_mate_unmapped_reads=None):
     '''
     Filters bam reads by flag.
     get_paired_reads: get all reads that are tagged as paired
     get_unpaired_reads: get all reads that are not tagged as paired
     get_mapped_reads: get all reads that are not tagged unmapped
     get_unmapped_reads: get all reads that are tagged unmapped
+    get_proper_paired_reads: get all reads that are read mapped in a proper pair
+    get_mate_mapped_reads: get all reads where the mate is mapped
+    get_mate_unmapped_reads: get all reads where the mate is unmapped
     '''
-    samtools_args = ["samtools", "view", "-h"]
+    samtools_args = ["samtools", "view", "-bh"]
 
     include_flags = []
     exclude_flags = []
@@ -33,16 +36,40 @@ def bam_flag_filter(input_bam, output_bam, get_paired_reads=None, get_unpaired_r
     if get_unmapped_reads:
         #get reads unmapped, code -f 4
         include_flags.append(4)
+    if get_proper_paired_reads:
+        if not get_paired_reads:
+            print("get_paired_reads must be set!")
+            raise Exception
+        #get all reads where each segment is properly aligned, code -f 2
+        include_flags.append(2)
+    if get_improper_paired_reads:
+        if not get_paired_reads:
+            print("get_paired_reads must be set!")
+            raise Exception
+        #get all reads where each segment is not properly aligned, code -F 2
+        exclude_flags.append(2)
+    if get_mate_mapped_reads:
+        if not get_paired_reads:
+            print("get_paired_reads must be set!")
+            raise Exception
+        #get all reads where the next segment in the template is not unmapped, i.e. mapped, code -F 8
+        exclude_flags.append(8)
+    if get_mate_unmapped_reads:
+        if not get_paired_reads:
+            print("get_paired_reads must be set!")
+            raise Exception
+        #get all reads where the next segment in the template is unmapped, code -f 8
+        include_flags.append(8)
 
+    #get the final flag code for filter
     include_flags = sum(include_flags)
     exclude_flags = sum(exclude_flags)
-
-
+    #include arguments
     if include_flags > 0:
         samtools_args.extend(["-f", include_flags])
     if exclude_flags > 0:
         samtools_args.extend(["-F", exclude_flags])
-
+    #run samtools with flag arguments
     samtools_args.append(input_bam)
     gen.run_process(samtools_args, file_for_output=output_bam)
 
@@ -285,7 +312,7 @@ def read_exon_junctions(junctions_file):
                 start = int(junction[1])
                 if start not in out_dict[chrom]:
                     out_dict[chrom][start] = {}
-                #record where 
+                #record where
                 work_dict[junction[3]] = start
             #otherwise put it aside
             elif junction[3][-1] == "5":
@@ -318,7 +345,7 @@ def read_exon_junctions(junctions_file):
                     exons = ["{0}.{1}".format(trans, current_exon + 1)]
                     types = ["skip"]
                 out_dict[chrom][start][end] = {"exon": exons, "type": types}
-    return(out_dict)                
+    return(out_dict)
 
 def retrieve_bams_core(all_files, local_directory, host, user, password, ftp_directory, expect_string):
     '''

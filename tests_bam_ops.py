@@ -5,6 +5,19 @@ import unittest
 
 class Test_bam_ops(unittest.TestCase):
 
+    def test_bam_flag_filter_improper_paired_reads(self):
+        input_bam = "test_data/bam_ops/test_bam_flag_filter_improper_paired_reads/input_bam.bam"
+        expected = "test_data/bam_ops/test_bam_flag_filter_improper_paired_reads/expected_flag_filtered_improper_paired_reads.sam"
+        observed = "test_data/bam_ops/test_bam_flag_filter_improper_paired_reads/observed_flag_improper_paired_reads_filtered_bam.bam"
+        observed_sam_output = "test_data/bam_ops/test_bam_flag_filter_improper_paired_reads/observed_flag_improper_paired_reads_filtered.sam"
+        bam_flag_filter(input_bam, observed, get_paired_reads=True, get_improper_paired_reads=True)
+        #convert bam to sam to check correct output
+        samtools_args = ["samtools", "view", observed]
+        gen.run_process(samtools_args, file_for_output=observed_sam_output)
+        expected = gen.read_many_fields(expected, "\t")
+        observed = gen.read_many_fields(observed_sam_output, "\t")
+        self.assertEqual(expected, observed)
+
     def test_bam_flag_filter_mapped_reads(self):
         input_bam = "test_data/bam_ops/test_bam_flag_filter_mapped_reads/input_bam.bam"
         expected = "test_data/bam_ops/test_bam_flag_filter_mapped_reads/expected_flag_filtered_mapped_reads.sam"
@@ -23,7 +36,20 @@ class Test_bam_ops(unittest.TestCase):
         expected = "test_data/bam_ops/test_bam_flag_filter_mate_mapped_reads/expected_flag_filtered_mate_mapped_reads.sam"
         observed = "test_data/bam_ops/test_bam_flag_filter_mate_mapped_reads/observed_flag_filtered_mate_mapped_reads_bam.bam"
         observed_sam_output = "test_data/bam_ops/test_bam_flag_filter_mate_mapped_reads/observed_flag_filtered_mate_mapped_reads.sam"
-        bam_flag_filter(input_bam, observed, get_mate_mapped_reads=True)
+        bam_flag_filter(input_bam, observed, get_paired_reads=True, get_mate_mapped_reads=True)
+        #convert bam to sam to check correct output
+        samtools_args = ["samtools", "view", observed]
+        gen.run_process(samtools_args, file_for_output=observed_sam_output)
+        expected = gen.read_many_fields(expected, "\t")
+        observed = gen.read_many_fields(observed_sam_output, "\t")
+        self.assertEqual(expected, observed)
+
+    def test_bam_flag_filter_mate_unmapped_reads(self):
+        input_bam = "test_data/bam_ops/test_bam_flag_filter_mate_unmapped_reads/input_bam.bam"
+        expected = "test_data/bam_ops/test_bam_flag_filter_mate_unmapped_reads/expected_flag_filtered_mate_unmapped_reads.sam"
+        observed = "test_data/bam_ops/test_bam_flag_filter_mate_unmapped_reads/observed_flag_filtered_mate_unmapped_reads_bam.bam"
+        observed_sam_output = "test_data/bam_ops/test_bam_flag_filter_mate_unmapped_reads/observed_flag_filtered_mate_unmapped_reads.sam"
+        bam_flag_filter(input_bam, observed, get_paired_reads=True, get_mate_unmapped_reads=True)
         #convert bam to sam to check correct output
         samtools_args = ["samtools", "view", observed]
         gen.run_process(samtools_args, file_for_output=observed_sam_output)
@@ -37,6 +63,19 @@ class Test_bam_ops(unittest.TestCase):
         observed = "test_data/bam_ops/test_bam_flag_filter_paired_reads/observed_flag_paired_reads_filtered_bam.bam"
         observed_sam_output = "test_data/bam_ops/test_bam_flag_filter_paired_reads/observed_flag_paired_reads_filtered.sam"
         bam_flag_filter(input_bam, observed, get_paired_reads=True)
+        #convert bam to sam to check correct output
+        samtools_args = ["samtools", "view", observed]
+        gen.run_process(samtools_args, file_for_output=observed_sam_output)
+        expected = gen.read_many_fields(expected, "\t")
+        observed = gen.read_many_fields(observed_sam_output, "\t")
+        self.assertEqual(expected, observed)
+
+    def test_bam_flag_filter_proper_paired_reads(self):
+        input_bam = "test_data/bam_ops/test_bam_flag_filter_proper_paired_reads/input_bam.bam"
+        expected = "test_data/bam_ops/test_bam_flag_filter_proper_paired_reads/expected_flag_filtered_proper_paired_reads.sam"
+        observed = "test_data/bam_ops/test_bam_flag_filter_proper_paired_reads/observed_flag_proper_paired_reads_filtered_bam.bam"
+        observed_sam_output = "test_data/bam_ops/test_bam_flag_filter_proper_paired_reads/observed_flag_proper_paired_reads_filtered.sam"
+        bam_flag_filter(input_bam, observed, get_paired_reads=True, get_proper_paired_reads=True)
         #convert bam to sam to check correct output
         samtools_args = ["samtools", "view", observed]
         gen.run_process(samtools_args, file_for_output=observed_sam_output)
