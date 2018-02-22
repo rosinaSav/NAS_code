@@ -1,10 +1,54 @@
 import bed_ops as bo
 import csv
 import generic as gen
+import numpy as np
 import os
 import random
 import re
 import time
+import copy
+
+def bam_quality_filter(input_bam, output_bam, quality_greater_than_equal_to=None, quality_less_than_equal_to=None):
+    '''
+    Filters bam reads by quality.
+    quality_less_than_equal_to: the lower threshold for quality control
+    quality_greater_than_equal_to: the upper threshold for quality control
+    '''
+
+    samtools_args = ["samtools", "view", "-h"]
+    #if neither thresholds are specified
+    if not quality_greater_than_equal_to and not quality_less_than_equal_to:
+        print("You must specify one threshold to filter reads by.")
+        raise Exception
+    #if both thresholds are specified
+    if quality_greater_than_equal_to and quality_less_than_equal_to:
+        #create temp file
+        gen.create_directory("temp_data/")
+        temp_file = "temp_data/{0}.{1}.bam".format(os.path.split(output_bam)[1][:-4], random.random())
+        #first get everything below the upper threshold
+        #need to account for the fact samtools removes everything below threshold
+        #so when inversing need to add 1 to total
+        args = samtools_args.copy()
+        upper_limit = quality_less_than_equal_to + 1
+        args.extend(["-q", upper_limit, input_bam, "-U", temp_file])
+        gen.run_process(args)
+        #second get everything above the lower threshold
+        args = samtools_args.copy()
+        args.extend(["-q", quality_greater_than_equal_to, temp_file])
+        gen.run_process(args, file_for_output=output_bam)
+        # #cleanup files
+        gen.remove_file(temp_file)
+    #if only the lower threshold is specified
+    elif quality_greater_than_equal_to and not quality_less_than_equal_to:
+        samtools_args.extend(["-q", quality_greater_than_equal_to, input_bam])
+        gen.run_process(samtools_args, file_for_output=output_bam)
+    #if only the upper threshold is specified
+    elif quality_less_than_equal_to and not quality_greater_than_equal_to:
+        #need to account for the fact samtools removes everything below threshold
+        #so when inversing need to add 1 to total
+        upper_limit = quality_less_than_equal_to + 1
+        samtools_args.extend(["-q", upper_limit, input_bam, "-U", output_bam])
+        gen.run_process(samtools_args)
 
 def convert2bed(input_file_name, output_file_name, group_flags = None):
     '''
@@ -23,6 +67,42 @@ def convert2bed(input_file_name, output_file_name, group_flags = None):
         print("Grouped flags.")
     print("Converted data from {0} to bed.".format(extension))
 
+def count_junction_reads(sam, junctions, outfile):
+    '''
+    Given a sam file and a dictionary of exon-exon junctions, count how many reads overlap each junction.
+    For each exon, count how many reads support its skipping and how many support its inclusion.
+    Multiply the former count by 2.
+    '''
+    out_dict = {}
+    with open(sam) as file:
+        counter = 0
+        for line in file:
+            counter = counter + 1
+            line = line.split("\t")
+            sam_start = int(line[3])
+            cigar = line[5]
+            chrom = line[2]
+            if chrom in junctions:
+                #get intron position in chromosome coordinates based on the alignment cigar
+                putative_junctions = map_from_cigar(cigar, sam_start)
+                if putative_junctions:
+                    for junction in putative_junctions:
+                        #if the 3'end of the exon is in the junctions dict
+                        if junction[0] in junctions[chrom]:
+                            #if the 5' end of the exon is in the junctions dict
+                            if junction[1] in junctions[chrom][junction[0]]:
+                                current_dict = junctions[chrom][junction[0]][junction[1]]
+                                for pos, exon in enumerate(current_dict["exon"]):
+                                    if exon not in out_dict:
+                                        out_dict[exon] = {"skip": 0, "incl": 0}
+                                    out_dict[exon][current_dict["type"][pos]] = out_dict[exon][current_dict["type"][pos]] + 1
+            else:
+                print("Chromosome {0} not found!".format(chrom))
+    with open(outfile, "w") as file:
+        file.write("exon\tskippedx2\tincluded\ttotal_reads\n")
+        for exon in sorted(out_dict):
+            file.write("{0}\t{1}\t{2}\t{3}\n".format(exon, out_dict[exon]["skip"] * 2, out_dict[exon]["incl"], counter))
+
 def group_flags(input_bed, output_bed, flag_start):
     '''Takes an input bed file and converts all the fields from the flag_start'th
     onwards into a single field, with the elements separated by commas.'''
@@ -37,7 +117,7 @@ def group_flags(input_bed, output_bed, flag_start):
             writer.writerow(new_row)
 
 def intersect_bed(bed_file1, bed_file2, use_bedops = False, overlap = False, overlap_rec = False, write_both = False, sort = False, output_file = None,
-                             force_strand = False, no_name_check = False, no_dups = True, chrom = None, intersect = False, hit_count = False, bed_path = None):
+                             force_strand = False, no_name_check = False, no_dups = True, chrom = None, intersect = False, hit_count = False, bed_path = None, intersect_bam=None):
     '''Use bedtools/bedops to intersect coordinates from two bed files.
     Return those lines in bed file 1 that overlap with intervals in bed file 2.
     OPTIONS
@@ -57,14 +137,15 @@ def intersect_bed(bed_file1, bed_file2, use_bedops = False, overlap = False, ove
     bed file 2 will be returned several times (as many times as there are overlaps with different elements in bed file 2)
     chrom: limit search to a specific chromosome (only valid with bedops, can help in terms of efficiency)
     intersect: rather than returning the entire interval, only return the part of the interval that overlaps an interval in bed file 2.
-    hit_count: for each element in bed file 1, return the number of elements it overlaps in bed file 2 (only valid with bedtools)'''
+    hit_count: for each element in bed file 1, return the number of elements it overlaps in bed file 2 (only valid with bedtools)
+    intersect_bam: intersect a bam file with a bed file. Requires bam file to be called first.'''
     gen.create_directory("temp_data/")
     temp_file_name = "temp_data/temp_bed_file{0}.bed".format(random.random())
     #have it write the output to a temporary file
     if use_bedops:
-        bedtools_output = run_bedops(bed_file1, bed_file2, force_strand, write_both, chrom, overlap, sort, output_file = temp_file_name, intersect = intersect, hit_number = hit_count, no_dups = no_dups, overlap_rec = overlap_rec)
+        bedtools_output = run_bedops(bed_file1, bed_file2, force_strand, write_both, chrom, overlap, sort, output_file = temp_file_name, intersect = intersect, hit_number = hit_count, no_dups = no_dups, intersect_bam = intersect_bam, overlap_rec = overlap_rec)
     else:
-        bedtools_output = run_bedtools(bed_file1, bed_file2, force_strand, write_both, chrom, overlap, sort, no_name_check, no_dups, output_file = temp_file_name, intersect = intersect, hit_number = hit_count, bed_path = bed_path, overlap_rec = overlap_rec)
+        bedtools_output = run_bedtools(bed_file1, bed_file2, force_strand, write_both, chrom, overlap, sort, no_name_check, no_dups, output_file = temp_file_name, intersect = intersect, hit_number = hit_count, bed_path = bed_path, intersect_bam = intersect_bam, overlap_rec = overlap_rec)
     #move it to a permanent location only if you want to keep it
     if output_file:
         gen.run_process(["mv", temp_file_name, output_file])
@@ -73,6 +154,34 @@ def intersect_bed(bed_file1, bed_file2, use_bedops = False, overlap = False, ove
         bedtools_output = [i.split("\t") for i in bedtools_output]
     gen.remove_file(temp_file_name)
     return(bedtools_output)
+
+def map_from_cigar(cigar, sam_start):
+    '''
+    Given the cigar and the start coordinate (base 1) of an exon-exon read in a bam file,
+    determine the (base 0) coordinates of both the 3'-most nucleotide in the 5' exon and the 5'-most
+    nucleotide in the 3' exon. Can handle reads that map multiple exon-exon junctions.
+    '''
+    result = []
+    #check if one gap in alignment
+    gaps = [i for i in re.finditer("\d+N", cigar)]
+    if len(gaps) < 1:
+        return None
+    for gap in gaps:
+        #intron length
+        length = int(gap.group(0)[:-1])
+        #where the intron starts in the alignment
+        before_gap = cigar[:gap.start()]
+        pairs = re.findall("\d+(?=[MDN])", before_gap)
+        rel_start = 0
+        if pairs:
+            pairs = [int(i) for i in pairs]
+            rel_start = np.sum(pairs)
+        #where the intron starts on the chromosome
+        abs_start = (sam_start - 1) + rel_start - 1
+        #where the intron ends (actually the base after that)
+        abs_end = abs_start + length + 1
+        result.append([abs_start, abs_end])
+    return(result)
 
 def retrieve_bams(ftp_site, local_directory, remote_directory, password_file, subset = None):
     '''
@@ -117,6 +226,61 @@ def retrieve_bams(ftp_site, local_directory, remote_directory, password_file, su
     for process in processes:
         process.get()
 
+def read_exon_junctions(junctions_file):
+    '''
+    Read the exon junctions in a bed file into a dictionary that tells you how the junctions are matched
+    and what information they contain on skipping events.
+    '''
+    out_dict = {}
+    work_dict = {}
+    ends_list = []
+    junctions = gen.read_many_fields(junctions_file, "\t")
+    #loop over intervals, only consider 3' exon ends on first go
+    for junction in junctions:
+        if len(junction) > 1:
+            chrom = junction[0]
+            if chrom not in out_dict:
+                out_dict[chrom] = {}
+            #if it's a 3' exon end, just create the record in the output dictionary
+            if junction[3][-1] == "3":
+                start = int(junction[1])
+                if start not in out_dict[chrom]:
+                    out_dict[chrom][start] = {}
+                #record where 
+                work_dict[junction[3]] = start
+            #otherwise put it aside
+            elif junction[3][-1] == "5":
+                ends_list.append(junction)
+
+    #now go over the 5' exon ends and match them up with the 3' exon ends
+    for junction in ends_list:
+        name = junction[3].split(".")
+        trans = name[0]
+        exon = int(name[1])
+        #the corresponding 3' exon end can either be that of the previous exon or of that of
+        #the exon before it
+        expected_starts = ["{0}.{1}.3".format(name[0], exon - 1)]
+        if exon > 2:
+            expected_starts.append("{0}.{1}.3".format(name[0], exon - 2))
+        end = int(junction[1])
+        chrom = junction[0]
+        for expected_start in expected_starts:
+            if expected_start in work_dict:
+                start = work_dict[expected_start]
+                current_exon = int(expected_start.split(".")[1])
+                #if it's the previous exon, reads overlapping that junction support the splicing in of
+                #both this and the current exon
+                if exon - current_exon == 1:
+                    exons = ["{0}.{1}".format(trans, current_exon), "{0}.{1}".format(trans, exon)]
+                    types = ["incl", "incl"]
+                #if it's the 3'end of n-2th exon, then reads overlapping that junction support the skipping
+                #of n-1th exon
+                elif exon - current_exon == 2:
+                    exons = ["{0}.{1}".format(trans, current_exon + 1)]
+                    types = ["skip"]
+                out_dict[chrom][start][end] = {"exon": exons, "type": types}
+    return(out_dict)                
+
 def retrieve_bams_core(all_files, local_directory, host, user, password, ftp_directory, expect_string):
     '''
     Core function parallelized in retrieve_bams above.
@@ -144,7 +308,7 @@ def retrieve_bams_core(all_files, local_directory, host, user, password, ftp_dir
     ftp = gen.ftp_check(ftp, host, user, password, ftp_directory)
     ftp.quit()
 
-def run_bedops(A_file, B_file, force_strand = False, write_both = False, chrom = None, overlap = None, sort = False, output_file = None, intersect = False, hit_number = None, no_dups = False, overlap_rec = None):
+def run_bedops(A_file, B_file, force_strand = False, write_both = False, chrom = None, overlap = None, sort = False, output_file = None, intersect = False, hit_number = None, no_dups = False, overlap_rec = None, intersect_bam = None):
     '''
     See intersect_bed for details.
     '''
@@ -179,11 +343,13 @@ def run_bedops(A_file, B_file, force_strand = False, write_both = False, chrom =
         print("Bedops doesn't print duplicates by default!")
     if overlap_rec:
         print("Bedops hasn't been set up to filter by overlap in second file!")
+    if intersect_bam:
+        print("Use bedtools to intersect bam and bed!")
         raise Exception
     bedops_output = gen.run_process(bedops_args, file_for_output = output_file)
     return(bedops_output)
 
-def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom = None, overlap = None, sort = False, no_name_check = False, no_dups = True, hit_number = False, output_file = None, intersect = False, bed_path = None, overlap_rec = None):
+def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom = None, overlap = None, sort = False, no_name_check = False, no_dups = True, hit_number = False, output_file = None, intersect = False, bed_path = None, overlap_rec = None, intersect_bam = None):
     '''
     See intersect_bed for details.
     '''
@@ -217,7 +383,14 @@ def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom
         raise(Exception)
     if bed_path:
         bedtools_args[0] = "{0}{1}".format(bed_path, bedtools_args[0])
-    print(" ".join(bedtools_args))
+    if intersect_bam:
+        if A_file[-4:] != ".bam":
+            print("Bam file must be called first")
+            raise Exception
+        if B_file[-4:] != ".bed":
+            print("Bed file must be called second")
+            raise Exception
+        bedtools_args = ["intersectBed", "-wa", "-abam", A_file, "-b", B_file]
     bedtools_output = gen.run_process(bedtools_args, file_for_output = output_file)
     return(bedtools_output)
 

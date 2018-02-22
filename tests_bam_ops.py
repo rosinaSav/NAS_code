@@ -5,6 +5,69 @@ import unittest
 
 class Test_bam_ops(unittest.TestCase):
 
+    def test_bam_quality_filter(self):
+        input_bam = "test_data/bam_ops/test_bam_quality_filter/test_bam.bam"
+        expected = "test_data/bam_ops/test_bam_quality_filter/expected_bam_quality_filter.sam"
+        observed = "test_data/bam_ops/test_bam_quality_filter/observed_bam_quality_filter.bam"
+        observed_sam_output = "test_data/bam_ops/test_bam_quality_filter/observed_bam_quality_filter.sam"
+        expected = gen.read_many_fields(expected, "\t")
+        bam_quality_filter(input_bam, observed, quality_greater_than_equal_to=100, quality_less_than_equal_to=200)
+        #convert bam to sam to check correct output
+        #use samtools to extract in the same format as sam
+        samtools_args = ["samtools", "view", observed]
+        gen.run_process(samtools_args, file_for_output=observed_sam_output)
+        observed = gen.read_many_fields(observed_sam_output, "\t")
+        self.assertEqual(expected, observed)
+
+    def test_bam_quality_filter_greater_than(self):
+        input_bam = "test_data/bam_ops/test_bam_quality_filter_greater_than/test_bam.bam"
+        expected = "test_data/bam_ops/test_bam_quality_filter_greater_than/expected_bam_quality_filter_greater_than.sam"
+        observed = "test_data/bam_ops/test_bam_quality_filter_greater_than/observed_bam_quality_filter_greater_than.bam"
+        observed_sam_output = "test_data/bam_ops/test_bam_quality_filter_greater_than/observed_bam_quality_filter_greater_than.sam"
+        expected = gen.read_many_fields(expected, "\t")
+        bam_quality_filter(input_bam, observed, quality_greater_than_equal_to=200)
+        #convert bam to sam to check correct output
+        #use samtools to extract in the same format as sam
+        samtools_args = ["samtools", "view", observed]
+        gen.run_process(samtools_args, file_for_output=observed_sam_output)
+        observed = gen.read_many_fields(observed_sam_output, "\t")
+        self.assertEqual(expected, observed)
+
+    def test_bam_quality_filter_less_than(self):
+        input_bam = "test_data/bam_ops/test_bam_quality_filter_less_than/test_bam.bam"
+        expected = "test_data/bam_ops/test_bam_quality_filter_less_than/expected_bam_quality_filter_less_than.sam"
+        observed = "test_data/bam_ops/test_bam_quality_filter_less_than/observed_bam_quality_filter_less_than.bam"
+        observed_sam_output = "test_data/bam_ops/test_bam_quality_filter_less_than/observed_bam_quality_filter_less_than.sam"
+        expected = gen.read_many_fields(expected, "\t")
+        bam_quality_filter(input_bam, observed, quality_less_than_equal_to=250)
+        #convert bam to sam to check correct output
+        #use samtools to extract in the same format as sam
+        samtools_args = ["samtools", "view", observed]
+        gen.run_process(samtools_args, file_for_output=observed_sam_output)
+        observed = gen.read_many_fields(observed_sam_output, "\t")
+        self.assertEqual(expected, observed)
+
+    def test_count_junction_reads(self):
+        sam = "test_data/bam_ops/test_count_junction_reads/reads.sam"
+        junctions = {"chr1": {51: {54: {"exon": ["ENST1.1", "ENST1.2"], "type": ["incl", "incl"]},
+                             59: {"exon": ["ENST1.2"], "type": ["skip"]}},
+                    56: {59: {"exon": ["ENST1.2", "ENST1.3"], "type": ["incl", "incl"]},
+                         67: {"exon": ["ENST1.3"], "type": ["skip"]}},
+                    63: {67: {"exon": ["ENST1.3", "ENST1.4"], "type": ["incl", "incl"]}},
+                    76: {79: {"exon": ["ENST1.5", "ENST1.6"], "type": ["incl", "incl"]}}},
+                    "chr2": {34: {37: {"exon": ["ENST2.1", "ENST2.2"], "type": ["incl", "incl"]}},
+                    46: {50: {"exon": ["ENST2.3", "ENST2.4"], "type": ["incl", "incl"]},
+                         57: {"exon": ["ENST2.4"], "type": ["skip"]}},
+                    54: {57: {"exon": ["ENST2.4", "ENST2.5"], "type": ["incl", "incl"]},
+                         62: {"exon": ["ENST2.5"], "type": ["skip"]}},
+                    59: {62: {"exon": ["ENST2.5", "ENST2.6"], "type": ["incl", "incl"]}}}}
+        expected = gen.read_many_fields("test_data/bam_ops/test_count_junction_reads/expected.txt", "\t")
+        observed = "test_data/bam_ops/test_count_junction_reads/observed.txt"
+        gen.remove_file(observed)
+        count_junction_reads(sam, junctions, observed)
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(expected, observed)
+
     def test_group_flags(self):
         input_bed = "test_data/bam_ops/test_group_flags/test_tabix.bed"
         observed = "test_data/bam_ops/test_group_flags/observed_test_group_flags.bed"
@@ -14,6 +77,21 @@ class Test_bam_ops(unittest.TestCase):
         expected = gen.read_many_fields("test_data/bam_ops/test_group_flags/expected_test_group_flags.bed", "\t")
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(expected, observed)
+
+    def test_intersect_bam(self):
+        bam_file = "test_data/bam_ops/test_intersect_bam/test_input_bam.bam"
+        bed_file = "test_data/bam_ops/test_intersect_bam/test_input_bed.bed"
+        observed_bam_output = "test_data/bam_ops/test_intersect_bam/observed_bam_intersect.bam"
+        observed_bed_output = "test_data/bam_ops/test_intersect_bam/observed_bam_intersect.bed"
+        expected_bed_output = "test_data/bam_ops/test_intersect_bam/expected_intersect_bed.bed"
+        intersect_bed(bam_file, bed_file, output_file=observed_bam_output, intersect_bam=True)
+        expected = gen.read_many_fields(expected_bed_output, "\t")
+        #convert bam to bed to check correct output
+        #use samtools to extract in the same format as bed
+        samtools_args = ["samtools", "view", observed_bam_output]
+        gen.run_process(samtools_args, file_for_output=observed_bed_output)
+        observed = gen.read_many_fields(observed_bed_output, "\t")
+        self.assertEqual(observed, expected)
 
     def test_intersect_bed_default(self):
         A_file = "test_data/bam_ops/test_intersect_bed_default/test_intersect_bed_A_file.bed"
@@ -144,4 +222,27 @@ class Test_bam_ops(unittest.TestCase):
         intersect_bed(A_file, B_file, output_file = observed_file, no_dups = False, use_bedops = True, intersect = True)
         expected = gen.read_many_fields(expected_file, "\t")
         observed = gen.read_many_fields(observed_file, "\t")
+        self.assertEqual(expected, observed)
+
+    def test_map_from_cigar(self):
+        cigars = [["75M", 55], ["21M1I3M1I4M3I42M", 845], ["10M2N65M", 48], ["4I18M16N53M", 40], ["10M2N5M3N3M3N4M", 48], ["18M3I16N57M", 40]]
+        expected = [None, None, [[56, 59]], [[56, 73]], [[56, 59], [63, 67], [69, 73]], [[56, 73]]]
+        observed = [map_from_cigar(i[0], i[1]) for i in cigars]
+        self.assertEqual(expected, observed)
+
+    def test_read_exon_junctions(self):
+        junctions_file = "test_data/bam_ops/test_read_exon_junctions/junctions.bed"
+        expected = {"chr1": {51: {54: {"exon": ["ENST1.1", "ENST1.2"], "type": ["incl", "incl"]},
+                             59: {"exon": ["ENST1.2"], "type": ["skip"]}},
+                    56: {59: {"exon": ["ENST1.2", "ENST1.3"], "type": ["incl", "incl"]},
+                         67: {"exon": ["ENST1.3"], "type": ["skip"]}},
+                    63: {67: {"exon": ["ENST1.3", "ENST1.4"], "type": ["incl", "incl"]}},
+                    76: {79: {"exon": ["ENST1.5", "ENST1.6"], "type": ["incl", "incl"]}}},
+                    "chr2": {34: {37: {"exon": ["ENST2.1", "ENST2.2"], "type": ["incl", "incl"]}},
+                    46: {50: {"exon": ["ENST2.3", "ENST2.4"], "type": ["incl", "incl"]},
+                         57: {"exon": ["ENST2.4"], "type": ["skip"]}},
+                    54: {57: {"exon": ["ENST2.4", "ENST2.5"], "type": ["incl", "incl"]},
+                         62: {"exon": ["ENST2.5"], "type": ["skip"]}},
+                    59: {62: {"exon": ["ENST2.5", "ENST2.6"], "type": ["incl", "incl"]}}}}
+        observed = read_exon_junctions(junctions_file)
         self.assertEqual(expected, observed)
