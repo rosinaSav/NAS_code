@@ -135,6 +135,15 @@ class Test_bam_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed_sam_output, "\t")
         self.assertEqual(expected, observed)
 
+    def test_bam_nm_filter(self):
+        input_bam = "test_data/bam_ops/test_bam_nm_filter/input_bam.bam"
+        expected = "test_data/bam_ops/test_bam_nm_filter/expected_bam_nm_filter.sam"
+        observed = "test_data/bam_ops/test_bam_nm_filter/observed_bam_nm_filter.sam"
+        bam_nm_filter(input_bam, observed, nm_less_equal_to=6)
+        expected = gen.read_many_fields(expected, "\t")
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(expected, observed)
+
     def test_bam_quality_filter(self):
         input_bam = "test_data/bam_ops/test_bam_quality_filter/test_bam.bam"
         expected = "test_data/bam_ops/test_bam_quality_filter/expected_bam_quality_filter.sam"

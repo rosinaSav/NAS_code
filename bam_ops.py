@@ -74,6 +74,23 @@ def bam_flag_filter(input_bam, output_bam, get_paired_reads=None, get_unpaired_r
     samtools_args.append(input_bam)
     gen.run_process(samtools_args, file_for_output=output_bam)
 
+def bam_nm_filter(input_bam, output, nm_less_equal_to=None):
+    '''
+    Filters bam reads by NM value.
+    '''
+    if not nm_less_equal_to:
+        print("Please provide NM filter value.")
+        raise Exception
+
+    sam_output = gen.run_process(["samtools", "view", input_bam])
+    grep_args = []
+    for i in range(nm_less_equal_to+1):
+        if i > 0:
+            grep_args.append("\|\tNM:i:{0}\t".format(i))
+        else:
+            grep_args.append("\tNM:i:{0}\t".format(i))
+    grep_args = "".join(grep_args)
+    gen.run_process(["grep", grep_args], input_to_pipe=sam_output, file_for_output = output)
 
 def bam_quality_filter(input_bam, output_bam, quality_greater_than_equal_to=None, quality_less_than_equal_to=None):
     '''
@@ -252,7 +269,12 @@ def merge_bams(bam_list, output_file):
     '''
     Merge a list of bams files to defined output file.
     '''
-    args = ["samtools", "merge", "-h", output_file]
+    #setup args, add -r to attach filename rg tag
+    args = ["samtools", "merge", "-r"]
+    if os.path.exists(output_file):
+        args.append("-f")
+    args.append(output_file)
+    #loop through each input file and add to argument list
     for file in bam_list:
         args.append(file)
     gen.run_process(args)
