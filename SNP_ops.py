@@ -177,7 +177,8 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
     with open(ptcs_output_file, "w") as ptc_outputs, open(others_output_file, "w") as other_outputs: 
         refbase_error = 0
         snp_count = 0
-        for snp in snps:
+        #the first line is the header
+        for snp in snps[1:]:
             cds_id = re.search(entry_regex, snp[3]).group(1)
             snp_index = int(snp[11])
             #get the strand
