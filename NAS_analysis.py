@@ -30,24 +30,25 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder):
             lower_threshold, upper_threshold = mapq_interval[0], mapq_interval[1]
             mapq_filter_file = "{0}_mapq_filter_{1}_{2}.bam".format(bam_file[-4:], lower_threshold, upper_threshold)
             mapq_filter_filelist.append(mapq_filter_file)
-            #run the mapq filter
+            ##run the mapq filter
             bmo.bam_quality_filter(bam_file, mapq_filter_file, quality_greater_than_equal_to=lower_threshold, quality_less_than_equal_to=upper_threshold)
 
-        #merge files in filelist
+        ##merge files in filelist
         bam_file_parts = os.path.split(bam_file)
         #setup the filename for the mapq filtered bam file
         mapq_filtered_bam = "{0}/{1}_filtered_mapq.bam".format(bam_file_parts[0], bam_file_parts[1])
         bmo.merge_bams(mapq_filter_filelist, mapq_filtered_bam)
 
-        # Leaves: unpaired reads, single reads from paired reads (all with the mapped flag?)
+        ##filter by flags: get all mapped reads
+        #Leaves: mapped unpaired and paired reads
         mapq_flag_filtered_bam = "{0}_flag.bam".format(mapq_filtered_bam[-4:])
         bmo.bam_flag_filter(mapq_filtered_bam, mapq_flag_filtered_bam, get_mapped_reads=True)
 
-        #filter bam by xt tag
+        ##filter bam by xt tag XT=U
         mapq_flag_xt_filtered_bam = "{0}_xt.bam".format(mapq_flag_filtered_bam[:-4])
         bmo.bam_xt_filter(mapq_filter_file, mapq_xt_filter_file, xt_filter="U")
 
-        #filter bam by nm tag
+        ##filter bam by nm tag NM<=6
         mapq_flag_xt_nm_filtered_sam = "{0}_nm.sam".format(mapq_flag_xt_filtered_bam[:-4])
         bmo.bam_nm_filter(mapq_flag_xt_filtered_bam, mapq_flag_xt_nm_filtered_sam, nm_less_equal_to=6)
 
