@@ -53,7 +53,7 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder):
 	##3. Intersect junctions and .bam, and write down the overlapping .bam alignments, without counting.
 	#this uses intersect bed, with the intersect bam paramter
         intersect_bam = "{0}_exon_junction_filtered_bam_intersect.bam".format(mapq_filtered_flag_filtered_bam[-4:])
-	bmo.intersect_bed(PTC_exon_junctions_file, mapq_filtered_flag_filtered_bam, output_file=intersect_bam, intersect_bam=True)
+        bmo.intersect_bed(PTC_exon_junctions_file, mapq_filtered_flag_filtered_bam, output_file=intersect_bam, intersect_bam=True)
 
         #convert to sam format
         intersect_sam = "{0}.sam".format(intersect_bam[-4:])
@@ -61,7 +61,7 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder):
 
         #4. count the number of reads supporting either the skipping or the inclusion of each exon
         junctions = bmo.read_exon_junctions(PTC_exon_junctions_file)
-        bmo.count_junction_reads(intersect_sam, junctions, "{0}/{1}.txt".format(out_folder, bam_file.split(".")[0], read_count)
+        bmo.count_junction_reads(intersect_sam, junctions, "{0}/{1}.txt".format(out_folder, bam_file.split(".")[0]), read_count)
 
 def main():
 
