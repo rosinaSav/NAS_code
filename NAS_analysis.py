@@ -64,7 +64,7 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder):
 	     ##3. Intersect junctions and .bam, and write down the overlapping .bam alignments, without counting.
 	     #this uses intersect bed, with the intersect bam paramter
         intersect_bam = "{0}_exon_junction_filtered_bam_intersect.bam".format(mapq_flag_xt_nm_filtered_sam[-4:])
-	    bmo.intersect_bed(PTC_exon_junctions_file, mapq_flag_xt_nm_filtered_sam, output_file=intersect_bam, intersect_bam=True)
+        bmo.intersect_bed(PTC_exon_junctions_file, mapq_flag_xt_nm_filtered_sam, output_file=intersect_bam, intersect_bam=True)
 
         #convert to sam format
         intersect_sam = "{0}.sam".format(intersect_bam[-4:])
