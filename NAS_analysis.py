@@ -5,48 +5,63 @@ import os
 import SNP_ops as so
 import time
 
-def process_bam_per_individual(bam_files, other_arguments):
+def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder):
     #add other arguments
 
     for bam_file in bam_files:
 
-        '''
-        **********
-        MISSING: Intersect junctions and .bam, and write down the overlapping .bam alignments, without counting.
-        **********
-        '''
+        #Process:
+        # 1. Filter bams by quality
+        # This gives us a set of "good" quality reads.
+        # extra1: Get a count of all reads
+        # 2. Map to exon junctions
+        # 3. Count reads either skipping or including each exon
 
-        '''
-        **********
-        MISSING: filter remaining .bam alignments by quality.
-        **********
-        '''
+        #1. filter .bam alignments by quality.
+        #takes both upper and lower bam thresholds
+        #outputs bam file with "_quality_filter_{lower_lim}_{upper_lim}" appended
+        # need to do this twice and merge, so we use both intervals used by Geuvadis
 
-        '''
-        **********
-        MISSING: Find cases where both of the reads in a pair have been retained in step 1, and randomly remove one of them.
-        **********
-        '''
+        #set the mapq filter paramters here
+        mapq_intervals = [[251, 255], [175, 181]]
+        mapq_filter_filelist = []
 
-        '''
-        **********
-        MISSING: Based on the filtered reads, count how many reads support each exon-exon junction. 
-        NB! The RNA-seq data we're using is not stranded so contrary to what I had written before, we should NOT match strand in the intersect.
-        Make sure that the reads 
-        **********
-        '''
+        for mapq_interval in mapq_intervals:
+            lower_threshold, upper_threshold = mapq_interval[0], mapq_interval[1]
+            mapq_filter_file = "{0}_mapq_filter_{1}_{2}.bam".format(bam_file[-4:], lower_threshold, upper_threshold)
+            mapq_filter_filelist.append(mapq_filter_file)
+            #run the mapq filter
+            bmo.bam_quality_filter(bam_file, mapq_filter_file, quality_greater_than_equal_to=lower_threshold, quality_less_than_equal_to=upper_threshold)
 
-        #this intersect will probably not be kept in the final version, I'll take it out once the above MISSING bit is done.
-        #count how many .bam alignments overlap each exon-exon junction
-        bmo.intersect_bed(PTC_exon_junctions_file, bam_file, overlap = 1, output_file = "{0}_junction_hit_count.bed".format(bam_file[:-4]), force_strand = False, no_dups = False, hit_count = True, use_bedops = False)
+        #merge files in filelist
+        bam_file_parts = os.path.split(bam_file)
+        #setup the filename for the mapq filtered bam file
+        mapq_filtered_bam = "{0}/{1}_mapq_filtered.bam".format(bam_file_parts[0], bam_file_parts[1])
+        bmo.merge_bams(mapq_filter_filelist, mapq_filtered_bam)
 
-        '''
-        **********
-        MISSING: for each fully protein-coding exon,
-        1) estimate PSI in this individual (no. of alignments that support exon inclusion/(no. of alignments that support exon inclusion + number of alignments that support exon skipping))
-        2) calculate (no. of alignments that support exon inclusion)/(total no. of alignments in sample)
-        **********
-        '''
+        # Leaves: unpaired reads, single reads from paired reads (all with the mapped flag?)
+        mapq_filtered_flag_filtered_bam = "{0}_flag_filtered.bam".format(mapq_filtered_bam[-4:])
+        bmo.bam_flag_filter(mapq_filtered_bam, mapq_filtered_flag_filtered_bam, get_mapped_reads=True)
+
+        #filter bam by nm tag
+        mapq_flag_filtered_nm_filtered_sam = "{0}_nm_filtered.sam".format(mapq_filtered_flag_filtered_bam[:-4])
+        bmo.bam_nm_filter(mapq_filtered_flag_filtered_bam, mapq_flag_filtered_nm_filtered_sam, nm_less_equal_to=6)
+
+        #extra1: We can then get a count of the total reads possible which can be used for normalisation
+        read_count = int(gen.run_process(["samtools", "view", "-c", mapq_filtered_flag_filtered_bam]))
+
+	##3. Intersect junctions and .bam, and write down the overlapping .bam alignments, without counting.
+	#this uses intersect bed, with the intersect bam paramter
+        intersect_bam = "{0}_exon_junction_filtered_bam_intersect.bam".format(mapq_filtered_flag_filtered_bam[-4:])
+	bmo.intersect_bed(PTC_exon_junctions_file, mapq_filtered_flag_filtered_bam, output_file=intersect_bam, intersect_bam=True)
+
+        #convert to sam format
+        intersect_sam = "{0}.sam".format(intersect_bam[-4:])
+        gen.run_process(["samtools", "view", intersect_bam], file_for_output = intersect_sam)
+
+        #4. count the number of reads supporting either the skipping or the inclusion of each exon
+        junctions = bmo.read_exon_junctions(PTC_exon_junctions_file)
+        bmo.count_junction_reads(intersect_sam, junctions, "{0}/{1}.txt".format(out_folder, bam_file.split(".")[0], read_count)
 
 def main():
 
@@ -93,7 +108,7 @@ def main():
     coding_exon_bed = "{0}_coding_exons.bed".format(out_prefix)
     #bo.check_coding(filtered_exon_bed, CDS_bed, coding_exon_bed, remove_overlapping = True)
     gen.get_time(start)
-        
+
     #check which individuals were included in Geuvadis
     sample_names = os.listdir(bams_folder)
     sample_names = [(i.split("."))[0] for i in sample_names]
@@ -109,11 +124,11 @@ def main():
     sample_file = "{0}_sample_file.txt".format(out_prefix)
     SNP_file = "{0}_SNP_file.txt".format(out_prefix)
     PTC_file = "{0}_ptc_file.txt".format(out_prefix)
-    syn_nonsyn_file = "{0}_syn_nonsyn_file.txt".format(out_prefix)   
+    syn_nonsyn_file = "{0}_syn_nonsyn_file.txt".format(out_prefix)
     #get SNPs for the sample
     print("Getting SNP data...")
     CDS_interval_file = "{0}_intervals{1}".format(os.path.splitext(CDS_fasta)[0], os.path.splitext(CDS_fasta)[1])
-    so.get_snps_in_cds(coding_exon_bed, CDS_bed, vcf_folder, panel_file, sample_names, sample_file, SNP_file, out_prefix)
+    #so.get_snps_in_cds(coding_exon_bed, CDS_bed, vcf_folder, panel_file, sample_names, sample_file, SNP_file, out_prefix)
     gen.get_time(start)
     print("Determining SNP type...")
     so.get_snp_change_status(SNP_file, CDS_fasta, PTC_file, syn_nonsyn_file)
@@ -128,8 +143,9 @@ def main():
     bam_files = ["{0}/{1}".format(bam_folder, i) for i in sample_names if i[-4:] == ".bam"]
 
     #in parallel, do the processing on individual .bam files
-    #fill in 'other_arguments' later
-    processes = gen.run_in_parallel(bam_files, ["foo", other_arguments], process_bam_per_individual)
+    bam_analysis_folder = "{0}_bam_analysis".format(out_prefix)
+    gen.create_directory(bam_analysis_folder)
+    processes = gen.run_in_parallel(bam_files, ["foo", PTC_exon_junctions_file, bam_analysis_folder], process_bam_per_individual)
     print("Processing RNA-seq data...")
     for process in processes:
         process.get()
