@@ -22,7 +22,7 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder):
         #outputs bam file with "_quality_filter_{lower_lim}_{upper_lim}" appended
         # need to do this twice and merge, so we use both intervals used by Geuvadis
 
-        #set the mapq filter paramters here
+        #set the mapq filter parameters here
         mapq_intervals = [[251, 255], [175, 181]]
         mapq_filter_filelist = []
 
@@ -54,7 +54,6 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder):
 
         #extra1: We can then get a count of the total reads possible which can be used for normalisation
         read_count = int(gen.run_process(["samtools", "view", "-c", mapq_flag_xt_nm_filtered_sam]))
-
 
         ##### Potential filetype conflict in here ######
         ## After nm filter, the reads are now in sam format with no header (because I've done a grep)
@@ -161,15 +160,10 @@ def main():
     for process in processes:
         process.get()
 
-    
-    '''
-    **********
-    MISSING: for each of the exon-exon junctions that have been retained, determine median PSI (or count/total sample size) for individuals that have/don't have the PSI.
-    Would be good to also record sample size for either group.
-    Average results across paralogous families.
-    Perform some sort of a paired comparison between PTC+ and PTC-.
-    **********
-    '''
+    print("Calculating PSI...")
+    final_file = "{0}_final_output.txt".format(out_prefix)
+    bmo.compare_PSI(PTC_file, bam_folder, final_file)       
+
 
 if __name__ == "__main__":
     main()

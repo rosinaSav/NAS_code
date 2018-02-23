@@ -1,0 +1,5 @@
+exon	skippedx2	included	total_reads
+ENST2.1	3	3	10
+ENST2.3	8	5	10
+ENST2.4	7	3	10
+ENST2.8	2	1	10

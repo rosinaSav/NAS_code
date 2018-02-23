@@ -203,6 +203,12 @@ class Test_bam_ops(unittest.TestCase):
     def test_compare_PSI(self):
         SNPs = "test_data/bam_ops/test_compare_PSI/SNPs.bed"
         bam_folder = "test_data/bam_ops/test_compare_PSI/bam_folder"
+        expected = gen.read_many_fields("test_data/bam_ops/test_compare_PSI/expected.txt", "\t")
+        observed = "test_data/bam_ops/test_compare_PSI/observed.txt"
+        gen.remove_file(observed)
+        compare_PSI(SNPs, bam_folder, observed)
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(expected, observed)
 
     def test_count_junction_reads(self):
         sam = "test_data/bam_ops/test_count_junction_reads/reads.sam"

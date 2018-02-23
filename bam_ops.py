@@ -164,6 +164,55 @@ def bam_quality_filter(input_bam, output_bam, quality_greater_than_equal_to=None
         samtools_args.extend(["-q", upper_limit, input_bam, "-U", output_bam])
         gen.run_process(samtools_args)
 
+def compare_PSI(SNP_file, bam_folder, out_file):
+    '''
+    Given PTC-generating SNPs, as well as read counts at exon-exon junctions, compare exon skipping rates
+    within samples that do or do not have a PTC within a given exon.
+    '''
+    SNPs = gen.read_many_fields(SNP_file, "\t")
+    samples = SNPs[0][15:]
+    #note that if two SNPs appear in the same exon, the one that appears later
+    #will overwrite the one that appears first so only one of the SNPs will be analyzed
+    SNPs = {i[3]: i[15:-1] for i in SNPs[1:]}
+    results = {i: {"PSI_w_PTC": [], "PSI_no_PTC": [], "norm_count_w_PTC": [],
+                   "norm_count_no_PTC": [], "ptc_count": len([j for j in SNPs[i] if "1" in j]),
+                   "sample_count": 0} for i in SNPs}
+    for pos, sample in enumerate(samples):
+        with open("{0}/{1}.txt".format(bam_folder, sample)) as file:
+            for line in file:
+                line = line.split("\t")
+                exon = line[0]
+                #this also filters out the header line
+                if exon in SNPs:
+                    skipped = int(line[1])
+                    included = int(line[2])
+                    total = int(line[3])
+                    #if this sample contains a PTC
+                    if "1" in SNPs[exon][pos]:
+                        results[exon]["PSI_w_PTC"].append(included/(skipped + included))
+                        results[exon]["norm_count_w_PTC"].append(skipped/total)
+                    else:
+                        results[exon]["PSI_no_PTC"].append(included/(skipped + included))
+                        results[exon]["norm_count_no_PTC"].append(skipped/total)
+                    results[exon]["sample_count"] = results[exon]["sample_count"] + 1
+    header = "exon\tptc_count\tsample_count\tPSI_w_PTC\tPSI_no_PTC\tnorm_count_w_PTC\tnorm_count_no_PTC\n"
+    header_split = header.split("\t")
+    header_split[-1] = header_split[-1].rstrip("\n")
+    with open(out_file, "w") as file:
+        file.write(header)
+        for exon in sorted(results):
+            if results[exon]["sample_count"] > 0:
+                file.write("{0}\t".format(exon))
+                #:-1 cause you don't want a \t at the end of the line
+                for info in header_split[1:-1]:
+                    to_write = results[exon][info]
+                    if type(to_write) == list:
+                        to_write = round(np.mean(to_write), 3)
+                    file.write("{0}\t".format(to_write))
+                to_write = results[exon][header_split[-1]]
+                to_write = round(np.mean(to_write), 3)
+                file.write("{0}\n".format(to_write))                
+
 def convert2bed(input_file_name, output_file_name, group_flags = None):
     '''
     Converts an input file (sam, bam, gtf, gff...) to a bed file using bedops.

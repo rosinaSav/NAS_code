@@ -1,5 +1,0 @@
-exon	skippedx2	included	total_reads
-ENST1.1	0	3	16
-ENST1.2	8	5	16
-ENST1.3	0	3	16
-ENST1.4	0	1	16
