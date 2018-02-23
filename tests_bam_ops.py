@@ -194,7 +194,7 @@ class Test_bam_ops(unittest.TestCase):
         expected = gen.read_many_fields("test_data/bam_ops/test_count_junction_reads/expected.txt", "\t")
         observed = "test_data/bam_ops/test_count_junction_reads/observed.txt"
         gen.remove_file(observed)
-        count_junction_reads(sam, junctions, observed)
+        count_junction_reads(sam, junctions, observed, 1000)
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(expected, observed)
 
