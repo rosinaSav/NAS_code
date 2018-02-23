@@ -50,10 +50,10 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder):
         #extra1: We can then get a count of the total reads possible which can be used for normalisation
         read_count = int(gen.run_process(["samtools", "view", "-c", mapq_filtered_flag_filtered_bam]))
 
-	     ##3. Intersect junctions and .bam, and write down the overlapping .bam alignments, without counting.
-	     #this uses intersect bed, with the intersect bam paramter
+	##3. Intersect junctions and .bam, and write down the overlapping .bam alignments, without counting.
+	#this uses intersect bed, with the intersect bam paramter
         intersect_bam = "{0}_exon_junction_filtered_bam_intersect.bam".format(mapq_filtered_flag_filtered_bam[-4:])
-	    bmo.intersect_bed(PTC_exon_junctions_file, mapq_filtered_flag_filtered_bam, output_file=intersect_bam, intersect_bam=True)
+	bmo.intersect_bed(PTC_exon_junctions_file, mapq_filtered_flag_filtered_bam, output_file=intersect_bam, intersect_bam=True)
 
         #convert to sam format
         intersect_sam = "{0}.sam".format(intersect_bam[-4:])
