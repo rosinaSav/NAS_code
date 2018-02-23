@@ -83,15 +83,25 @@ def bam_nm_filter(input_bam, output, nm_less_equal_to=None):
         print("Please provide NM filter value.")
         raise Exception
 
-    sam_output = gen.run_process(["samtools", "view", input_bam])
-    grep_args = []
+    #create output file
+    if output[-4:] == ".bam":
+        output_file = "{0}.sam".format(output[:-4])
+    else:
+        output_file = output
+    sam_output = gen.run_process(["samtools", "view", "-h", input_bam])
+    #create grep args and include header fields if they exist
+    grep_args = ["^@"]
+    #for each nm less than equal to threshold, create grep arg
     for i in range(nm_less_equal_to+1):
-        if i > 0:
-            grep_args.append("\|\tNM:i:{0}\t".format(i))
-        else:
-            grep_args.append("\tNM:i:{0}\t".format(i))
+        grep_args.append("\|\tNM:i:{0}\t".format(i))
     grep_args = "".join(grep_args)
-    gen.run_process(["grep", grep_args], input_to_pipe=sam_output, file_for_output = output)
+    gen.run_process(["grep", grep_args], input_to_pipe=sam_output, file_for_output = output_file)
+
+    #if wanting to create bam, create bam and delete sam
+    if output != output_file:
+        samtools_args = ["samtools", "view", "-bh", output_file]
+        gen.run_process(samtools_args, file_for_output=output)
+        gen.remove_file(output_file)
 
 def bam_xt_filter(input_bam, output, xt_filter=None):
     '''
@@ -116,7 +126,7 @@ def bam_xt_filter(input_bam, output, xt_filter=None):
     grep_args = "".join(grep_args)
     gen.run_process(["grep", grep_args], input_to_pipe=sam_output, file_for_output = output_file)
 
-    #if wanting to create bam
+    #if wanting to create bam, create bam and delete sam
     if output != output_file:
         samtools_args = ["samtools", "view", "-bh", output_file]
         gen.run_process(samtools_args, file_for_output=output)

@@ -11,15 +11,14 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder):
     for bam_file in bam_files:
 
         #Process:
-        # 1. Filter bams by quality
+        # 1. Filter bams
         # This gives us a set of "good" quality reads.
         # extra1: Get a count of all reads
         # 2. Map to exon junctions
         # 3. Count reads either skipping or including each exon
 
-        #1. filter .bam alignments by quality.
-        #takes both upper and lower bam thresholds
-        #outputs bam file with "_quality_filter_{lower_lim}_{upper_lim}" appended
+        #####1. filter .bam alignments by quality.
+        # upper and lower bam thresholds required
         # need to do this twice and merge, so we use both intervals used by Geuvadis
 
         #set the mapq filter paramters here
@@ -49,28 +48,22 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder):
         bmo.bam_xt_filter(mapq_filter_file, mapq_xt_filter_file, xt_filter="U")
 
         ##filter bam by nm tag NM<=6
-        mapq_flag_xt_nm_filtered_sam = "{0}_nm.sam".format(mapq_flag_xt_filtered_bam[:-4])
-        bmo.bam_nm_filter(mapq_flag_xt_filtered_bam, mapq_flag_xt_nm_filtered_sam, nm_less_equal_to=6)
+        mapq_flag_xt_nm_filtered_bam = "{0}_nm.bam".format(mapq_flag_xt_filtered_bam[:-4])
+        bmo.bam_nm_filter(mapq_flag_xt_filtered_bam, mapq_flag_xt_nm_filtered_bam, nm_less_equal_to=6)
 
         #extra1: We can then get a count of the total reads possible which can be used for normalisation
-        read_count = int(gen.run_process(["samtools", "view", "-c", mapq_flag_xt_nm_filtered_sam]))
+        read_count = int(gen.run_process(["samtools", "view", "-c", mapq_flag_xt_nm_filtered_bam]))
 
-
-        ##### Potential filetype conflict in here ######
-        ## After nm filter, the reads are now in sam format with no header (because I've done a grep)
-        # Need to work out if this affects the input and outputs of the functions below and
-        # whether this needs fixing
-
-	     ##3. Intersect junctions and .bam, and write down the overlapping .bam alignments, without counting.
-	     #this uses intersect bed, with the intersect bam paramter
-        intersect_bam = "{0}_exon_junction_filtered_bam_intersect.bam".format(mapq_flag_xt_nm_filtered_sam[-4:])
-	    bmo.intersect_bed(PTC_exon_junctions_file, mapq_flag_xt_nm_filtered_sam, output_file=intersect_bam, intersect_bam=True)
+	    #####2. Intersect junctions and .bam, and write down the overlapping .bam alignments, without counting.
+	    #this uses intersect bed, with the intersect bam paramter
+        intersect_bam = "{0}_exon_junction_filtered_bam_intersect.bam".format(mapq_flag_xt_nm_filtered_bam[-4:])
+	    bmo.intersect_bed(PTC_exon_junctions_file, mapq_flag_xt_nm_filtered_bam, output_file=intersect_bam, intersect_bam=True)
 
         #convert to sam format
         intersect_sam = "{0}.sam".format(intersect_bam[-4:])
         gen.run_process(["samtools", "view", intersect_bam], file_for_output = intersect_sam)
 
-        #4. count the number of reads supporting either the skipping or the inclusion of each exon
+        #####3. count the number of reads supporting either the skipping or the inclusion of each exon
         junctions = bmo.read_exon_junctions(PTC_exon_junctions_file)
         bmo.count_junction_reads(intersect_sam, junctions, "{0}/{1}.txt".format(out_folder, bam_file.split(".")[0]), read_count)
 
