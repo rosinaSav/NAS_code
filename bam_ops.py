@@ -77,6 +77,7 @@ def bam_flag_filter(input_bam, output_bam, get_paired_reads=None, get_unpaired_r
 def bam_nm_filter(input_bam, output, nm_less_equal_to=None):
     '''
     Filters bam reads by NM value.
+    nm_less_equal_to: the NM value you wish to filter by.
     '''
     if not nm_less_equal_to:
         print("Please provide NM filter value.")
@@ -91,6 +92,35 @@ def bam_nm_filter(input_bam, output, nm_less_equal_to=None):
             grep_args.append("\tNM:i:{0}\t".format(i))
     grep_args = "".join(grep_args)
     gen.run_process(["grep", grep_args], input_to_pipe=sam_output, file_for_output = output)
+
+def bam_xt_filter(input_bam, output, xt_filter=None):
+    '''
+    Filter a bam/sam file by XT tag.
+    '''
+    if not xt_filter:
+        print("Please specify XT filter.")
+        raise Exception
+    #create output file
+    if output[-4:] == ".bam":
+        output_file = "{0}.sam".format(output[:-4])
+    else:
+        output_file = output
+
+
+    sam_output = gen.run_process(["samtools", "view", "-h", input_bam])
+    grep_args = []
+    #get header lines
+    grep_args.append("^@")
+    #get XT values with xt_filter
+    grep_args.append("\|\tXT:A:{0}\t".format(xt_filter))
+    grep_args = "".join(grep_args)
+    gen.run_process(["grep", grep_args], input_to_pipe=sam_output, file_for_output = output_file)
+
+    #if wanting to create bam
+    if output != output_file:
+        samtools_args = ["samtools", "view", "-bh", output_file]
+        gen.run_process(samtools_args, file_for_output=output)
+        gen.remove_file(output_file)
 
 def bam_quality_filter(input_bam, output_bam, quality_greater_than_equal_to=None, quality_less_than_equal_to=None):
     '''

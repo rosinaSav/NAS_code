@@ -144,6 +144,20 @@ class Test_bam_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(expected, observed)
 
+    def test_bam_xt_filter(self):
+        input_bam = "test_data/bam_ops/test_bam_xt_filter/input_bam.bam"
+        expected = "test_data/bam_ops/test_bam_xt_filter/expected_bam_xt_filter.sam"
+        observed = "test_data/bam_ops/test_bam_xt_filter/observed_bam_xt_filter.bam"
+        observed_sam_file = "test_data/bam_ops/test_bam_xt_filter/observed_bam_xt_filter.sam"
+        bam_xt_filter(input_bam, observed, xt_filter="U")
+        #convert bam to sam to check correct output
+        samtools_args = ["samtools", "view", observed]
+        gen.run_process(samtools_args, file_for_output=observed_sam_file)
+        expected = gen.read_many_fields(expected, "\t")
+        observed = gen.read_many_fields(observed_sam_file, "\t")
+        self.assertEqual(expected, observed)
+
+
     def test_bam_quality_filter(self):
         input_bam = "test_data/bam_ops/test_bam_quality_filter/test_bam.bam"
         expected = "test_data/bam_ops/test_bam_quality_filter/expected_bam_quality_filter.sam"
