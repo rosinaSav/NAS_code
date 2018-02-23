@@ -36,24 +36,34 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder):
         #merge files in filelist
         bam_file_parts = os.path.split(bam_file)
         #setup the filename for the mapq filtered bam file
-        mapq_filtered_bam = "{0}/{1}_mapq_filtered.bam".format(bam_file_parts[0], bam_file_parts[1])
+        mapq_filtered_bam = "{0}/{1}_filtered_mapq.bam".format(bam_file_parts[0], bam_file_parts[1])
         bmo.merge_bams(mapq_filter_filelist, mapq_filtered_bam)
 
         # Leaves: unpaired reads, single reads from paired reads (all with the mapped flag?)
-        mapq_filtered_flag_filtered_bam = "{0}_flag_filtered.bam".format(mapq_filtered_bam[-4:])
-        bmo.bam_flag_filter(mapq_filtered_bam, mapq_filtered_flag_filtered_bam, get_mapped_reads=True)
+        mapq_flag_filtered_bam = "{0}_flag.bam".format(mapq_filtered_bam[-4:])
+        bmo.bam_flag_filter(mapq_filtered_bam, mapq_flag_filtered_bam, get_mapped_reads=True)
+
+        #filter bam by xt tag
+        mapq_flag_xt_filtered_bam = "{0}_xt.bam".format(mapq_flag_filtered_bam[:-4])
+        bmo.bam_xt_filter(mapq_filter_file, mapq_xt_filter_file, xt_filter="U")
 
         #filter bam by nm tag
-        mapq_flag_filtered_nm_filtered_sam = "{0}_nm_filtered.sam".format(mapq_filtered_flag_filtered_bam[:-4])
-        bmo.bam_nm_filter(mapq_filtered_flag_filtered_bam, mapq_flag_filtered_nm_filtered_sam, nm_less_equal_to=6)
+        mapq_flag_xt_nm_filtered_sam = "{0}_nm.sam".format(mapq_flag_xt_filtered_bam[:-4])
+        bmo.bam_nm_filter(mapq_flag_xt_filtered_bam, mapq_flag_xt_nm_filtered_sam, nm_less_equal_to=6)
 
         #extra1: We can then get a count of the total reads possible which can be used for normalisation
-        read_count = int(gen.run_process(["samtools", "view", "-c", mapq_filtered_flag_filtered_bam]))
+        read_count = int(gen.run_process(["samtools", "view", "-c", mapq_flag_xt_nm_filtered_sam]))
+
+
+        ##### Potential filetype conflict in here ######
+        ## After nm filter, the reads are now in sam format with no header (because I've done a grep)
+        # Need to work out if this affects the input and outputs of the functions below and
+        # whether this needs fixing
 
 	     ##3. Intersect junctions and .bam, and write down the overlapping .bam alignments, without counting.
 	     #this uses intersect bed, with the intersect bam paramter
-        intersect_bam = "{0}_exon_junction_filtered_bam_intersect.bam".format(mapq_filtered_flag_filtered_bam[-4:])
-	    bmo.intersect_bed(PTC_exon_junctions_file, mapq_filtered_flag_filtered_bam, output_file=intersect_bam, intersect_bam=True)
+        intersect_bam = "{0}_exon_junction_filtered_bam_intersect.bam".format(mapq_flag_filtered_nm_filtered_sam[-4:])
+	    bmo.intersect_bed(PTC_exon_junctions_file, mapq_flag_filtered_nm_filtered_sam, output_file=intersect_bam, intersect_bam=True)
 
         #convert to sam format
         intersect_sam = "{0}.sam".format(intersect_bam[-4:])
