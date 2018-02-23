@@ -254,7 +254,12 @@ def merge_bams(bam_list, output_file):
     '''
     Merge a list of bams files to defined output file.
     '''
-    args = ["samtools", "merge", "-h", output_file]
+    #setup args, add -r to attach filename rg tag
+    args = ["samtools", "merge", "-r"]
+    if os.path.exists(output_file):
+        args.append("-f")
+    args.append(output_file)
+    #loop through each input file and add to argument list
     for file in bam_list:
         args.append(file)
     gen.run_process(args)
