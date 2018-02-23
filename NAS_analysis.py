@@ -161,6 +161,7 @@ def main():
     for process in processes:
         process.get()
 
+    
     '''
     **********
     MISSING: for each of the exon-exon junctions that have been retained, determine median PSI (or count/total sample size) for individuals that have/don't have the PSI.

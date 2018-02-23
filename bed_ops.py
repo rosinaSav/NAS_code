@@ -466,7 +466,8 @@ def filter_exon_junctions(junctions_file, exons_file, out_file):
         exons = gen.read_many_fields(exons_file, "\t")
         #only leave name field, parse, remove empty lines
         exons = [i[3].split(".") for i in exons if len(i) > 1]
-        exons = gen.list_to_dict(exons, 0, 1, as_list = True)
+        #exons[1:] because the first line is the header
+        exons = gen.list_to_dict(exons[1:], 0, 1, as_list = True)
         #open output file
         with open(out_file, "w") as o_file:
                 #loop over exon junctions file

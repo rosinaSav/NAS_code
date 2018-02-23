@@ -200,6 +200,10 @@ class Test_bam_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed_sam_output, "\t")
         self.assertEqual(expected, observed)
 
+    def test_compare_PSI(self):
+        SNPs = "test_data/bam_ops/test_compare_PSI/SNPs.bed"
+        bam_folder = "test_data/bam_ops/test_compare_PSI/bam_folder"
+
     def test_count_junction_reads(self):
         sam = "test_data/bam_ops/test_count_junction_reads/reads.sam"
         junctions = {"chr1": {51: {54: {"exon": ["ENST1.1", "ENST1.2"], "type": ["incl", "incl"]},
