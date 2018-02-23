@@ -62,8 +62,8 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder):
 
 	     ##3. Intersect junctions and .bam, and write down the overlapping .bam alignments, without counting.
 	     #this uses intersect bed, with the intersect bam paramter
-        intersect_bam = "{0}_exon_junction_filtered_bam_intersect.bam".format(mapq_flag_filtered_nm_filtered_sam[-4:])
-	    bmo.intersect_bed(PTC_exon_junctions_file, mapq_flag_filtered_nm_filtered_sam, output_file=intersect_bam, intersect_bam=True)
+        intersect_bam = "{0}_exon_junction_filtered_bam_intersect.bam".format(mapq_flag_xt_nm_filtered_sam[-4:])
+	    bmo.intersect_bed(PTC_exon_junctions_file, mapq_flag_xt_nm_filtered_sam, output_file=intersect_bam, intersect_bam=True)
 
         #convert to sam format
         intersect_sam = "{0}.sam".format(intersect_bam[-4:])
@@ -71,7 +71,7 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder):
 
         #4. count the number of reads supporting either the skipping or the inclusion of each exon
         junctions = bmo.read_exon_junctions(PTC_exon_junctions_file)
-        bmo.count_junction_reads(intersect_sam, junctions, "{0}/{1}.txt".format(out_folder, bam_file.split(".")[0], read_count)
+        bmo.count_junction_reads(intersect_sam, junctions, "{0}/{1}.txt".format(out_folder, bam_file.split(".")[0]), read_count)
 
 def main():
 
@@ -85,29 +85,29 @@ def main():
     CDS_fasta = "{0}_CDS.fasta".format(out_prefix)
     CDS_bed = "{0}_CDS.bed".format(out_prefix)
     print("Extracting and filtering CDSs...")
-    bo.extract_cds(gtf, CDS_bed, CDS_fasta, genome_fasta, all_checks = True, uniquify = True, clean_chrom_only = True, full_chr_name = True)
+    #bo.extract_cds(gtf, CDS_bed, CDS_fasta, genome_fasta, all_checks = True, uniquify = True, clean_chrom_only = True, full_chr_name = True)
     gen.get_time(start)
 
     #group the CDS sequences into families based on sequence similarity
     print("Grouping sequences into families...")
     names = gen.read_fasta(CDS_fasta)[0]
-    gen.find_families_ensembl("../source_data/GRCh37_ensembl_protein_families.txt", names, "{0}_families.txt".format(out_prefix))
+    #gen.find_families_ensembl("../source_data/GRCh37_ensembl_protein_families.txt", names, "{0}_families.txt".format(out_prefix))
     gen.get_time(start)
 
     print("Extracting and filtering exons...")
     #extract exon coordinates
     exon_bed = "{0}_exons.bed".format(out_prefix)
-    bo.extract_exons(gtf, exon_bed)
+    #bo.extract_exons(gtf, exon_bed)
     #only leave exons from transcripts that passed quality control in the extract_cds step above.
     #also only leave a single gene per family
     filtered_exon_bed = "{0}_filtered_exons.bed".format(out_prefix)
-    bo.filter_bed_from_fasta(exon_bed, CDS_fasta, filtered_exon_bed, families_file = "{0}_families.txt".format(out_prefix))
+    #bo.filter_bed_from_fasta(exon_bed, CDS_fasta, filtered_exon_bed, families_file = "{0}_families.txt".format(out_prefix))
     gen.get_time(start)
 
     #extract exon-exon junction coordinates
     print("Extracting exon-exon junctions...")
     exon_junctions_file = "{0}_exon_junctions.bed".format(out_prefix)
-    bo.extract_exon_junctions(exon_bed, exon_junctions_file, window_of_interest = 2)
+    #bo.extract_exon_junctions(exon_bed, exon_junctions_file, window_of_interest = 2)
     gen.get_time(start)
 
     #make another exons bed that only contains fully coding exons.
@@ -116,7 +116,7 @@ def main():
     #be flanked by exons that are not. This is why we couldn't do this filtering step earlier.
     print("Filtering out overlapping, non-coding and partially coding, as well as terminal exons...")
     coding_exon_bed = "{0}_coding_exons.bed".format(out_prefix)
-    bo.check_coding(filtered_exon_bed, CDS_bed, coding_exon_bed, remove_overlapping = True)
+    #bo.check_coding(filtered_exon_bed, CDS_bed, coding_exon_bed, remove_overlapping = True)
     gen.get_time(start)
 
     #check which individuals were included in Geuvadis
@@ -131,7 +131,6 @@ def main():
     samples_in_vcf = [i.rstrip("\n") for i in samples_in_vcf]
     sample_names = [i for i in sample_names if i in samples_in_vcf]
     print(len(sample_names))
-    sample_names = []
     sample_file = "{0}_sample_file.txt".format(out_prefix)
     SNP_file = "{0}_SNP_file.txt".format(out_prefix)
     PTC_file = "{0}_ptc_file.txt".format(out_prefix)
@@ -139,7 +138,7 @@ def main():
     #get SNPs for the sample
     print("Getting SNP data...")
     CDS_interval_file = "{0}_intervals{1}".format(os.path.splitext(CDS_fasta)[0], os.path.splitext(CDS_fasta)[1])
-    so.get_snps_in_cds(coding_exon_bed, CDS_bed, vcf_folder, panel_file, sample_names, sample_file, SNP_file, out_prefix)
+    #so.get_snps_in_cds(coding_exon_bed, CDS_bed, vcf_folder, panel_file, sample_names, sample_file, SNP_file, out_prefix)
     gen.get_time(start)
     print("Determining SNP type...")
     so.get_snp_change_status(SNP_file, CDS_fasta, PTC_file, syn_nonsyn_file)
