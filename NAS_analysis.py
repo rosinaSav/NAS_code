@@ -57,7 +57,7 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder):
                                           
         #4. count the number of reads supporting either the skipping or the inclusion of each exon
         junctions = bmo.read_exon_junctions(PTC_exon_junctions_file)
-        bmo.count_junction_reads(clean_sam, junctions, "{0}/{1}.txt".format(out_folder, bam_file.split(".")[0], read_count)
+        bmo.count_junction_reads(intersect_sam, junctions, "{0}/{1}.txt".format(out_folder, bam_file.split(".")[0], read_count)
 
 def main():
 
