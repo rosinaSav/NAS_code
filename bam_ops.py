@@ -83,15 +83,25 @@ def bam_nm_filter(input_bam, output, nm_less_equal_to=None):
         print("Please provide NM filter value.")
         raise Exception
 
-    sam_output = gen.run_process(["samtools", "view", input_bam])
-    grep_args = []
+    #create output file
+    if output[-4:] == ".bam":
+        output_file = "{0}.sam".format(output[:-4])
+    else:
+        output_file = output
+    sam_output = gen.run_process(["samtools", "view", "-h", input_bam])
+    #create grep args and include header fields if they exist
+    grep_args = ["^@"]
+    #for each nm less than equal to threshold, create grep arg
     for i in range(nm_less_equal_to+1):
-        if i > 0:
-            grep_args.append("\|\tNM:i:{0}\t".format(i))
-        else:
-            grep_args.append("\tNM:i:{0}\t".format(i))
+        grep_args.append("\|\tNM:i:{0}\t".format(i))
     grep_args = "".join(grep_args)
-    gen.run_process(["grep", grep_args], input_to_pipe=sam_output, file_for_output = output)
+    gen.run_process(["grep", grep_args], input_to_pipe=sam_output, file_for_output = output_file)
+
+    #if wanting to create bam, create bam and delete sam
+    if output != output_file:
+        samtools_args = ["samtools", "view", "-bh", output_file]
+        gen.run_process(samtools_args, file_for_output=output)
+        gen.remove_file(output_file)
 
 def bam_xt_filter(input_bam, output, xt_filter=None):
     '''
@@ -116,7 +126,7 @@ def bam_xt_filter(input_bam, output, xt_filter=None):
     grep_args = "".join(grep_args)
     gen.run_process(["grep", grep_args], input_to_pipe=sam_output, file_for_output = output_file)
 
-    #if wanting to create bam
+    #if wanting to create bam, create bam and delete sam
     if output != output_file:
         samtools_args = ["samtools", "view", "-bh", output_file]
         gen.run_process(samtools_args, file_for_output=output)
@@ -213,6 +223,7 @@ def compare_PSI(SNP_file, bam_folder, out_file):
                 to_write = round(np.mean(to_write), 3)
                 file.write("{0}\n".format(to_write))                
 
+
 def convert2bed(input_file_name, output_file_name, group_flags = None):
     '''
     Converts an input file (sam, bam, gtf, gff...) to a bed file using bedops.
@@ -245,7 +256,7 @@ def count_junction_reads(sam, junctions, outfile, read_count):
             chrom = line[2]
             if chrom in junctions:
                 #get intron position in chromosome coordinates based on the alignment cigar
-                putative_junctions = map_from_cigar(cigar, sam_start)
+                putative_junctions = map_intron_from_cigar(cigar, sam_start)
                 if putative_junctions:
                     for junction in putative_junctions:
                         #if the 3'end of the exon is in the junctions dict
@@ -316,7 +327,7 @@ def intersect_bed(bed_file1, bed_file2, use_bedops = False, overlap = False, ove
     gen.remove_file(temp_file_name)
     return(bedtools_output)
 
-def map_from_cigar(cigar, sam_start):
+def map_intron_from_cigar(cigar, sam_start):
     '''
     Given the cigar and the start coordinate (base 1) of an exon-exon read in a bam file,
     determine the (base 0) coordinates of both the 3'-most nucleotide in the 5' exon and the 5'-most
