@@ -428,15 +428,22 @@ def read_exon_junctions(junctions_file):
             chrom = junction[0]
             if chrom not in out_dict:
                 out_dict[chrom] = {}
+            strand = junction[5]
+            start_id = "5"
+            end_id = "3"
+            #we're gonna ignore strand in all of the analysis to come
+            #so we need antisense exon-exon junctions to look like sense exon-exon junctions
+            if strand == "-":
+                start_id = "3"
+                end_id = "5"
             #if it's a 3' exon end, just create the record in the output dictionary
-            if junction[3][-1] == "3":
+            if junction[3][-1] == end_id:
                 start = int(junction[1])
                 if start not in out_dict[chrom]:
                     out_dict[chrom][start] = {}
-                #record where
                 work_dict[junction[3]] = start
             #otherwise put it aside
-            elif junction[3][-1] == "5":
+            elif junction[3][-1] == start_id:
                 ends_list.append(junction)
 
     #now go over the 5' exon ends and match them up with the 3' exon ends
@@ -444,11 +451,20 @@ def read_exon_junctions(junctions_file):
         name = junction[3].split(".")
         trans = name[0]
         exon = int(name[1])
+        strand = junction[5]
+        end_id = "3"
+        mult_factor = 1
+        if strand == "-":
+            end_id = "5"
+            mult_factor = -1
         #the corresponding 3' exon end can either be that of the previous exon or of that of
         #the exon before it
-        expected_starts = ["{0}.{1}.3".format(name[0], exon - 1)]
-        if exon > 2:
-            expected_starts.append("{0}.{1}.3".format(name[0], exon - 2))
+        #for exons on the antisense strand, you will be looking at exons to come rather than preceding exons,
+        #hence the use of mult_factor
+        #note that the append might lead to an exon number of -1
+        #but expected_starts like that won't appear in work_dict so they'll be skipped
+        expected_starts = ["{0}.{1}.{2}".format(trans, exon + (-1 * mult_factor), end_id)]
+        expected_starts.append("{0}.{1}.{2}".format(trans, exon + (-2 * mult_factor), end_id))
         end = int(junction[1])
         chrom = junction[0]
         for expected_start in expected_starts:
@@ -457,13 +473,13 @@ def read_exon_junctions(junctions_file):
                 current_exon = int(expected_start.split(".")[1])
                 #if it's the previous exon, reads overlapping that junction support the splicing in of
                 #both this and the current exon
-                if exon - current_exon == 1:
+                if abs(exon - current_exon) == 1:
                     exons = ["{0}.{1}".format(trans, current_exon), "{0}.{1}".format(trans, exon)]
                     types = ["incl", "incl"]
                 #if it's the 3'end of n-2th exon, then reads overlapping that junction support the skipping
                 #of n-1th exon
-                elif exon - current_exon == 2:
-                    exons = ["{0}.{1}".format(trans, current_exon + 1)]
+                elif abs(exon - current_exon) == 2:
+                    exons = ["{0}.{1}".format(trans, current_exon + (1 * mult_factor))]
                     types = ["skip"]
                 out_dict[chrom][start][end] = {"exon": exons, "type": types}
     return(out_dict)
