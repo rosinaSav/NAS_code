@@ -9,6 +9,7 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder):
     #add other arguments
 
     for bam_file in bam_files:
+        print(bam_file)
 
         #Process:
         # 1. Filter bams by quality
@@ -68,6 +69,16 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder):
         #convert to sam format
         intersect_sam = "{0}.sam".format(intersect_bam[-4:])
         gen.run_process(["samtools", "view", intersect_bam], file_for_output = intersect_sam)
+
+        '''
+        **********
+        MISSING
+        **********
+        '''
+        #when counting junction reads, if the individual is heterozygous, get the big tabix samples file
+        #which you have previously intersected with the .bam
+        #for all the SNPs in the sample, check which allele the read has
+        #assign read to one of the two haplotypes based on that
 
         #4. count the number of reads supporting either the skipping or the inclusion of each exon
         junctions = bmo.read_exon_junctions(PTC_exon_junctions_file)
@@ -162,7 +173,7 @@ def main():
 
     print("Calculating PSI...")
     final_file = "{0}_final_output.txt".format(out_prefix)
-    bmo.compare_PSI(PTC_file, bam_folder, final_file)       
+    bmo.compare_PSI(PTC_file, bam_analysis_folder, final_file)       
 
 
 if __name__ == "__main__":
