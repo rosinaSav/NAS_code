@@ -9,12 +9,13 @@ import time
 ##simulation
 
 #have 2 files, 1 containing all PTCs, 1 containing all other SNPs
-#generate a psuedo PTC file containing a choice of non synonymous snps with ancestral allele and derived allele matched (need to think about matching allele frequency)
-#map new psudo PTC to exon junctions
-#convert to bam
-#haplotype stuff
-#count reads and output to output folder
-#then run compare psi
+#1get a file containing all nonsyn snp
+#2generate a psuedo PTC file containing a choice of non synonymous snps with ancestral allele and derived allele matched (need to think about matching allele frequency)
+#3map new psudo PTC to exon junctions
+#4convert to bam
+#5haplotype stuff
+#6count reads and output to output folder
+#7then run compare psi
 
 
 

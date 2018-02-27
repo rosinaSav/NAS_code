@@ -7,7 +7,7 @@ import string
 import collections
 import re
 
-def filter_by_snp_type(input_file, output_file, snp_type):
+def filter_by_snp_type(input_file, output_file, snp_type, set_seed=None):
     '''
     Filter a file of processed SNP reads by SNP type.
     snp_type: ptc, syn, non
@@ -15,6 +15,66 @@ def filter_by_snp_type(input_file, output_file, snp_type):
     #get header and anything that containts snp type
     grep_args = "echrom\|{0}".format(snp_type)
     gen.run_process(["grep", grep_args, input_file], file_for_output = output_file)
+
+def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, output_file, replacement=None, match_allele_frequency=None, seed=None):
+    '''
+    Generate a new file of pseudo PTC snps that are instead snps of different type.
+    For each PTC snp in input_ptc_snps, take a random snp from the alternative file
+    ensuring the ancestral and derived alleles match.
+    replacement: random choice with/without replacement
+    match_allele_frequency: match the allele frequencies (ptcs are likely rare whereas alternative snps may be more common)
+    seed: list of seeds (must be greater or equal to the number of simulations)
+    '''
+    #set up a default dictionary to hold indicies of position in list of alternative snps
+    alternative_snp_indicies = collections.defaultdict(lambda: collections.defaultdict(lambda: []))
+    alternative_snps = gen.read_many_fields(input_other_snps, "\t")
+    ptc_snps = gen.read_many_fields(input_ptc_snps, "\t")
+
+    #check for header of files
+    if alternative_snps[0][0] == "echrom":
+        alt_start=1
+        header=True
+    else:
+        alt_start=0
+    if ptc_snps[0][0] == "echrom":
+        ptc_start=1
+    else:
+        ptc_start=0
+
+    #go through each of the alternative snps and add to dictionary
+    for i,snp in enumerate(alternative_snps[alt_start:]):
+        #index 9 = ancestral base, #index 10 = mutation base
+        alternative_snp_indicies[alternative_snps[i][9]][alternative_snps[i][10]].append(i)
+
+    # if seed:
+    #     #chunk seeds based on processes
+    #     seed_chunks = [seed[i] for i in simulations]
+    #     np.random.seed(seed_chunks[i])
+    # else:
+    #     np.random.seed()
+
+
+    #below here needs to be repeated for each run
+    if seed:
+        np.random.seed(seed)
+    else:
+        np.random.seed()
+    #create an empty list to hold the alternative snps chosen
+    pseudo_ptc_indicies = []
+    #get the real ptc snps
+    ptc_snps = gen.read_many_fields(input_ptc_snps, "\t")
+    for ptc in ptc_snps[ptc_start:]:
+        ptc_choice = np.random.choice(alternative_snp_indicies[ptc[9]][ptc[10]], 1)[0]
+        pseudo_ptc_indicies.append(ptc_choice)
+
+    #open an output file and write the pseduo snps to file
+    with open(output_file, "w") as output:
+        #write header
+        output.write("echrom\testart\teend\teID\tfeature\tstrand\tschr\tspos\tsID\taa\tma\trel_pos\tstatus\tinfo\tformat\tHG1\tHG3\n")
+        #write each pseduo snp from the original alternative snp list
+        for index in pseudo_ptc_indicies:
+            output.write("{0}\n".format("\t".join(alternative_snps[index])))
+
 
 
 def get_snp_relative_cds_position(snp_exon_relative_positions, snp_cds_position_output, full_bed):
