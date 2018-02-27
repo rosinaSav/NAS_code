@@ -106,6 +106,17 @@ class Test_SNP_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(observed, expected)
 
+    def test_merge_and_header(self):
+        file1 = "test_data/snp_ops/test_merge_and_header/file1.txt"
+        file2 = "test_data/snp_ops/test_merge_and_header/file2.txt"
+        expected = "test_data/snp_ops/test_merge_and_header/expected.txt"
+        observed = "test_data/snp_ops/test_merge_and_header/observed.txt"
+        gen.remove_file(observed)
+        merge_and_header(file1, file2, observed)
+        expected = gen.read_many_fields(expected, "\t")
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(expected, observed)
+
     def test_tabix(self):
         bed_file = "test_data/snp_ops/test_tabix/test_tabix_bed.txt"
         expected = gen.read_many_fields("test_data/snp_ops/test_tabix/expected_test_tabix.txt", "\t")

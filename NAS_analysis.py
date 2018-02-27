@@ -65,19 +65,13 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, P
         intersect_bam = "{0}_exon_junction_filtered_bam_intersect_proc.bam".format(mapq_flag_xt_nm_filtered_bam[-4:])
         bmo.intersect_bed(mapq_flag_xt_nm_filtered_bam, PTC_exon_junctions_file, output_file = intersect_bam, intersect_bam = True)
 
-        #convert to sam format
-        intersect_sam = "{0}.sam".format(intersect_bam[-4:])
-        gen.run_process(["samtools", "view", intersect_bam], file_for_output = intersect_sam)
-
-        '''
-        **********
-        MISSING
-        **********
-        '''
-        #when counting junction reads, if the individual is heterozygous, get the big tabix samples file
-        #which you have previously intersected with the .bam
-        #for all the SNPs in the sample, check which allele the read has
-        #assign read to one of the two haplotypes based on that
+        print("Phasing reads...")
+        #convert to sam format and phase reads
+        intersect_sam = "{0}_phased.sam".format(intersect_bam[-4:])
+        temp_snp_fle = "temp_data/snps{0}.txt".format(random.random())
+        merge_and_header(PTC_file, syn_nonsyn_file, temp_snp_file)
+        phase_bams(temp_snp_file, intersect_bam, sample_name, intersect_sam)
+        gen.remove_file(temp_snp_file)
 
         print("Counting reads at junctions...")
         #4. count the number of reads supporting either the skipping or the inclusion of each exon

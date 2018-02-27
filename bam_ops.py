@@ -185,7 +185,7 @@ def compare_PSI(SNP_file, bam_folder, out_file):
     #will overwrite the one that appears first so only one of the SNPs will be analyzed
     SNPs = {i[3]: i[15:-1] for i in SNPs[1:]}
     results = {i: {"PSI_w_PTC": [], "PSI_no_PTC": [], "norm_count_w_PTC": [],
-                   "norm_count_no_PTC": [], "ptc_count": len([j for j in SNPs[i] if "1" in j]),
+                   "norm_count_no_PTC": [], "ptc_count": 0,
                    "sample_count": 0} for i in SNPs}
     for pos, sample in enumerate(samples):
         with open("{0}/{1}.txt".format(bam_folder, sample)) as file:
@@ -194,17 +194,23 @@ def compare_PSI(SNP_file, bam_folder, out_file):
                 exon = line[0]
                 #this also filters out the header line
                 if exon in SNPs:
-                    skipped = int(line[1])
-                    included = int(line[2])
+                    skipped = [int(i) for i in line[1].split("|")]
+                    included = [int(i) for i in line[2].split("|")]
                     total = int(line[3])
-                    #if this sample contains a PTC
-                    if "1" in SNPs[exon][pos]:
-                        results[exon]["PSI_w_PTC"].append(included/(skipped + included))
-                        results[exon]["norm_count_w_PTC"].append(skipped/total)
-                    else:
-                        results[exon]["PSI_no_PTC"].append(included/(skipped + included))
-                        results[exon]["norm_count_no_PTC"].append(skipped/total)
-                    results[exon]["sample_count"] = results[exon]["sample_count"] + 1
+                    genotype = SNPs[exon][pos].split("|")
+                    #we're ignoring data from unphased reads (third subfield in the skipped and included fields)
+                    for haplotype in range(2):
+                        #if any phased reads mapped to this exon-exon junction
+                        if skipped[haplotype] > 0 or included[haplotype] > 0:
+                            results[exon]["sample_count"] = results[exon]["sample_count"] + 1
+                            #if this sample contains a PTC
+                            if genotype[haplotype] == "1":
+                                results[exon]["ptc_count"] = results[exon]["ptc_count"] + 1                               
+                                results[exon]["PSI_w_PTC"].append(included[haplotype]/(skipped[haplotype] + included[haplotype]))
+                                results[exon]["norm_count_w_PTC"].append(skipped[haplotype]/total)
+                            else:
+                                results[exon]["PSI_no_PTC"].append(included[haplotype]/(skipped[haplotype] + included[haplotype]))
+                                results[exon]["norm_count_no_PTC"].append(skipped[haplotype]/total)
     header = "exon\tptc_count\tsample_count\tPSI_w_PTC\tPSI_no_PTC\tnorm_count_w_PTC\tnorm_count_no_PTC\n"
     header_split = header.split("\t")
     header_split[-1] = header_split[-1].rstrip("\n")
@@ -221,8 +227,7 @@ def compare_PSI(SNP_file, bam_folder, out_file):
                     file.write("{0}\t".format(to_write))
                 to_write = results[exon][header_split[-1]]
                 to_write = round(np.mean(to_write), 3)
-                file.write("{0}\n".format(to_write))                
-
+                file.write("{0}\n".format(to_write))
 
 def convert2bed(input_file_name, output_file_name, group_flags = None):
     '''
@@ -248,12 +253,15 @@ def count_junction_reads(sam, junctions, outfile, read_count):
     Multiply the former count by 2.
     '''
     out_dict = {}
+    haplotypes = ["0", "1", "N"]
     with open(sam) as file:
         for line in file:
             line = line.split("\t")
             sam_start = int(line[3])
             cigar = line[5]
             chrom = line[2]
+            #0, 1 or N
+            haplotype = (line[0].split("|"))[1]
             if chrom in junctions:
                 #get intron position in chromosome coordinates based on the alignment cigar
                 putative_junctions = map_intron_from_cigar(cigar, sam_start)
@@ -266,14 +274,17 @@ def count_junction_reads(sam, junctions, outfile, read_count):
                                 current_dict = junctions[chrom][junction[0]][junction[1]]
                                 for pos, exon in enumerate(current_dict["exon"]):
                                     if exon not in out_dict:
-                                        out_dict[exon] = {"skip": 0, "incl": 0}
-                                    out_dict[exon][current_dict["type"][pos]] = out_dict[exon][current_dict["type"][pos]] + 1
+                                        #we have three counters instead of one because we're counting the two copies separately
+                                        #and there's the third category for reads that couldn't be phased
+                                        out_dict[exon] = {"skip": [0, 0, 0], "incl": [0, 0, 0]}
+                                    haplotype_pos = haplotypes.index(haplotype)
+                                    out_dict[exon][current_dict["type"][pos]][haplotype_pos] = out_dict[exon][current_dict["type"][pos]][haplotype_pos] + 1
             else:
                 print("Chromosome {0} not found!".format(chrom))
     with open(outfile, "w") as file:
         file.write("exon\tskippedx2\tincluded\ttotal_reads\n")
         for exon in sorted(out_dict):
-            file.write("{0}\t{1}\t{2}\t{3}\n".format(exon, out_dict[exon]["skip"] * 2, out_dict[exon]["incl"], read_count))
+            file.write("{0}\t{1}\t{2}\t{3}\n".format(exon, "|".join([str(i * 2) for i in out_dict[exon]["skip"]]), "|".join([str(i) for i in out_dict[exon]["incl"]]), read_count))
 
 def group_flags(input_bed, output_bed, flag_start):
     '''Takes an input bed file and converts all the fields from the flag_start'th
@@ -289,7 +300,8 @@ def group_flags(input_bed, output_bed, flag_start):
             writer.writerow(new_row)
 
 def intersect_bed(bed_file1, bed_file2, use_bedops = False, overlap = False, overlap_rec = False, write_both = False, sort = False, output_file = None,
-                             force_strand = False, no_name_check = False, no_dups = True, chrom = None, intersect = False, hit_count = False, bed_path = None, intersect_bam=None):
+                             force_strand = False, no_name_check = False, no_dups = True, chrom = None, intersect = False, hit_count = False, bed_path = None, intersect_bam=None,
+                  write_zero = False, write_bed = False):
     '''Use bedtools/bedops to intersect coordinates from two bed files.
     Return those lines in bed file 1 that overlap with intervals in bed file 2.
     OPTIONS
@@ -310,22 +322,47 @@ def intersect_bed(bed_file1, bed_file2, use_bedops = False, overlap = False, ove
     chrom: limit search to a specific chromosome (only valid with bedops, can help in terms of efficiency)
     intersect: rather than returning the entire interval, only return the part of the interval that overlaps an interval in bed file 2.
     hit_count: for each element in bed file 1, return the number of elements it overlaps in bed file 2 (only valid with bedtools)
-    intersect_bam: intersect a bam file with a bed file. Requires bam file to be called first.'''
+    intersect_bam: intersect a bam file with a bed file. Requires bam file to be called first
+    write_zero: like write_both but also write A intervals that don't overlap with any B intervals,
+    write_bed: when intersecting a bam file, write output as bed.'''
     gen.create_directory("temp_data/")
     temp_file_name = "temp_data/temp_bed_file{0}.bed".format(random.random())
     #have it write the output to a temporary file
     if use_bedops:
         bedtools_output = run_bedops(bed_file1, bed_file2, force_strand, write_both, chrom, overlap, sort, output_file = temp_file_name, intersect = intersect, hit_number = hit_count, no_dups = no_dups, intersect_bam = intersect_bam, overlap_rec = overlap_rec)
     else:
-        bedtools_output = run_bedtools(bed_file1, bed_file2, force_strand, write_both, chrom, overlap, sort, no_name_check, no_dups, output_file = temp_file_name, intersect = intersect, hit_number = hit_count, bed_path = bed_path, intersect_bam = intersect_bam, overlap_rec = overlap_rec)
+        bedtools_output = run_bedtools(bed_file1, bed_file2, force_strand, write_both, chrom, overlap, sort, no_name_check, no_dups, output_file = temp_file_name, intersect = intersect, hit_number = hit_count, bed_path = bed_path, intersect_bam = intersect_bam, write_zero = write_zero, overlap_rec = overlap_rec, write_bed = write_bed)
     #move it to a permanent location only if you want to keep it
     if output_file:
         gen.run_process(["mv", temp_file_name, output_file])
     else:
-        bedtools_output = bedtools_output.splitlines()
-        bedtools_output = [i.split("\t") for i in bedtools_output]
+        bedtools_output = gen.read_many_fields(temp_file_name, "\t")
     gen.remove_file(temp_file_name)
     return(bedtools_output)
+
+def map_from_cigar(cigar, sam_start, focal_pos):
+    '''
+    Given the cigar and the start coordinate (base 1) of an exon-exon read in a bam file,
+    as well as the (base 1) coordinate of a focal position, determine where the focal
+    position falls in the read sequence (in base 0). 
+    '''
+    consume_query = ["M", "I", "S"]
+    consume_ref = ["M", "D", "N"]
+    split_cigar = re.findall("\d+\w", cigar)
+    ref_count = sam_start
+    query_count = 0
+    for part in split_cigar:
+        if ref_count == focal_pos:
+            return(query_count)
+        letter = part[-1]
+        number = int(part[:-1])
+        for occurrence in range(number):
+            if ref_count == focal_pos:
+                return(query_count)
+            if letter in consume_query:
+                query_count = query_count + 1
+            if letter in consume_ref:
+                ref_count = ref_count + 1
 
 def map_intron_from_cigar(cigar, sam_start):
     '''
@@ -357,7 +394,7 @@ def map_intron_from_cigar(cigar, sam_start):
 
 def merge_bams(bam_list, output_file):
     '''
-    Merge a list of bams files to defined output file.
+    Merge a list of bam files to defined output file.
     '''
     #setup args, add -r to attach filename rg tag
     args = ["samtools", "merge", "-r"]
@@ -369,6 +406,61 @@ def merge_bams(bam_list, output_file):
         args.append(file)
     gen.run_process(args)
 
+def phase_bams(snps, bam, sample_name, out_sam):
+    '''
+    Given a bed file of SNPs and a sam file of reads, annotate the reads according to haplotype.
+    '''
+    temp_snps = "temp_data/{0}.bed".format(random.random())
+    gen.run_process(["cut", "-f7-", snps], file_for_output = temp_snps)
+    intersecting_reads = intersect_bed(bam, temp_snps, write_zero = True, intersect_bam = True, write_bed = True)
+    sam = (gen.run_process(["samtools", "view", bam])).split("\n")
+    sam = [i.split("\t") for i in sam]
+    #store cigar and sequence info cause that is lost in the bam to bed conversion
+    sam = {i[0]: [i[5], i[9]] for i in sam if len(i) > 1 and i[0][0] != "#"}
+    #get order of samples in SNP file
+    samples = ((((gen.run_process(["head", "-2", temp_snps])).split("\n"))[1]).split("\t"))[9:-1]
+    sample_pos = samples.index(sample_name)
+    
+    out_dict = {}
+    for read in intersecting_reads:
+        #because the bam to bed conversion appends read pair member identifier
+        read_name = read[3].split("/")[0]
+        read_code = "|".join([read_name, read[1], read[0], read[5]])
+        if read_code not in out_dict:
+            out_dict[read_code] = []
+        #read overlaps with a SNP
+        if read[14] != ".":
+            genotypes = read[21:-2]
+            genotype = genotypes[sample_pos]
+            #a site where this individual is homozygous won't tell us anything
+            if "0" in genotype and "1" in genotype:
+                cigar, seq = sam[read_name]
+                current_base = seq[map_from_cigar(cigar, int(read[1]) + 1, int(read[13]))]
+                reference = read[15]
+                variant = read[16]
+                genotype = genotype.split("|")
+                #don't count it if the base in the read is neither the reported reference nor the reported variant base
+                if current_base == reference:
+                    haplotype = genotype.index("0")
+                    out_dict[read_code].append(haplotype)
+                elif current_base == variant:
+                    haplotype = genotype.index("1")
+                    out_dict[read_code].append(haplotype)
+    with open(out_sam, "w") as file:
+        for read in sorted(out_dict):
+            count_0 = out_dict[read].count(0)
+            count_1 = out_dict[read].count(1)
+            if count_0 > count_1:
+                haplotype = 0
+            elif count_1 > count_0:
+                haplotype = 1
+            else:
+                haplotype = "N"
+            read = read.split("|")
+            #I'm using this strange format to maintain compatibility with count_junction_reads
+            #(that is also why I'm taking the read start position to base 1)
+            file.write("{0}|{1}\t.\t{2}\t{3}\t.\t{4}\n".format(read[0], haplotype, read[2], int(read[1]) + 1, sam[read[0]][0]))
+    gen.remove_file(temp_snps)
 
 def retrieve_bams(ftp_site, local_directory, remote_directory, password_file, subset = None):
     '''
@@ -552,7 +644,7 @@ def run_bedops(A_file, B_file, force_strand = False, write_both = False, chrom =
     bedops_output = gen.run_process(bedops_args, file_for_output = output_file)
     return(bedops_output)
 
-def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom = None, overlap = None, sort = False, no_name_check = False, no_dups = True, hit_number = False, output_file = None, intersect = False, bed_path = None, overlap_rec = None, intersect_bam = None):
+def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom = None, overlap = None, sort = False, no_name_check = False, no_dups = True, hit_number = False, output_file = None, intersect = False, bed_path = None, overlap_rec = None, intersect_bam = None, write_zero = None, write_bed = False):
     '''
     See intersect_bed for details.
     '''
@@ -560,6 +652,8 @@ def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom
         write_option = "-wo"
     elif hit_number:
         write_option = "-c"
+    elif write_zero:
+        write_option = "-wao"
     else:
         write_option = "-wa"
     if sort:
@@ -593,7 +687,9 @@ def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom
         if B_file[-4:] != ".bed":
             print("Bed file must be called second")
             raise Exception
-        bedtools_args = ["intersectBed", "-wa", "-abam", A_file, "-b", B_file]
+        bedtools_args = ["intersectBed", write_option, "-abam", A_file, "-b", B_file]
+        if write_bed:
+            bedtools_args.append("-bed")
     bedtools_output = gen.run_process(bedtools_args, file_for_output = output_file)
     return(bedtools_output)
 
