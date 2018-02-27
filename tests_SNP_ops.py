@@ -5,6 +5,15 @@ import unittest
 
 class Test_SNP_ops(unittest.TestCase):
 
+    def test_filter_by_snp_type(self):
+        input_snps = "test_data/snp_ops/test_filter_by_snp_type/input_snps.bed"
+        expected = "test_data/snp_ops/test_filter_by_snp_type/expected_snps.bed"
+        observed = "test_data/snp_ops/test_filter_by_snp_type/observed_snps.bed"
+        filter_by_snp_type(input_snps, observed, "non")
+        expected = gen.read_many_fields(expected, "\t")
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(observed, expected)
+
     def test_get_snp_relative_cds_position(self):
         relative_exon_position_file = gen.read_many_fields("test_data/snp_ops/test_get_snp_relative_cds_position/test_snp_relative_exon_position.bed", "\t")
         full_bed_file = "test_data/snp_ops/test_get_snp_relative_cds_position/test_full_bed.bed"
@@ -53,7 +62,7 @@ class Test_SNP_ops(unittest.TestCase):
         gen.remove_file(observed)
         get_snp_relative_cds_position(relative_exon_position_file, observed, bed_file)
         observed = gen.read_many_fields(observed, "\t")
-        self.assertEqual(observed, expected)        
+        self.assertEqual(observed, expected)
 
     def test_get_snp_relative_exon_position(self):
         intersect_file = "test_data/snp_ops/test_get_snp_relative_exon_position/test_cds_bed_snps_vcf_intersect.bed"
@@ -153,4 +162,3 @@ class Test_SNP_ops(unittest.TestCase):
         expected = re.sub("source_[0-9]*\.[0-9]*", "source_N", expected)
         observed = re.sub("source_[0-9]*\.[0-9]*", "source_N", observed)
         self.assertEqual(observed, expected)
-

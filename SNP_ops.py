@@ -7,6 +7,16 @@ import string
 import collections
 import re
 
+def filter_by_snp_type(input_file, output_file, snp_type):
+    '''
+    Filter a file of processed SNP reads by SNP type.
+    snp_type: ptc, syn, non
+    '''
+    #get header and anything that containts snp type
+    grep_args = "echrom\|{0}".format(snp_type)
+    gen.run_process(["grep", grep_args, input_file], file_for_output = output_file)
+
+
 def get_snp_relative_cds_position(snp_exon_relative_positions, snp_cds_position_output, full_bed):
     '''
     Get the position of the snp within a CDS using the relative positions of snps in the features they are found
