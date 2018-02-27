@@ -2,6 +2,7 @@ import bed_ops as bo
 import bam_ops as bmo
 import generic as gen
 import os
+import random
 import SNP_ops as so
 import time
 
@@ -22,7 +23,7 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, P
         #outputs bam file with "_quality_filter_{lower_lim}_{upper_lim}" appended
         # need to do this twice and merge, so we use both intervals used by Geuvadis
 
-        mapq_filter_file = "{0}_mapq_filter_{1}_{2}_proc.bam".format(bam_file[-4:], lower_threshold, upper_threshold)
+        bam_file_parts = os.path.split(bam_file)
         mapq_filtered_bam = "{0}/{1}_filtered_mapq_proc.bam".format(bam_file_parts[0], bam_file_parts[1])
         mapq_flag_filtered_bam = "{0}_flag_proc.bam".format(mapq_filtered_bam[:-4])
         mapq_flag_xt_filtered_bam = "{0}_xt_proc.bam".format(mapq_flag_filtered_bam[:-4])
@@ -37,13 +38,13 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, P
 
             for mapq_interval in mapq_intervals:
                 lower_threshold, upper_threshold = mapq_interval[0], mapq_interval[1]
+                mapq_filter_file = "{0}_mapq_filter_{1}_{2}_proc.bam".format(bam_file[:-4], lower_threshold, upper_threshold)
                 mapq_filter_filelist.append(mapq_filter_file)
                 ##run the mapq filter
                 bmo.bam_quality_filter(bam_file, mapq_filter_file, quality_greater_than_equal_to=lower_threshold, quality_less_than_equal_to=upper_threshold)
 
             ##merge files in filelist
-            bam_file_parts = os.path.split(bam_file)
-            #bmo.merge_bams(mapq_filter_filelist, mapq_filtered_bam)
+            bmo.merge_bams(mapq_filter_filelist, mapq_filtered_bam)
 
             print("Filtering by .bam flags...")
 
@@ -63,21 +64,23 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, P
         print("Filtering .bam to relevant sequence intervals...")
         ##3. Intersect junctions and .bam, and write down the overlapping .bam alignments, without counting.
 	#this uses intersect bed, with the intersect bam parameter
-        intersect_bam = "{0}_exon_junction_filtered_bam_intersect_proc.bam".format(mapq_flag_xt_nm_filtered_bam[-4:])
+        intersect_bam = "{0}_exon_junction_filtered_bam_intersect_proc.bam".format(mapq_flag_xt_nm_filtered_bam[:-4])
         bmo.intersect_bed(mapq_flag_xt_nm_filtered_bam, PTC_exon_junctions_file, output_file = intersect_bam, intersect_bam = True)
 
         print("Phasing reads...")
         #convert to sam format and phase reads
-        intersect_sam = "{0}_phased.sam".format(intersect_bam[-4:])
-        temp_snp_fle = "temp_data/snps{0}.txt".format(random.random())
-        merge_and_header(PTC_file, syn_nonsyn_file, temp_snp_file)
-        phase_bams(temp_snp_file, intersect_bam, sample_name, intersect_sam)
+        intersect_sam = "{0}_phased.sam".format(intersect_bam[:-4])
+        temp_snp_file = "temp_data/snps{0}.txt".format(random.random())
+        so.merge_and_header(PTC_file, syn_nonsyn_file, temp_snp_file)
+        sample_name = (bam_file.split("/")[-1]).split(".")[0]
+        bmo.phase_bams(temp_snp_file, intersect_bam, sample_name, intersect_sam)
         gen.remove_file(temp_snp_file)
+        print(intersect_sam)
 
         print("Counting reads at junctions...")
         #4. count the number of reads supporting either the skipping or the inclusion of each exon
         junctions = bmo.read_exon_junctions(PTC_exon_junctions_file)
-        bmo.count_junction_reads(intersect_sam, junctions, "{0}/{1}.txt".format(out_folder, bam_file.split(".")[0]), read_count)
+        bmo.count_junction_reads(intersect_sam, junctions, "{0}/{1}.txt".format(out_folder, sample_name), read_count)
 
 def main():
 
@@ -154,10 +157,10 @@ def main():
         so.get_snp_change_status(SNP_file, CDS_fasta, PTC_file, syn_nonsyn_file)
         gen.get_time(start)
 
-        #filter the exon junctions file to only leave those junctions that flank exons retained in the previous step.
-        print("Filtering exon-exon junctions to only leave those that flank exons with a PTC variant...")
-        PTC_exon_junctions_file = "{0}_filtered_exon_junctions.bed".format(out_prefix)
-        bo.filter_exon_junctions(exon_junctions_file, PTC_file, PTC_exon_junctions_file)
+    #filter the exon junctions file to only leave those junctions that flank exons retained in the previous step.
+    print("Filtering exon-exon junctions to only leave those that flank exons with a PTC variant...")
+    PTC_exon_junctions_file = "{0}_filtered_exon_junctions.bed".format(out_prefix)
+    bo.filter_exon_junctions(exon_junctions_file, PTC_file, PTC_exon_junctions_file)
 
     #make a list of all the .bam files and modify them to have the full path rather than just the file name
     bam_files = ["{0}/{1}".format(bams_folder, i) for i in full_sample_names if (i.split("."))[0] in sample_names]
@@ -169,6 +172,8 @@ def main():
     processes = gen.run_in_parallel(bam_files, ["foo", PTC_exon_junctions_file, bam_analysis_folder, PTC_file, syn_nonsyn_file, filter_bams], process_bam_per_individual)
     for process in processes:
         process.get()
+
+    gen.get_time(start)
 
     print("Calculating PSI...")
     final_file = "{0}_final_output.txt".format(out_prefix)

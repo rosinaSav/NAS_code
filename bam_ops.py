@@ -180,7 +180,7 @@ def compare_PSI(SNP_file, bam_folder, out_file):
     within samples that do or do not have a PTC within a given exon.
     '''
     SNPs = gen.read_many_fields(SNP_file, "\t")
-    samples = SNPs[0][15:]
+    samples = SNPs[0][15:-1]
     #note that if two SNPs appear in the same exon, the one that appears later
     #will overwrite the one that appears first so only one of the SNPs will be analyzed
     SNPs = {i[3]: i[15:-1] for i in SNPs[1:]}
@@ -416,7 +416,8 @@ def phase_bams(snps, bam, sample_name, out_sam):
     sam = (gen.run_process(["samtools", "view", bam])).split("\n")
     sam = [i.split("\t") for i in sam]
     #store cigar and sequence info cause that is lost in the bam to bed conversion
-    sam = {i[0]: [i[5], i[9]] for i in sam if len(i) > 1 and i[0][0] != "#"}
+    #you can't just put down the name of the read cause those aren't unique
+    sam = {" ".join([i[0], i[3]]): [i[5], i[9]] for i in sam if len(i) > 1 and i[0][0] != "#"}
     #get order of samples in SNP file
     samples = ((((gen.run_process(["head", "-2", temp_snps])).split("\n"))[1]).split("\t"))[9:-1]
     sample_pos = samples.index(sample_name)
@@ -434,7 +435,14 @@ def phase_bams(snps, bam, sample_name, out_sam):
             genotype = genotypes[sample_pos]
             #a site where this individual is homozygous won't tell us anything
             if "0" in genotype and "1" in genotype:
-                cigar, seq = sam[read_name]
+                sam_read_name = " ".join([read_name, str(int(read[1]) + 1)])
+                cigar, seq = sam[sam_read_name]
+##                print("\n")
+##                print(read)
+##                print(cigar)
+##                print(seq)
+##                print(map_from_cigar(cigar, int(read[1]) + 1, int(read[13])))
+##                print(seq[map_from_cigar(cigar, int(read[1]) + 1, int(read[13]))])
                 current_base = seq[map_from_cigar(cigar, int(read[1]) + 1, int(read[13]))]
                 reference = read[15]
                 variant = read[16]
@@ -459,7 +467,7 @@ def phase_bams(snps, bam, sample_name, out_sam):
             read = read.split("|")
             #I'm using this strange format to maintain compatibility with count_junction_reads
             #(that is also why I'm taking the read start position to base 1)
-            file.write("{0}|{1}\t.\t{2}\t{3}\t.\t{4}\n".format(read[0], haplotype, read[2], int(read[1]) + 1, sam[read[0]][0]))
+            file.write("{0}|{1}\t.\t{2}\t{3}\t.\t{4}\n".format(read[0], haplotype, read[2], int(read[1]) + 1, sam[" ".join([read[0], str(int(read[1]) + 1)])][0]))
     gen.remove_file(temp_snps)
 
 def retrieve_bams(ftp_site, local_directory, remote_directory, password_file, subset = None):
