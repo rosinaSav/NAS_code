@@ -39,7 +39,7 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, P
         bam_file_parts = os.path.split(bam_file)
         #setup the filename for the mapq filtered bam file
         mapq_filtered_bam = "{0}/{1}_filtered_mapq_proc.bam".format(bam_file_parts[0], bam_file_parts[1])
-        #bmo.merge_bams(mapq_filter_filelist, mapq_filtered_bam)
+        bmo.merge_bams(mapq_filter_filelist, mapq_filtered_bam)
 
         print("Filtering by .bam flags...")
 
