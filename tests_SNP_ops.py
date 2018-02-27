@@ -24,6 +24,16 @@ class Test_SNP_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(observed, expected)
 
+    def test_generate_pseudo_ptc_snps_without_replacement(self):
+        input_ptc_snps = "test_data/snp_ops/test_generate_pseudo_ptc_snps_without_replacement/input_ptc_snps.bed"
+        input_nonsyn_snps = "test_data/snp_ops/test_generate_pseudo_ptc_snps_without_replacement/input_nonsyn_snps.bed"
+        expected = "test_data/snp_ops/test_generate_pseudo_ptc_snps_without_replacement/expected_pseudo_ptc_snps.bed"
+        observed = "test_data/snp_ops/test_generate_pseudo_ptc_snps_without_replacement/observed_pseudo_ptc_snps.bed"
+        generate_pseudo_ptc_snps(input_ptc_snps, input_nonsyn_snps, observed, seed=5, without_replacement=True)
+        expected = gen.read_many_fields(expected, "\t")
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(observed, expected)
+
     def test_get_snp_relative_cds_position(self):
         relative_exon_position_file = gen.read_many_fields("test_data/snp_ops/test_get_snp_relative_cds_position/test_snp_relative_exon_position.bed", "\t")
         full_bed_file = "test_data/snp_ops/test_get_snp_relative_cds_position/test_full_bed.bed"

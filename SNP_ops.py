@@ -16,7 +16,7 @@ def filter_by_snp_type(input_file, output_file, snp_type, set_seed=None):
     grep_args = "echrom\|{0}".format(snp_type)
     gen.run_process(["grep", grep_args, input_file], file_for_output = output_file)
 
-def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, output_file, replacement=None, match_allele_frequency=None, seed=None):
+def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, output_file, without_replacement=None, match_allele_frequency=None, seed=None):
     '''
     Generate a new file of pseudo PTC snps that are instead snps of different type.
     For each PTC snp in input_ptc_snps, take a random snp from the alternative file
@@ -63,8 +63,10 @@ def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, output_file, repl
     pseudo_ptc_indicies = []
     #get the real ptc snps
     ptc_snps = gen.read_many_fields(input_ptc_snps, "\t")
+    #backwards logic but makes more sense in the flags
+    replacement = not without_replacement
     for ptc in ptc_snps[ptc_start:]:
-        ptc_choice = np.random.choice(alternative_snp_indicies[ptc[9]][ptc[10]], 1)[0]
+        ptc_choice = np.random.choice(alternative_snp_indicies[ptc[9]][ptc[10]], 1, replacement)[0]
         pseudo_ptc_indicies.append(ptc_choice)
 
     #open an output file and write the pseduo snps to file
