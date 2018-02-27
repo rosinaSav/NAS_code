@@ -1,2 +1,0 @@
-echrom	estart	eend	eID	feature	strand	schr	spos	sID	aa	ma	rel_pos	status	info	format	HG1	HG3
-chr1	33	36	ENST1.3	CDS	+	chr1	20	rs6	G	T	13	ptc	CDS_CODON=TTA$SNP_CODON=TAA	GT	0|0	0|1	1

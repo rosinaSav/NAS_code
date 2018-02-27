@@ -222,12 +222,12 @@ class Test_bam_ops(unittest.TestCase):
                          67: {"exon": ["ENST1.3"], "type": ["skip"]}},
                     63: {67: {"exon": ["ENST1.3", "ENST1.4"], "type": ["incl", "incl"]}},
                     76: {79: {"exon": ["ENST1.5", "ENST1.6"], "type": ["incl", "incl"]}}},
-                    "chr2": {34: {37: {"exon": ["ENST2.1", "ENST2.2"], "type": ["incl", "incl"]}},
-                    46: {50: {"exon": ["ENST2.3", "ENST2.4"], "type": ["incl", "incl"]},
-                         57: {"exon": ["ENST2.4"], "type": ["skip"]}},
-                    54: {57: {"exon": ["ENST2.4", "ENST2.5"], "type": ["incl", "incl"]},
-                         62: {"exon": ["ENST2.5"], "type": ["skip"]}},
-                    59: {62: {"exon": ["ENST2.5", "ENST2.6"], "type": ["incl", "incl"]}}}}
+                    "chr2": {76: {79: {"exon": ["ENST2.2", "ENST2.1"], "type": ["incl", "incl"]}},
+                    63: {67: {"exon": ["ENST2.4", "ENST2.3"], "type": ["incl", "incl"]}},
+                    56: {59: {"exon": ["ENST2.5", "ENST2.4"], "type": ["incl", "incl"]},
+                         67: {"exon": ["ENST2.4"], "type": ["skip"]}},
+                    51: {54: {"exon": ["ENST2.6", "ENST2.5"], "type": ["incl", "incl"]},
+                         59: {"exon": ["ENST2.5"], "type": ["skip"]}}}}
         expected = gen.read_many_fields("test_data/bam_ops/test_count_junction_reads/expected.txt", "\t")
         observed = "test_data/bam_ops/test_count_junction_reads/observed.txt"
         gen.remove_file(observed)
@@ -381,10 +381,29 @@ class Test_bam_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed_file, "\t")
         self.assertEqual(expected, observed)
 
+    def test_map_from_cigar(self):
+        cigars = [["4M", 16, 18], ["2M1I3M1I4M3I2M", 11, 17], ["3M2N65M", 10, 16], ["3D2M2N53M", 40, 49]]
+        expected = [2, 8, 4, 4]
+        observed = [map_from_cigar(i[0], i[1], i[2]) for i in cigars]
+        self.assertEqual(expected, observed)
+
     def test_map_intron_from_cigar(self):
         cigars = [["75M", 55], ["21M1I3M1I4M3I42M", 845], ["10M2N65M", 48], ["4I18M16N53M", 40], ["10M2N5M3N3M3N4M", 48], ["18M3I16N57M", 40]]
         expected = [None, None, [[56, 59]], [[56, 73]], [[56, 59], [63, 67], [69, 73]], [[56, 73]]]
         observed = [map_intron_from_cigar(i[0], i[1]) for i in cigars]
+        self.assertEqual(expected, observed)
+
+    def test_phase_bams(self):
+        snps = "test_data/bam_ops/test_phase_bams/snps.bed"
+        sam = "test_data/bam_ops/test_phase_bams/reads.sam"
+        bam = "test_data/bam_ops/test_phase_bams/reads.bam"
+        gen.run_process(["samtools", "view", "-S", "-b", sam], file_for_output = bam)
+        expected = "test_data/bam_ops/test_phase_bams/expected.sam"
+        observed = "test_data/bam_ops/test_phase_bams/observed.sam"
+        gen.remove_file(observed)
+        phase_bams(snps, bam, "HG3", observed)
+        expected = gen.read_many_fields(expected, "\t")
+        observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(expected, observed)
 
     def test_read_exon_junctions(self):
@@ -395,12 +414,12 @@ class Test_bam_ops(unittest.TestCase):
                          67: {"exon": ["ENST1.3"], "type": ["skip"]}},
                     63: {67: {"exon": ["ENST1.3", "ENST1.4"], "type": ["incl", "incl"]}},
                     76: {79: {"exon": ["ENST1.5", "ENST1.6"], "type": ["incl", "incl"]}}},
-                    "chr2": {34: {37: {"exon": ["ENST2.1", "ENST2.2"], "type": ["incl", "incl"]}},
-                    46: {50: {"exon": ["ENST2.3", "ENST2.4"], "type": ["incl", "incl"]},
-                         57: {"exon": ["ENST2.4"], "type": ["skip"]}},
-                    54: {57: {"exon": ["ENST2.4", "ENST2.5"], "type": ["incl", "incl"]},
-                         62: {"exon": ["ENST2.5"], "type": ["skip"]}},
-                    59: {62: {"exon": ["ENST2.5", "ENST2.6"], "type": ["incl", "incl"]}}}}
+                    "chr2": {76: {79: {"exon": ["ENST2.2", "ENST2.1"], "type": ["incl", "incl"]}},
+                    63: {67: {"exon": ["ENST2.4", "ENST2.3"], "type": ["incl", "incl"]}},
+                    56: {59: {"exon": ["ENST2.5", "ENST2.4"], "type": ["incl", "incl"]},
+                         67: {"exon": ["ENST2.4"], "type": ["skip"]}},
+                    51: {54: {"exon": ["ENST2.6", "ENST2.5"], "type": ["incl", "incl"]},
+                         59: {"exon": ["ENST2.5"], "type": ["skip"]}}}}
         observed = read_exon_junctions(junctions_file)
         self.assertEqual(expected, observed)
 

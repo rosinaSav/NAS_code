@@ -24,7 +24,7 @@ def check_coding(exons_file, CDSs_file, outfile, remove_overlapping = False):
                 remove_overlaps(exons_file, exons_file)
         #filter out anything that isn't fully coding
         #you have to write_both because you want to make sure that they
-        #haven't been kept because of an overlap to a ranscript that doens't appear in the exons file
+        #haven't been kept because of an overlap to a transcript that doesn't appear in the exons file
         temp_file = "temp_data/temp{0}.txt".format(random.random())
         bmo.intersect_bed(exons_file, CDSs_file, overlap = 1, overlap_rec = True, output_file = temp_file, force_strand = True, write_both = True, no_dups = False, no_name_check = False)
         #filter out terminal exons

@@ -312,10 +312,10 @@ def get_snps_in_cds(bed, full_bed, vcf_folder, panel_file, names, sample_file, o
     get_snp_relative_cds_position(exon_pos, output_file, full_bed)
     #this last bit is just to add a header to the final output file
     #so you'd know which sample is which
-    header_line = "echrom\testart\teend\teID\tfeature\tstrand\tschr\tspos\tsID\taa\tma\trel_pos\tstatus\tinfo\tformat"
+    header_line = "echrom\testart\teend\teID\tfeature\tstrand\t#schr\tspos\tsID\taa\tma\trel_pos\tstatus\tinfo\tformat"
     samples_header = gen.run_process(["grep", "CHROM", "{0}_uncompressed.txt".format(sample_file)])
-    samples_header = re.search("(?<=FORMAT)[\tA-Z0-9]*\n", samples_header).group(0)
-    header_line = header_line + samples_header
+    samples_header = re.search("(?<=FORMAT)[\tA-Z0-9]*", samples_header).group(0)
+    header_line = header_line + samples_header + "\toverlap_count\n"
     temp_file = "temp_data/temp{0}.txt".format(random.random())
     temp_file2 = "temp_data/temp{0}.txt".format(random.random())
     with open(temp_file, "w") as file:
@@ -323,6 +323,22 @@ def get_snps_in_cds(bed, full_bed, vcf_folder, panel_file, names, sample_file, o
     gen.run_process(["cat", temp_file, output_file], file_for_output = temp_file2)
     gen.run_process(["mv", temp_file2, output_file])
     gen.remove_file(temp_file)
+
+def merge_and_header(file1, file2, out_file):
+    '''
+    Merge two SNP files and add a header so it'd be recognized as VCF.
+    '''
+    temp1 = "temp_data/temp{0}.txt".format(random.random())
+    temp2 = "temp_data/temp{0}.txt".format(random.random())
+    header = "##fileformat=VCF\n"
+    with open(temp1, "w") as file:
+        file.write(header)
+    #remove header from second file
+    gen.run_process(["tail", "-n", 2, file2], file_for_output = temp2)
+    #put header, file1 and file2 together
+    gen.run_process(["cat", temp1, file1, temp2], file_for_output = out_file)
+    gen.remove_file(temp1)
+    gen.remove_file(temp2)
 
 def tabix(bed_file, output_file, vcf, process_number = None):
     '''

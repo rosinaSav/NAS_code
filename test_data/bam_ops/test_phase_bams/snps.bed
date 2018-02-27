@@ -1,0 +1,11 @@
+##fileformat=VCF
+echrom	estart	eend	eID	feature	strand	#schr	spos	sID	aa	ma	rel_pos	status	info	format	HG1	HG3	overlap_count
+chr1	33	36	ENST1.3	CDS	+	chr1	8	rs6	T	A	13	ptc	CDS_CODON=TTA$SNP_CODON=TAA	GT	0|0	1|0	1
+chr1	33	36	ENST1.3	CDS	+	chr1	20	rs6	G	T	13	ptc	CDS_CODON=TTA$SNP_CODON=TAA	GT	0|0	0|1	1
+chr1	33	36	ENST1.3	CDS	+	chr1	23	rs6	T	A	13	ptc	CDS_CODON=TTA$SNP_CODON=TAA	GT	0|1	1|0	1
+chr1	30	50	ENST1.1	CDS	+	chr1	12	rs1	A	C	0	non	CDS_CODON=ATG$SNP_CODON=CTG	GT	1|0	1|0	1
+chr1	33	36	ENST1.3	CDS	+	chr1	17	rs4	C	G	11	syn	CDS_CODON=GGC$SNP_CODON=GGG	GT	0|1	1|0	1
+chr1	33	36	ENST1.3	CDS	+	chr1	26	rs4	C	A	11	non	CDS_CODON=GGC$SNP_CODON=GGG	GT	0|0	1|0	1
+chr1	33	36	ENST1.3	CDS	+	chr1	40	rs4	A	C	11	non	CDS_CODON=GGC$SNP_CODON=GGG	GT	1|0	1|0	1
+chr1	33	36	ENST1.3	CDS	+	chr1	25	rs4	C	A	11	non	CDS_CODON=GGC$SNP_CODON=GGG	GT	1|0	1|1	1
+
