@@ -16,7 +16,7 @@ def filter_by_snp_type(input_file, output_file, snp_type, set_seed=None):
     grep_args = "echrom\|{0}".format(snp_type)
     gen.run_process(["grep", grep_args, input_file], file_for_output = output_file)
 
-def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, output_file, without_replacement=None, match_allele_frequency=None, seed=None):
+def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, output_file, without_replacement=None, match_allele_frequency=None, group_by_gene=None, seed=None):
     '''
     Generate a new file of pseudo PTC snps that are instead snps of different type.
     For each PTC snp in input_ptc_snps, take a random snp from the alternative file
@@ -25,8 +25,9 @@ def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, output_file, with
     match_allele_frequency: match the allele frequencies (ptcs are likely rare whereas alternative snps may be more common)
     seed: list of seeds (must be greater or equal to the number of simulations)
     '''
-    #set up a default dictionary to hold indicies of position in list of alternative snps
-    alternative_snp_indicies = collections.defaultdict(lambda: collections.defaultdict(lambda: []))
+    #set up a default dictionary to hold indicies of positions in list of alternative snps,
+    #grouped by gene, ancestral base, mutated base
+    alternative_snp_indicies = collections.defaultdict(lambda: (collections.defaultdict(lambda: collections.defaultdict(lambda: []))))
     alternative_snps = gen.read_many_fields(input_other_snps, "\t")
     ptc_snps = gen.read_many_fields(input_ptc_snps, "\t")
 
@@ -44,7 +45,16 @@ def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, output_file, with
     #go through each of the alternative snps and add to dictionary
     for i,snp in enumerate(alternative_snps[alt_start:]):
         #index 9 = ancestral base, #index 10 = mutation base
-        alternative_snp_indicies[alternative_snps[i][9]][alternative_snps[i][10]].append(i)
+        if group_by_gene:
+            gene_id = snp[3].split('.')[0]
+            alternative_snp_indicies[gene_id][alternative_snps[i][9]][alternative_snps[i][10]].append(i)
+        else:
+            alternative_snp_indicies['all'][alternative_snps[i][9]][alternative_snps[i][10]].append(i)
+
+    # for gene in alternative_snp_indicies:
+    #     for n in alternative_snp_indicies[gene]:
+    #         for m in alternative_snp_indicies[gene][n]:
+    #             print(gene, n, m, alternative_snp_indicies[gene][n][m])
 
     # if seed:
     #     #chunk seeds based on processes
@@ -66,8 +76,18 @@ def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, output_file, with
     #backwards logic but makes more sense in the flags
     replacement = not without_replacement
     for ptc in ptc_snps[ptc_start:]:
-        ptc_choice = np.random.choice(alternative_snp_indicies[ptc[9]][ptc[10]], 1, replacement)[0]
-        pseudo_ptc_indicies.append(ptc_choice)
+        if group_by_gene:
+            gene_id = ptc[3].split('.')[0]
+        else:
+            gene_id = 'all'
+        #check if there are any alternative snps
+        if len(alternative_snp_indicies[gene_id][ptc[9]][ptc[10]]) > 0:
+            #choose a random snp
+            ptc_choice = np.random.choice(alternative_snp_indicies[gene_id][ptc[9]][ptc[10]], 1, replacement)[0]
+            pseudo_ptc_indicies.append(ptc_choice)
+        else:
+            #how do we handle it if there are not nonsynonymous snps?
+            pass
 
     #open an output file and write the pseduo snps to file
     with open(output_file, "w") as output:
