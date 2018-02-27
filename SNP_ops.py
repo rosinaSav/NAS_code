@@ -103,7 +103,7 @@ def get_snp_relative_cds_position(snp_exon_relative_positions, snp_cds_position_
             cds_features_relative_positions[cds][exon] = total
 
             total += to_add
-    
+
     #now get the relative position of the snp within the cds
     with open(snp_cds_position_output, "w") as output:
         error_count = 0
@@ -172,9 +172,10 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
     cds_names, cds_seqs = gen.read_fasta(cds_fasta)
     entry_regex = re.compile("(\w+)\.(\d+)(\..*)*")
     var_type_reg = re.compile("VT=([A-z]+)")
+    ancestral_reg = re.compile("AA=([A-z]+)")
 
 
-    with open(ptcs_output_file, "w") as ptc_outputs, open(others_output_file, "w") as other_outputs: 
+    with open(ptcs_output_file, "w") as ptc_outputs, open(others_output_file, "w") as other_outputs:
         refbase_error = 0
         snp_count = 0
         #the first line is the header
@@ -192,6 +193,7 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
             var_base = snp[10].split(",")
             var_base_count = len(var_base)
             var_base = [i for i in var_base if i in ["A", "C", "G", "T"]]
+            ancestral_allele = re.search(ancestral_reg, snp[13])
 
             #get the feature type
             var_type = re.search(var_type_reg, snp[13])
@@ -233,9 +235,7 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
                             pass
                         else:
                             cds_codon, snp_codon, mutation_type = get_snp_type(cds_seqs[cds_names.index(cds_id)], [snp_index, var_base])
-                            #I temporarily took out snp[6] from the line below cause I wasn't sure what you meant and whether I had to change it around now that
-                            #the file format had changed
-                            snp[13] = "CDS_CODON={0}$SNP_CODON={1}".format(cds_codon, snp_codon)
+                            snp[13] = "CDS_CODON={0}$SNP_CODON={1}$AA={2}".format(cds_codon, snp_codon, ancestral_allele.group(1))
                             snp[12] = mutation_type
                             if(mutation_type == "ptc"):
                                 ptc_outputs.write("{0}\n".format("\t".join(snp)))
@@ -247,7 +247,7 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
     else:
         print("No SNPs were extracted!")
         raise Exception
-    
+
 def get_snp_type(sequence, variant):
 
     codon_map = {
@@ -569,4 +569,3 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
         gen.remove_file(sample_file)
     for concat_file in concat_files:
         gen.remove_file(concat_file)
-

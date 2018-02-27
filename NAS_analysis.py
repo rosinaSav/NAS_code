@@ -5,6 +5,20 @@ import os
 import SNP_ops as so
 import time
 
+
+##simulation
+
+#have 2 files, 1 containing all PTCs, 1 containing all other SNPs
+#generate a psuedo PTC file containing a choice of non synonymous snps with ancestral allele and derived allele matched (need to think about matching allele frequency)
+#map new psudo PTC to exon junctions
+#convert to bam
+#haplotype stuff
+#count reads and output to output folder
+#then run compare psi
+
+
+
+
 def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, PTC_file, syn_nonsyn_file):
     #add other arguments
 
@@ -61,7 +75,7 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, P
 
         print("Filtering .bam to relevant sequence intervals...")
         ##3. Intersect junctions and .bam, and write down the overlapping .bam alignments, without counting.
-	#this uses intersect bed, with the intersect bam parameter
+		#this uses intersect bed, with the intersect bam parameter
         intersect_bam = "{0}_exon_junction_filtered_bam_intersect_proc.bam".format(mapq_flag_xt_nm_filtered_bam[-4:])
         bmo.intersect_bed(mapq_flag_xt_nm_filtered_bam, PTC_exon_junctions_file, output_file = intersect_bam, intersect_bam = True)
 
@@ -173,7 +187,7 @@ def main():
 
     print("Calculating PSI...")
     final_file = "{0}_final_output.txt".format(out_prefix)
-    bmo.compare_PSI(PTC_file, bam_analysis_folder, final_file)       
+    bmo.compare_PSI(PTC_file, bam_analysis_folder, final_file)
 
 
 if __name__ == "__main__":
