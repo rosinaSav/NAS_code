@@ -12,15 +12,14 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, P
     for bam_file in bam_files:
 
         #Process:
-        # 1. Filter bams by quality
+        # 1. Filter bams
         # This gives us a set of "good" quality reads.
         # extra1: Get a count of all reads
         # 2. Map to exon junctions
         # 3. Count reads either skipping or including each exon
 
-        #1. filter .bam alignments by quality.
-        #takes both upper and lower bam thresholds
-        #outputs bam file with "_quality_filter_{lower_lim}_{upper_lim}" appended
+        #####1. filter .bam alignments by quality.
+        # upper and lower bam thresholds required
         # need to do this twice and merge, so we use both intervals used by Geuvadis
 
         bam_file_parts = os.path.split(bam_file)
