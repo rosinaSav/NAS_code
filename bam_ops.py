@@ -174,10 +174,12 @@ def bam_quality_filter(input_bam, output_bam, quality_greater_than_equal_to=None
         samtools_args.extend(["-q", upper_limit, input_bam, "-U", output_bam])
         gen.run_process(samtools_args)
 
-def compare_PSI(SNP_file, bam_folder, out_file):
+def compare_PSI(SNP_file, bam_folder, out_file, round_norm_count = None):
     '''
     Given PTC-generating SNPs, as well as read counts at exon-exon junctions, compare exon skipping rates
     within samples that do or do not have a PTC within a given exon.
+    If round_norm_count is specified, the nromalized read counts will be rounded to
+    that number of digits after the decimal point.
     '''
     SNPs = gen.read_many_fields(SNP_file, "\t")
     samples = SNPs[0][15:-1]
@@ -230,10 +232,14 @@ def compare_PSI(SNP_file, bam_folder, out_file):
                 for info in header_split[1:-1]:
                     to_write = results[exon][info]
                     if type(to_write) == list:
-                        to_write = round(np.mean(to_write), 3)
+                        to_write = np.mean(to_write)
+                        if round_norm_count:
+                            to_write = round(to_write, round_norm_count)
                     file.write("{0}\t".format(to_write))
                 to_write = results[exon][header_split[-1]]
-                to_write = round(np.mean(to_write), 3)
+                to_write = np.mean(to_write)
+                if round_norm_count:
+                    to_write = round(to_write, round_norm_count)
                 file.write("{0}\n".format(to_write))
 
 def compare_PSI_haplotypes(SNP_file, bam_folder, out_file):

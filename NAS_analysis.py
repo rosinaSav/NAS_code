@@ -177,7 +177,7 @@ def main():
 
     print("Calculating PSI...")
     final_file = "{0}_final_output.txt".format(out_prefix)
-    bmo.compare_PSI(PTC_file, bam_analysis_folder, final_file)       
+    bmo.compare_PSI(PTC_file, bam_analysis_folder, final_file)    
 
 
 if __name__ == "__main__":
