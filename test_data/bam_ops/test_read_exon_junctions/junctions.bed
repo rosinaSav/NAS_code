@@ -1,16 +1,17 @@
 chr1	51	52	ENST1.1.3	.	+
 chr1	54	55	ENST1.2.5	.	+
-chr2	59	60	ENST2.5.3	.	-
+chr2	54	55	ENST2.5.3	.	-
 chr1	56	57	ENST1.2.3	.	+
 chr1	59	60	ENST1.3.5	.	+
 chr1	67	68	ENST1.4.5	.	+
 chr1	63	64	ENST1.3.3	.	+
-chr1	76	77	ENST1.5.3	.	+
 chr1	79	80	ENST1.6.5	.	+
-chr2	34	35	ENST2.1.3	.	-
-chr2	37	38	ENST2.2.5	.	-
-chr2	46	47	ENST2.3.3	.	-
-chr2	62	63	ENST2.6.5	.	-
-chr2	50	51	ENST2.4.5	.	-
-chr2	54	55	ENST2.4.3	.	-
-chr2	57	58	ENST2.5.5	.	-
+chr2	79	80	ENST2.1.3	.	-
+chr2	76	77	ENST2.2.5	.	-
+chr2	67	68	ENST2.3.3	.	-
+chr2	51	52	ENST2.6.5	.	-
+chr2	63	64	ENST2.4.5	.	-
+chr2	59	60	ENST2.4.3	.	-
+chr2	56	57	ENST2.5.5	.	-
+chr1	76	77	ENST1.5.3	.	+
+

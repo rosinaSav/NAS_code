@@ -1,0 +1,4 @@
+exon	ptc_count	sample_count	PSI_w_PTC	PSI_no_PTC	norm_count_w_PTC	norm_count_no_PTC
+ENST2.3	2	3	0.633	0.385	0.092	0.8
+ENST2.4	2	3	0.833	0.3	0.017	0.7
+ENST2.8	2	2	0.333	1.0	0.2	0.0

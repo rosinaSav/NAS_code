@@ -174,6 +174,56 @@ def bam_quality_filter(input_bam, output_bam, quality_greater_than_equal_to=None
         samtools_args.extend(["-q", upper_limit, input_bam, "-U", output_bam])
         gen.run_process(samtools_args)
 
+def compare_PSI(SNP_file, bam_folder, out_file):
+    '''
+    Given PTC-generating SNPs, as well as read counts at exon-exon junctions, compare exon skipping rates
+    within samples that do or do not have a PTC within a given exon.
+    '''
+    SNPs = gen.read_many_fields(SNP_file, "\t")
+    samples = SNPs[0][15:]
+    #note that if two SNPs appear in the same exon, the one that appears later
+    #will overwrite the one that appears first so only one of the SNPs will be analyzed
+    SNPs = {i[3]: i[15:-1] for i in SNPs[1:]}
+    results = {i: {"PSI_w_PTC": [], "PSI_no_PTC": [], "norm_count_w_PTC": [],
+                   "norm_count_no_PTC": [], "ptc_count": len([j for j in SNPs[i] if "1" in j]),
+                   "sample_count": 0} for i in SNPs}
+    for pos, sample in enumerate(samples):
+        with open("{0}/{1}.txt".format(bam_folder, sample)) as file:
+            for line in file:
+                line = line.split("\t")
+                exon = line[0]
+                #this also filters out the header line
+                if exon in SNPs:
+                    skipped = int(line[1])
+                    included = int(line[2])
+                    total = int(line[3])
+                    #if this sample contains a PTC
+                    if "1" in SNPs[exon][pos]:
+                        results[exon]["PSI_w_PTC"].append(included/(skipped + included))
+                        results[exon]["norm_count_w_PTC"].append(skipped/total)
+                    else:
+                        results[exon]["PSI_no_PTC"].append(included/(skipped + included))
+                        results[exon]["norm_count_no_PTC"].append(skipped/total)
+                    results[exon]["sample_count"] = results[exon]["sample_count"] + 1
+    header = "exon\tptc_count\tsample_count\tPSI_w_PTC\tPSI_no_PTC\tnorm_count_w_PTC\tnorm_count_no_PTC\n"
+    header_split = header.split("\t")
+    header_split[-1] = header_split[-1].rstrip("\n")
+    with open(out_file, "w") as file:
+        file.write(header)
+        for exon in sorted(results):
+            if results[exon]["sample_count"] > 0:
+                file.write("{0}\t".format(exon))
+                #:-1 cause you don't want a \t at the end of the line
+                for info in header_split[1:-1]:
+                    to_write = results[exon][info]
+                    if type(to_write) == list:
+                        to_write = round(np.mean(to_write), 3)
+                    file.write("{0}\t".format(to_write))
+                to_write = results[exon][header_split[-1]]
+                to_write = round(np.mean(to_write), 3)
+                file.write("{0}\n".format(to_write))                
+
+
 def convert2bed(input_file_name, output_file_name, group_flags = None):
     '''
     Converts an input file (sam, bam, gtf, gff...) to a bed file using bedops.
@@ -206,7 +256,7 @@ def count_junction_reads(sam, junctions, outfile, read_count):
             chrom = line[2]
             if chrom in junctions:
                 #get intron position in chromosome coordinates based on the alignment cigar
-                putative_junctions = map_from_cigar(cigar, sam_start)
+                putative_junctions = map_intron_from_cigar(cigar, sam_start)
                 if putative_junctions:
                     for junction in putative_junctions:
                         #if the 3'end of the exon is in the junctions dict
@@ -277,7 +327,7 @@ def intersect_bed(bed_file1, bed_file2, use_bedops = False, overlap = False, ove
     gen.remove_file(temp_file_name)
     return(bedtools_output)
 
-def map_from_cigar(cigar, sam_start):
+def map_intron_from_cigar(cigar, sam_start):
     '''
     Given the cigar and the start coordinate (base 1) of an exon-exon read in a bam file,
     determine the (base 0) coordinates of both the 3'-most nucleotide in the 5' exon and the 5'-most
@@ -378,15 +428,22 @@ def read_exon_junctions(junctions_file):
             chrom = junction[0]
             if chrom not in out_dict:
                 out_dict[chrom] = {}
+            strand = junction[5]
+            start_id = "5"
+            end_id = "3"
+            #we're gonna ignore strand in all of the analysis to come
+            #so we need antisense exon-exon junctions to look like sense exon-exon junctions
+            if strand == "-":
+                start_id = "3"
+                end_id = "5"
             #if it's a 3' exon end, just create the record in the output dictionary
-            if junction[3][-1] == "3":
+            if junction[3][-1] == end_id:
                 start = int(junction[1])
                 if start not in out_dict[chrom]:
                     out_dict[chrom][start] = {}
-                #record where
                 work_dict[junction[3]] = start
             #otherwise put it aside
-            elif junction[3][-1] == "5":
+            elif junction[3][-1] == start_id:
                 ends_list.append(junction)
 
     #now go over the 5' exon ends and match them up with the 3' exon ends
@@ -394,11 +451,20 @@ def read_exon_junctions(junctions_file):
         name = junction[3].split(".")
         trans = name[0]
         exon = int(name[1])
+        strand = junction[5]
+        end_id = "3"
+        mult_factor = 1
+        if strand == "-":
+            end_id = "5"
+            mult_factor = -1
         #the corresponding 3' exon end can either be that of the previous exon or of that of
         #the exon before it
-        expected_starts = ["{0}.{1}.3".format(name[0], exon - 1)]
-        if exon > 2:
-            expected_starts.append("{0}.{1}.3".format(name[0], exon - 2))
+        #for exons on the antisense strand, you will be looking at exons to come rather than preceding exons,
+        #hence the use of mult_factor
+        #note that the append might lead to an exon number of -1
+        #but expected_starts like that won't appear in work_dict so they'll be skipped
+        expected_starts = ["{0}.{1}.{2}".format(trans, exon + (-1 * mult_factor), end_id)]
+        expected_starts.append("{0}.{1}.{2}".format(trans, exon + (-2 * mult_factor), end_id))
         end = int(junction[1])
         chrom = junction[0]
         for expected_start in expected_starts:
@@ -407,13 +473,13 @@ def read_exon_junctions(junctions_file):
                 current_exon = int(expected_start.split(".")[1])
                 #if it's the previous exon, reads overlapping that junction support the splicing in of
                 #both this and the current exon
-                if exon - current_exon == 1:
+                if abs(exon - current_exon) == 1:
                     exons = ["{0}.{1}".format(trans, current_exon), "{0}.{1}".format(trans, exon)]
                     types = ["incl", "incl"]
                 #if it's the 3'end of n-2th exon, then reads overlapping that junction support the skipping
                 #of n-1th exon
-                elif exon - current_exon == 2:
-                    exons = ["{0}.{1}".format(trans, current_exon + 1)]
+                elif abs(exon - current_exon) == 2:
+                    exons = ["{0}.{1}".format(trans, current_exon + (1 * mult_factor))]
                     types = ["skip"]
                 out_dict[chrom][start][end] = {"exon": exons, "type": types}
     return(out_dict)

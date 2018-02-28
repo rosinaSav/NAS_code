@@ -1,0 +1,6 @@
+echrom	estart	eend	eID	feature	strand	schr	spos	sID	aa	ma	rel_pos	status	info	format	HG1	HG3
+chr3	266	269	ENST2.6	CDS	-	chr2	67	rs12	G	T	8	non	CDS_CODON=AGT$SNP_CODON=AGC$AA=G	GT	0|0	1|1	1
+chr3	146	149	ENST1.3	CDS	-	chr2	67	rs12	T	A	8	non	CDS_CODON=AGT$SNP_CODON=AGC$AA=G	GT	0|0	1|1	1
+chr3	736	739	ENST6.4	CDS	-	chr2	67	rs12	G	T	8	non	CDS_CODON=AGT$SNP_CODON=AGC$AA=G	GT	0|0	1|1	1
+chr1	160	163	ENST1.3	CDS	+	chr1	34	rs4	G	T	11	non	CDS_CODON=GGC$SNP_CODON=GGG$AA=G	GT	1|0	0|0	1
+chr3	636	639	ENST6.2	CDS	-	chr2	67	rs12	G	T	8	non	CDS_CODON=AGT$SNP_CODON=AGC$AA=G	GT	0|0	1|1	1
