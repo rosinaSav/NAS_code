@@ -1,5 +1,6 @@
 import generic as gen
 import re
+import numpy as np
 from SNP_ops import *
 import unittest
 
@@ -12,6 +13,15 @@ class Test_SNP_ops(unittest.TestCase):
         filter_by_snp_type(input_snps, observed, "non")
         expected = gen.read_many_fields(expected, "\t")
         observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(observed, expected)
+
+    def test_get_allele_frequency(self):
+        input_snps = "test_data/snp_ops/test_get_allele_frequency/input_snps.bed"
+        input_snps = gen.read_many_fields(input_snps, "\t")
+        expected = [np.divide(2, 6), np.divide(3, 6), np.divide(4, 6), np.divide(3, 6), np.divide(24, 5008), np.divide(15, 5008)]
+        observed = []
+        for snp in input_snps[1:]:
+            observed.append(get_allele_frequency(snp))
         self.assertEqual(observed, expected)
 
     def test_generate_pseudo_ptc_snps_group_by_gene(self):

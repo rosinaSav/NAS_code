@@ -16,6 +16,18 @@ def filter_by_snp_type(input_file, output_file, snp_type, set_seed=None):
     grep_args = "echrom\|{0}".format(snp_type)
     gen.run_process(["grep", grep_args, input_file], file_for_output = output_file)
 
+def get_allele_frequency(snp):
+    '''
+    Get the allele frequency of a SNP.
+    '''
+    #assumes that alles are kept in columns 16 to n-1
+    alleles = []
+    [alleles.extend(i.split('|')) for i in snp[15:-1]]
+    alleles = [int(i) for i in alleles]
+
+    # print(np.divide(sum(alleles), len(alleles)))
+    return(np.divide(sum(alleles), len(alleles)))
+
 def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, output_file, without_replacement=None, match_allele_frequency=None, group_by_gene=None, seed=None):
     '''
     Generate a new file of pseudo PTC snps that are instead snps of different type.
