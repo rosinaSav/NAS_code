@@ -188,34 +188,36 @@ def compare_PSI(SNP_file, bam_folder, out_file):
                    "norm_count_het_PTC": [], "norm_count_no_PTC": [], "ptc_count": 0,
                    "sample_count": 0} for i in SNPs}
     for pos, sample in enumerate(samples):
-        with open("{0}/{1}.txt".format(bam_folder, sample)) as file:
-            for line in file:
-                line = line.split("\t")
-                exon = line[0]
-                #this also filters out the header line
-                if exon in SNPs:
-                    skipped = np.sum([int(i) for i in line[1].split("|")])
-                    included = np.sum([int(i) for i in line[2].split("|")])
-                    total = int(line[3])
-                    genotype = SNPs[exon][pos]
-                    if skipped > 0 or included > 0:
-                        results[exon]["sample_count"] = results[exon]["sample_count"] + 1
-                        #if this sample contains a PTC
-                        if "1" in genotype:
-                            #if it's heterozygous:
-                            if "0" in genotype:
-                                results[exon]["ptc_count"] = results[exon]["ptc_count"] + 0.5                               
-                                results[exon]["PSI_het_PTC"].append(included/(skipped + included))
-                                results[exon]["norm_count_het_PTC"].append(skipped/total)
-                            #if it's homozygous for PTC
+        file_name = "{0}/{1}.txt".format(bam_folder, sample)
+        if os.path.isfile(file_name):
+            with open(file_name) as file:
+                for line in file:
+                    line = line.split("\t")
+                    exon = line[0]
+                    #this also filters out the header line
+                    if exon in SNPs:
+                        skipped = np.sum([int(i) for i in line[1].split("|")])
+                        included = np.sum([int(i) for i in line[2].split("|")])
+                        total = int(line[3])
+                        genotype = SNPs[exon][pos]
+                        if skipped > 0 or included > 0:
+                            results[exon]["sample_count"] = results[exon]["sample_count"] + 1
+                            #if this sample contains a PTC
+                            if "1" in genotype:
+                                #if it's heterozygous:
+                                if "0" in genotype:
+                                    results[exon]["ptc_count"] = results[exon]["ptc_count"] + 0.5                               
+                                    results[exon]["PSI_het_PTC"].append(included/(skipped + included))
+                                    results[exon]["norm_count_het_PTC"].append(skipped/total)
+                                #if it's homozygous for PTC
+                                else:
+                                    results[exon]["ptc_count"] = results[exon]["ptc_count"] + 1                               
+                                    results[exon]["PSI_w_PTC"].append(included/(skipped + included))
+                                    results[exon]["norm_count_w_PTC"].append(skipped/total)
+                            #if it's homozygous for lack of PTC
                             else:
-                                results[exon]["ptc_count"] = results[exon]["ptc_count"] + 1                               
-                                results[exon]["PSI_w_PTC"].append(included/(skipped + included))
-                                results[exon]["norm_count_w_PTC"].append(skipped/total)
-                        #if it's homozygous for lack of PTC
-                        else:
-                            results[exon]["PSI_no_PTC"].append(included/(skipped + included))
-                            results[exon]["norm_count_no_PTC"].append(skipped/total)
+                                results[exon]["PSI_no_PTC"].append(included/(skipped + included))
+                                results[exon]["norm_count_no_PTC"].append(skipped/total)
     header = "exon\tptc_count\tsample_count\tPSI_w_PTC\tPSI_het_PTC\tPSI_no_PTC\tnorm_count_w_PTC\tnorm_count_het_PTC\tnorm_count_no_PTC\n"
     header_split = header.split("\t")
     header_split[-1] = header_split[-1].rstrip("\n")

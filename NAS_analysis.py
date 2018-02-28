@@ -84,8 +84,8 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, P
 def main():
 
     description = "Check whether PTCs are associated with greater rates of exon skipping."
-    args = gen.parse_arguments(description, ["gtf", "genome_fasta", "bams_folder", "vcf_folder", "panel_file", "out_prefix", "filter_genome_data", "get_SNPs", "filter_bams"], flags = [6, 7, 8])
-    gtf, genome_fasta, bams_folder, vcf_folder, panel_file, out_prefix, filter_genome_data, get_SNPs, filter_bams = args.gtf, args.genome_fasta, args.bams_folder, args.vcf_folder, args.panel_file, args.out_prefix, args.filter_genome_data, args.get_SNPs, args.filter_bams
+    args = gen.parse_arguments(description, ["gtf", "genome_fasta", "bams_folder", "vcf_folder", "panel_file", "out_prefix", "bam_analysis_folder", "filter_genome_data", "get_SNPs", "filter_bams"], flags = [7, 8, 9])
+    gtf, genome_fasta, bams_folder, vcf_folder, panel_file, out_prefix, bam_analysis_folder, filter_genome_data, get_SNPs, filter_bams = args.gtf, args.genome_fasta, args.bams_folder, args.vcf_folder, args.panel_file, args.out_prefix, args.bam_analysis_folder, args.filter_genome_data, args.get_SNPs, args.filter_bams
 
     start = time.time()
 
@@ -165,7 +165,8 @@ def main():
     bam_files = ["{0}/{1}".format(bams_folder, i) for i in full_sample_names if (i.split("."))[0] in sample_names]
 
     #in parallel, do the processing on individual .bam files
-    bam_analysis_folder = "{0}_bam_analysis".format(out_prefix)
+    if bam_analysis_folder == "None":
+        bam_analysis_folder = "{0}_bam_analysis".format(out_prefix)
     gen.create_directory(bam_analysis_folder)
     print("Processing RNA-seq data...")
     processes = gen.run_in_parallel(bam_files, ["foo", PTC_exon_junctions_file, bam_analysis_folder, PTC_file, syn_nonsyn_file, filter_bams], process_bam_per_individual)
