@@ -28,15 +28,21 @@ def get_allele_frequency(snp):
     # print(np.divide(sum(alleles), len(alleles)))
     return(np.divide(sum(alleles), len(alleles)))
 
-def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, output_file, without_replacement=None, match_allele_frequency=None, group_by_gene=None, seed=None):
+def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, output_file, without_replacement=None, match_allele_frequency=None, match_allele_frequency_window=None, group_by_gene=None, seed=None):
     '''
     Generate a new file of pseudo PTC snps that are instead snps of different type.
     For each PTC snp in input_ptc_snps, take a random snp from the alternative file
     ensuring the ancestral and derived alleles match.
     replacement: random choice with/without replacement
     match_allele_frequency: match the allele frequencies (ptcs are likely rare whereas alternative snps may be more common)
+    match_allele_frequency_window: the proporition size of the window around the allele frequency to match, e.g 0.05 for allele frequency of 0.2 is 0.15-0.25.
     seed: list of seeds (must be greater or equal to the number of simulations)
     '''
+
+    if match_allele_frequency and not match_allele_frequency_window or match_allele_frequency_window and not match_allele_frequency:
+        print("_match_allele_frequency_ and _match_allele_frequency_threshold_ must both be set")
+        raise Exception
+
     #set up a default dictionary to hold indicies of positions in list of alternative snps,
     #grouped by gene, ancestral base, mutated base
     alternative_snp_indicies = collections.defaultdict(lambda: (collections.defaultdict(lambda: collections.defaultdict(lambda: []))))
@@ -45,61 +51,82 @@ def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, output_file, with
 
     #check for header of files
     if alternative_snps[0][0] == "echrom":
-        alt_start=1
-        header=True
-    else:
-        alt_start=0
+        alt_header=True
     if ptc_snps[0][0] == "echrom":
-        ptc_start=1
-    else:
-        ptc_start=0
+        ptc_header=True
 
     #go through each of the alternative snps and add to dictionary
-    for i,snp in enumerate(alternative_snps[alt_start:]):
-        #index 9 = ancestral base, #index 10 = mutation base
-        if group_by_gene:
-            gene_id = snp[3].split('.')[0]
-            alternative_snp_indicies[gene_id][alternative_snps[i][9]][alternative_snps[i][10]].append(i)
+    for i,snp in enumerate(alternative_snps):
+
+        #check if there is a header
+        if i == 0 and alt_header == True:
+            pass
         else:
-            alternative_snp_indicies['all'][alternative_snps[i][9]][alternative_snps[i][10]].append(i)
+            #if grouping by gene, set the gene id
+            if group_by_gene:
+                gene_id = snp[3].split('.')[0]
+            else:
+                gene_id = "all"
 
-    # for gene in alternative_snp_indicies:
-    #     for n in alternative_snp_indicies[gene]:
-    #         for m in alternative_snp_indicies[gene][n]:
-    #             print(gene, n, m, alternative_snp_indicies[gene][n][m])
+            #if match allele frequency, calculate the allele freequency for each ptc snp
+            if match_allele_frequency:
+                snp_index = [i, get_allele_frequency(snp)]
+            else:
+                snp_index = [i]
 
-    # if seed:
-    #     #chunk seeds based on processes
-    #     seed_chunks = [seed[i] for i in simulations]
-    #     np.random.seed(seed_chunks[i])
-    # else:
-    #     np.random.seed()
+            #add to dictionary: alternative_snp_indicies[gene_id][ancestral_base][derived_base] = [[snp_index, allele_freqency], [snp_index, allele_freqency],...]
+            #index 9 = ancestral base, #index 10 = mutation base
+            alternative_snp_indicies[gene_id][alternative_snps[i][9]][alternative_snps[i][10]].append(snp_index)
 
+    #set seed for randomisation
+    np.random.seed(seed)
 
-    #below here needs to be repeated for each run
-    if seed:
-        np.random.seed(seed)
-    else:
-        np.random.seed()
     #create an empty list to hold the alternative snps chosen
     pseudo_ptc_indicies = []
     #get the real ptc snps
     ptc_snps = gen.read_many_fields(input_ptc_snps, "\t")
     #backwards logic but makes more sense in the flags
     replacement = not without_replacement
-    for ptc in ptc_snps[ptc_start:]:
-        if group_by_gene:
-            gene_id = ptc[3].split('.')[0]
-        else:
-            gene_id = 'all'
-        #check if there are any alternative snps
-        if len(alternative_snp_indicies[gene_id][ptc[9]][ptc[10]]) > 0:
-            #choose a random snp
-            ptc_choice = np.random.choice(alternative_snp_indicies[gene_id][ptc[9]][ptc[10]], 1, replacement)[0]
-            pseudo_ptc_indicies.append(ptc_choice)
-        else:
-            #how do we handle it if there are not nonsynonymous snps?
+    for i, ptc in enumerate(ptc_snps):
+        #check for header
+        if i == 0 and ptc_header:
             pass
+        else:
+
+            #if group_by_gene, get the dict for the particular gene id
+            if group_by_gene:
+                gene_id = ptc[3].split('.')[0]
+            else:
+                gene_id = 'all'
+
+            #if match_allele_frequency, only allow snps with similar allele frequency defined by window
+            if match_allele_frequency:
+                #get the allele frequency of the ptc
+                ptc_allele_frequency = get_allele_frequency(ptc)
+                #set the upper and lower bounds
+                alt_snp_allele_frequency_lower_limit = ptc_allele_frequency - match_allele_frequency_window
+                alt_snp_allele_frequency_upper_limit = ptc_allele_frequency + match_allele_frequency_window
+                #get all alternative snps with allele frequenecies within those bounds
+                alt_snp_choices = [i for i in alternative_snp_indicies[gene_id][ptc[9]][ptc[10]] if alt_snp_allele_frequency_lower_limit <= i[1] and i[1] <= alt_snp_allele_frequency_upper_limit]
+            else:
+                alt_snp_choices = alternative_snp_indicies[gene_id][ptc[9]][ptc[10]]
+
+            #check if there are any alternative snps
+            if len(alt_snp_choices) > 0:
+                #have to do it this way round because we have a list of lists, not list of items
+                #which numpy doesnt like
+                #generate a list of indicies for the snp choices
+                alt_snp_choices_indicies = range(len(alt_snp_choices))
+                #pick one of those indicies
+                alt_snp_choice_index = np.random.choice(alt_snp_choices_indicies, 1)[0]
+                #add the index of the snp to the list of chosen snps
+                pseudo_ptc_indicies.append(alt_snp_choices[alt_snp_choice_index][0])
+                #if no replacement, remove snp from the snp choices list
+                if not replacement:
+                    del alternative_snp_indicies[gene_id][ptc[9]][ptc[10]][alt_snp_choice_index]
+            else:
+                #how do we handle it if there are not nonsynonymous snps?
+                pass
 
     #open an output file and write the pseduo snps to file
     with open(output_file, "w") as output:
