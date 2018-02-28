@@ -84,8 +84,8 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, P
 def main():
 
     description = "Check whether PTCs are associated with greater rates of exon skipping."
-    args = gen.parse_arguments(description, ["gtf", "genome_fasta", "bams_folder", "vcf_folder", "panel_file", "out_prefix", "bam_analysis_folder", "filter_genome_data", "get_SNPs", "filter_bams"], flags = [7, 8, 9])
-    gtf, genome_fasta, bams_folder, vcf_folder, panel_file, out_prefix, bam_analysis_folder, filter_genome_data, get_SNPs, filter_bams = args.gtf, args.genome_fasta, args.bams_folder, args.vcf_folder, args.panel_file, args.out_prefix, args.bam_analysis_folder, args.filter_genome_data, args.get_SNPs, args.filter_bams
+    args = gen.parse_arguments(description, ["gtf", "genome_fasta", "bams_folder", "vcf_folder", "panel_file", "out_prefix", "bam_analysis_folder", "filter_genome_data", "get_SNPs", "filter_bams", "process_bams"], flags = [7, 8, 9, 10])
+    gtf, genome_fasta, bams_folder, vcf_folder, panel_file, out_prefix, bam_analysis_folder, filter_genome_data, get_SNPs, filter_bams, process_bams = args.gtf, args.genome_fasta, args.bams_folder, args.vcf_folder, args.panel_file, args.out_prefix, args.bam_analysis_folder, args.filter_genome_data, args.get_SNPs, args.filter_bams, args.process_bams
 
     start = time.time()
 
@@ -168,12 +168,12 @@ def main():
     if bam_analysis_folder == "None":
         bam_analysis_folder = "{0}_bam_analysis".format(out_prefix)
     gen.create_directory(bam_analysis_folder)
-    print("Processing RNA-seq data...")
-    processes = gen.run_in_parallel(bam_files, ["foo", PTC_exon_junctions_file, bam_analysis_folder, PTC_file, syn_nonsyn_file, filter_bams], process_bam_per_individual)
-    for process in processes:
-        process.get()
-
-    gen.get_time(start)
+    if process_bams:
+        print("Processing RNA-seq data...")
+        processes = gen.run_in_parallel(bam_files, ["foo", PTC_exon_junctions_file, bam_analysis_folder, PTC_file, syn_nonsyn_file, filter_bams], process_bam_per_individual)
+        for process in processes:
+            process.get()
+        gen.get_time(start)
 
     print("Calculating PSI...")
     final_file = "{0}_final_output.txt".format(out_prefix)
