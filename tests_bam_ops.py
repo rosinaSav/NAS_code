@@ -214,6 +214,16 @@ class Test_bam_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(expected, observed)
 
+    def test_compare_PSI_haplotypes(self):
+        SNPs = "test_data/bam_ops/test_compare_PSI_haplotypes/SNPs.bed"
+        bam_folder = "test_data/bam_ops/test_compare_PSI_haplotypes/bam_folder"
+        expected = gen.read_many_fields("test_data/bam_ops/test_compare_PSI_haplotypes/expected.txt", "\t")
+        observed = "test_data/bam_ops/test_compare_PSI_haplotypes/observed.txt"
+        gen.remove_file(observed)
+        compare_PSI_haplotypes(SNPs, bam_folder, observed)
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(expected, observed)
+
     def test_count_junction_reads(self):
         sam = "test_data/bam_ops/test_count_junction_reads/reads.sam"
         junctions = {"chr1": {51: {54: {"exon": ["ENST1.1", "ENST1.2"], "type": ["incl", "incl"]},
