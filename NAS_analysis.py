@@ -17,6 +17,47 @@ import time
 #6count reads and output to output folder
 #7then run compare psi
 
+def ptc_snp_simulation(out_prefix, simulation_output_folder, ptc_file, syn_nonsyn_file, exon_junctions_file):
+
+    #setup up simulation output directory
+    if simulation_output_folder == "None":
+        simulation_output_folder = "{0}_simulate_ptc_snps_bam_analysis".format(out_prefix)
+    #if the simulation folder we are specifying already exists, delete and start again
+    gen.create_strict_directory(simulation_output_folder)
+
+    #get all nonsynonymous snps
+    nonsynonymous_snps_file = "{0}/nonsynonymous_snps.txt".format(simulation_output_folder)
+    so.filter_by_snp_type(syn_nonsyn_file, nonsynonymous_snps_file, "non")
+
+    ######
+    #need this repeated x times
+    #need to work out how to get files into directories
+    ######
+
+    #setup a folder to contain the simulation
+    simulation_instance_folder = "{0}/ptc_simulation_run_{1}".format(simulation_output_folder, simulation_number)
+
+    #generate pseduo ptc snps - need to sort output file
+    #we can tweak these if we get nothing
+    pseudo_ptc_file = "{0}/pseudo_ptc_file.txt".format(simulation_instance_folder)
+    so.generate_pseudo_ptc_snps(ptc_file, syn_nonsyn_file, pseudo_ptc_file, group_by_gene=True, without_replacement=True, match_allele_frequency=True, match_allele_frequency_window=0.05)
+
+    #filter the exon junctions file to only leave those junctions that flank exons retained in the previous step.
+    pseudo_ptc_exon_junctions_file = "{0}/{1}_filtered_exon_junctions.bed".format(simulation_instance_folder, out_prefix)
+    bo.filter_exon_junctions(exon_junctions_file, pesudo_ptc_file, pseudo_ptc_exon_junctions_file)
+
+
+    ######incomplete
+
+    #run the bam analysis for each
+    ##ask rosina why syn_nonsyn_file is required for the phasing
+    process_bam_per_individual(bam_files, pseudo_ptc_exon_junctions_file, simulation_instance_folder, pseudo_ptc_file, syn_nonsyn_file, filter_bams], process_bam_per_individual)
+
+    #process final psi for simualtion
+    final_file = "{0}_final_output.txt".format(out_prefix)
+    bmo.compare_PSI(PTC_file, bam_analysis_folder, final_file)
+
+
 
 def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, PTC_file, syn_nonsyn_file, filter_bams):
     #add other arguments
@@ -96,8 +137,8 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, P
 def main():
 
     description = "Check whether PTCs are associated with greater rates of exon skipping."
-    args = gen.parse_arguments(description, ["gtf", "genome_fasta", "bams_folder", "vcf_folder", "panel_file", "out_prefix", "bam_analysis_folder", "filter_genome_data", "get_SNPs", "filter_bams", "process_bams"], flags = [7, 8, 9, 10])
-    gtf, genome_fasta, bams_folder, vcf_folder, panel_file, out_prefix, bam_analysis_folder, filter_genome_data, get_SNPs, filter_bams, process_bams = args.gtf, args.genome_fasta, args.bams_folder, args.vcf_folder, args.panel_file, args.out_prefix, args.bam_analysis_folder, args.filter_genome_data, args.get_SNPs, args.filter_bams, args.process_bams
+    args = gen.parse_arguments(description, ["gtf", "genome_fasta", "bams_folder", "vcf_folder", "panel_file", "out_prefix", "bam_analysis_folder", "filter_genome_data", "get_SNPs", "filter_bams", "process_bams", "simulate_ptc_snps", "number_of_simulations", "simulation_output_folder"], flags = [7, 8, 9, 10, 11, 12, 13])
+    gtf, genome_fasta, bams_folder, vcf_folder, panel_file, out_prefix, bam_analysis_folder, filter_genome_data, get_SNPs, filter_bams, process_bams, simulate_ptc_snps, number_of_simulations, simulation_output_folder = args.gtf, args.genome_fasta, args.bams_folder, args.vcf_folder, args.panel_file, args.out_prefix, args.bam_analysis_folder, args.filter_genome_data, args.get_SNPs, args.filter_bams, args.process_bams args.simulate_ptc_snps, args.number_of_simulations args.simulation_output_folder
 
     start = time.time()
 
@@ -190,6 +231,13 @@ def main():
     print("Calculating PSI...")
     final_file = "{0}_final_output.txt".format(out_prefix)
     bmo.compare_PSI(PTC_file, bam_analysis_folder, final_file)
+
+    #run the simulation that swaps ptcs for nonsynonymous snps
+    if simulate_ptc_snps:
+        if simulate_ptc_snps and not number_of_simulations:
+            print("Please specify the number of simulations")
+            raise Exception
+        ptc_snp_simulation(out_prefix, simulation_output_folder, exon_junctions_file)
 
 
 if __name__ == "__main__":
