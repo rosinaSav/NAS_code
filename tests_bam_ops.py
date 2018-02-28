@@ -210,7 +210,17 @@ class Test_bam_ops(unittest.TestCase):
         expected = gen.read_many_fields("test_data/bam_ops/test_compare_PSI/expected.txt", "\t")
         observed = "test_data/bam_ops/test_compare_PSI/observed.txt"
         gen.remove_file(observed)
-        compare_PSI(SNPs, bam_folder, observed)
+        compare_PSI(SNPs, bam_folder, observed, 3)
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(expected, observed)
+
+    def test_compare_PSI_haplotypes(self):
+        SNPs = "test_data/bam_ops/test_compare_PSI_haplotypes/SNPs.bed"
+        bam_folder = "test_data/bam_ops/test_compare_PSI_haplotypes/bam_folder"
+        expected = gen.read_many_fields("test_data/bam_ops/test_compare_PSI_haplotypes/expected.txt", "\t")
+        observed = "test_data/bam_ops/test_compare_PSI_haplotypes/observed.txt"
+        gen.remove_file(observed)
+        compare_PSI_haplotypes(SNPs, bam_folder, observed)
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(expected, observed)
 
@@ -381,10 +391,29 @@ class Test_bam_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed_file, "\t")
         self.assertEqual(expected, observed)
 
+    def test_map_from_cigar(self):
+        cigars = [["4M", 16, 18], ["2M1I3M1I4M3I2M", 11, 17], ["3M2N65M", 10, 16], ["3D2M2N53M", 40, 49]]
+        expected = [2, 8, 4, 4]
+        observed = [map_from_cigar(i[0], i[1], i[2]) for i in cigars]
+        self.assertEqual(expected, observed)
+
     def test_map_intron_from_cigar(self):
         cigars = [["75M", 55], ["21M1I3M1I4M3I42M", 845], ["10M2N65M", 48], ["4I18M16N53M", 40], ["10M2N5M3N3M3N4M", 48], ["18M3I16N57M", 40]]
         expected = [None, None, [[56, 59]], [[56, 73]], [[56, 59], [63, 67], [69, 73]], [[56, 73]]]
         observed = [map_intron_from_cigar(i[0], i[1]) for i in cigars]
+        self.assertEqual(expected, observed)
+
+    def test_phase_bams(self):
+        snps = "test_data/bam_ops/test_phase_bams/snps.bed"
+        sam = "test_data/bam_ops/test_phase_bams/reads.sam"
+        bam = "test_data/bam_ops/test_phase_bams/reads.bam"
+        gen.run_process(["samtools", "view", "-S", "-b", sam], file_for_output = bam)
+        expected = "test_data/bam_ops/test_phase_bams/expected.sam"
+        observed = "test_data/bam_ops/test_phase_bams/observed.sam"
+        gen.remove_file(observed)
+        phase_bams(snps, bam, "HG3", observed)
+        expected = gen.read_many_fields(expected, "\t")
+        observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(expected, observed)
 
     def test_read_exon_junctions(self):
