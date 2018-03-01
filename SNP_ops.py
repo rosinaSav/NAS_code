@@ -12,7 +12,7 @@ def filter_by_snp_type(input_file, output_file, snp_type, set_seed=None):
     Filter a file of processed SNP reads by SNP type.
     snp_type: ptc, syn, non
     '''
-    #get header and anything that containts snp type
+    #get header and anything that contains snp type
     grep_args = "echrom\|{0}".format(snp_type)
     gen.run_process(["grep", grep_args, input_file], file_for_output = output_file)
 
@@ -20,9 +20,11 @@ def get_allele_frequency(snp):
     '''
     Get the allele frequency of a SNP.
     '''
-    #assumes that alles are kept in columns 16 to n-1
+    #assumes that alleles are kept in columns 16 to n-1
     alleles = []
-    [alleles.extend(i.split('|')) for i in snp[15:-1]]
+    #I added in the extra condition just in case you have a SNP file that has gone through two overlaps
+    #and thus has two overlap count columns at the end
+    [alleles.extend(i.split('|')) for i in snp[15:] if i != "1"]
     alleles = [int(i) for i in alleles]
 
     # print(np.divide(sum(alleles), len(alleles)))
