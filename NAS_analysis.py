@@ -18,7 +18,7 @@ def run_ptc_simulation_instance(simulations, out_prefix, simulation_output_folde
         #setup a folder to contain the individual simulation inside the simulations output
         simulation_instance_folder = "{0}/ptc_simulation_run_{1}".format(simulation_output_folder, simulation_number)
 
-        #generate pseduo ptc snps - need to sort output file
+        #generate pseduo ptc snps
         #also need to remove these snps from the file they started in so create a new remaining snps file
         #we can tweak these if we start running out of snps
         pseudo_ptc_file = "{0}/pseudo_ptc_file_{1}.txt".format(simulation_instance_folder, simulation_number)
