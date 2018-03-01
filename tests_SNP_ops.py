@@ -41,7 +41,7 @@ class Test_SNP_ops(unittest.TestCase):
         observed = "test_data/snp_ops/test_generate_pseudo_ptc_snps_group_by_gene/observed_pseudo_ptc_snps.bed"
         observed_remainder = "test_data/snp_ops/test_generate_pseudo_ptc_snps_group_by_gene/observed_remaining_snps.bed"
         gen.remove_file(observed)
-        gen.remove_file(observed_remaining)
+        gen.remove_file(observed_remainder)
         generate_pseudo_ptc_snps(input_ptc_snps, input_nonsyn_snps, observed, observed_remainder, group_by_gene=True, seed=10)
         expected = gen.read_many_fields(expected, "\t")
         expected_remainder = gen.read_many_fields(expected_remainder, "\t")
