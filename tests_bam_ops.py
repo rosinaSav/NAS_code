@@ -210,7 +210,17 @@ class Test_bam_ops(unittest.TestCase):
         expected = gen.read_many_fields("test_data/bam_ops/test_compare_PSI/expected.txt", "\t")
         observed = "test_data/bam_ops/test_compare_PSI/observed.txt"
         gen.remove_file(observed)
-        compare_PSI(SNPs, bam_folder, observed)
+        compare_PSI(SNPs, bam_folder, observed, 3)
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(expected, observed)
+
+    def test_compare_PSI_haplotypes(self):
+        SNPs = "test_data/bam_ops/test_compare_PSI_haplotypes/SNPs.bed"
+        bam_folder = "test_data/bam_ops/test_compare_PSI_haplotypes/bam_folder"
+        expected = gen.read_many_fields("test_data/bam_ops/test_compare_PSI_haplotypes/expected.txt", "\t")
+        observed = "test_data/bam_ops/test_compare_PSI_haplotypes/observed.txt"
+        gen.remove_file(observed)
+        compare_PSI_haplotypes(SNPs, bam_folder, observed)
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(expected, observed)
 

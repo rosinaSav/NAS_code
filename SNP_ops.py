@@ -7,6 +7,157 @@ import string
 import collections
 import re
 
+def filter_by_snp_type(input_file, output_file, snp_type, set_seed=None):
+    '''
+    Filter a file of processed SNP reads by SNP type.
+    snp_type: ptc, syn, non
+    '''
+    #get header and anything that contains snp type
+    grep_args = "echrom\|{0}".format(snp_type)
+    gen.run_process(["grep", grep_args, input_file], file_for_output = output_file)
+
+def get_allele_frequency(snp):
+    '''
+    Get the allele frequency of a SNP.
+    '''
+    alleles = []
+    #I added in the extra condition just in case you have a SNP file that has gone through two overlaps
+    #and thus has two overlap count columns at the end
+    [alleles.extend(i.split('|')) for i in snp[15:] if i != "1"]
+    alleles = [int(i) for i in alleles]
+
+    # print(np.divide(sum(alleles), len(alleles)))
+    return(np.divide(sum(alleles), len(alleles)))
+
+def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, ptc_output_file, other_snps_file, without_replacement=None, match_allele_frequency=None, match_allele_frequency_window=None, group_by_gene=None, seed=None):
+    '''
+    Generate a new file of pseudo PTC snps that are instead snps of different type.
+    For each PTC snp in input_ptc_snps, take a random snp from the alternative file
+    ensuring the ancestral and derived alleles match.
+    Need to also then remove that snp from the file
+    replacement: random choice with/without replacement
+    match_allele_frequency: match the allele frequencies (ptcs are likely rare whereas alternative snps may be more common)
+    match_allele_frequency_window: the proporition size of the window around the allele frequency to match, e.g 0.05 for allele frequency of 0.2 is 0.15-0.25.
+    seed: list of seeds (must be greater or equal to the number of simulations)
+    '''
+
+    if (match_allele_frequency and not match_allele_frequency_window) or (match_allele_frequency_window and not match_allele_frequency):
+        print("_match_allele_frequency_ and _match_allele_frequency_threshold_ must both be set")
+        raise Exception
+
+    #set up a default dictionary to hold indices of positions in list of alternative snps,
+    #grouped by gene, ancestral base, mutated base
+    alternative_snp_indices = collections.defaultdict(lambda: (collections.defaultdict(lambda: collections.defaultdict(lambda: []))))
+    alternative_snps = gen.read_many_fields(input_other_snps, "\t")
+    ptc_snps = gen.read_many_fields(input_ptc_snps, "\t")
+
+    #check for header of files
+    alt_header = False
+    ptc_header = False
+    if alternative_snps[0][0] == "echrom":
+        alt_header = "\t".join(alternative_snps[0])
+    if ptc_snps[0][0] == "echrom":
+        ptc_header = "\t".join(ptc_snps[0])
+
+    #go through each of the alternative snps and add to dictionary
+    for i,snp in enumerate(alternative_snps):
+
+        #check if there is a header
+        if i == 0 and alt_header:
+            pass
+        else:
+            #if grouping by gene, set the gene id
+            if group_by_gene:
+                gene_id = snp[3].split('.')[0]
+            else:
+                gene_id = "all"
+
+            #if match allele frequency, calculate the allele frequency for each ptc snp
+            if match_allele_frequency:
+                snp_index = [i, get_allele_frequency(snp)]
+            else:
+                snp_index = [i]
+
+            #add to dictionary: alternative_snp_indices[gene_id][ancestral_base][derived_base] = [[snp_index, allele_freqency], [snp_index, allele_freqency],...]
+            #index 9 = ancestral base, #index 10 = mutation base
+            alternative_snp_indices[gene_id][alternative_snps[i][9]][alternative_snps[i][10]].append(snp_index)
+
+    #set seed for randomisation
+    np.random.seed(seed)
+
+    #create an empty list to hold the alternative snps chosen
+    pseudo_ptc_indices = []
+    #get the real ptc snps
+    ptc_snps = gen.read_many_fields(input_ptc_snps, "\t")
+    #backwards logic but makes more sense in the flags
+    replacement = not without_replacement
+    for i, ptc in enumerate(ptc_snps):
+        #check for header
+        if i == 0 and ptc_header:
+            pass
+        else:
+
+            #if group_by_gene, get the dict for the particular gene id
+            if group_by_gene:
+                gene_id = ptc[3].split('.')[0]
+            else:
+                gene_id = 'all'
+
+            #if match_allele_frequency, only allow snps with similar allele frequency defined by window
+            if match_allele_frequency:
+                #get the allele frequency of the ptc
+                ptc_allele_frequency = get_allele_frequency(ptc)
+                #set the upper and lower bounds
+                alt_snp_allele_frequency_lower_limit = ptc_allele_frequency - match_allele_frequency_window
+                alt_snp_allele_frequency_upper_limit = ptc_allele_frequency + match_allele_frequency_window
+                #get all alternative snps with allele frequenecies within those bounds
+                alt_snp_choices = [i for i in alternative_snp_indices[gene_id][ptc[9]][ptc[10]] if alt_snp_allele_frequency_lower_limit <= i[1] and i[1] <= alt_snp_allele_frequency_upper_limit]
+            else:
+                alt_snp_choices = alternative_snp_indices[gene_id][ptc[9]][ptc[10]]
+
+            #check if there are any alternative snps
+            if len(alt_snp_choices) > 0:
+                #have to do it this way round because we have a list of lists, not list of items
+                #which numpy doesnt like
+                #generate a list of indices for the snp choices
+                alt_snp_choices_indices = range(len(alt_snp_choices))
+                #pick one of those indices
+                alt_snp_choice_index = np.random.choice(alt_snp_choices_indices, 1)[0]
+                #add the index of the snp to the list of chosen snps
+                pseudo_ptc_indices.append(alt_snp_choices[alt_snp_choice_index][0])
+                #if no replacement, remove snp from the snp choices list
+                if not replacement:
+                    del alternative_snp_indices[gene_id][ptc[9]][ptc[10]][alt_snp_choice_index]
+            else:
+                #how do we handle it if there are not nonsynonymous snps?
+                print("Gene {0} did not have any non-synonymous SNPs to sample from!".format(gene_id))
+                raise Exception
+
+    #open a pesudo ptc snps output file and other snps fileoutput file
+    pseudo_ptc_output = open(ptc_output_file, "w")
+    other_snps_output = open(other_snps_file, "w")
+
+    #write header to both files
+    pseudo_ptc_output.write("{0}\n".format(ptc_header))
+    other_snps_output.write("{0}\n".format(alt_header))
+
+    #for each alternative snp, write to ptc file if in the list or other file if not
+    for i, alternative_snp in enumerate(alternative_snps):
+        if i == 0 and alt_header:
+            pass
+        else:
+            if i in pseudo_ptc_indices:
+                #need this because if we are doing with replacement, the snp may appear more than once
+                count = pseudo_ptc_indices.count(i)
+                for j in range(count):
+                    pseudo_ptc_output.write("{0}\n".format("\t".join(alternative_snps[i])))
+            else:
+                other_snps_output.write("{0}\n".format("\t".join(alternative_snps[i])))
+
+    pseudo_ptc_output.close()
+    other_snps_output.close()
+
+
 def get_snp_relative_cds_position(snp_exon_relative_positions, snp_cds_position_output, full_bed):
     '''
     Get the position of the snp within a CDS using the relative positions of snps in the features they are found
@@ -103,7 +254,7 @@ def get_snp_relative_cds_position(snp_exon_relative_positions, snp_cds_position_
             cds_features_relative_positions[cds][exon] = total
 
             total += to_add
-    
+
     #now get the relative position of the snp within the cds
     with open(snp_cds_position_output, "w") as output:
         error_count = 0
@@ -172,9 +323,10 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
     cds_names, cds_seqs = gen.read_fasta(cds_fasta)
     entry_regex = re.compile("(\w+)\.(\d+)(\..*)*")
     var_type_reg = re.compile("VT=([A-z]+)")
+    ancestral_reg = re.compile("AA=([A-z]+)")
 
 
-    with open(ptcs_output_file, "w") as ptc_outputs, open(others_output_file, "w") as other_outputs: 
+    with open(ptcs_output_file, "w") as ptc_outputs, open(others_output_file, "w") as other_outputs:
         refbase_error = 0
         snp_count = 0
         #the first line is the header
@@ -192,6 +344,7 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
             var_base = snp[10].split(",")
             var_base_count = len(var_base)
             var_base = [i for i in var_base if i in ["A", "C", "G", "T"]]
+            ancestral_allele = re.search(ancestral_reg, snp[13])
 
             #get the feature type
             var_type = re.search(var_type_reg, snp[13])
@@ -233,9 +386,7 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
                             pass
                         else:
                             cds_codon, snp_codon, mutation_type = get_snp_type(cds_seqs[cds_names.index(cds_id)], [snp_index, var_base])
-                            #I temporarily took out snp[6] from the line below cause I wasn't sure what you meant and whether I had to change it around now that
-                            #the file format had changed
-                            snp[13] = "CDS_CODON={0}$SNP_CODON={1}".format(cds_codon, snp_codon)
+                            snp[13] = "CDS_CODON={0}$SNP_CODON={1}$AA={2}".format(cds_codon, snp_codon, ancestral_allele.group(1))
                             snp[12] = mutation_type
                             if(mutation_type == "ptc"):
                                 ptc_outputs.write("{0}\n".format("\t".join(snp)))
@@ -247,7 +398,7 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
     else:
         print("No SNPs were extracted!")
         raise Exception
-    
+
 def get_snp_type(sequence, variant):
 
     codon_map = {
@@ -585,4 +736,3 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
         gen.remove_file(sample_file)
     for concat_file in concat_files:
         gen.remove_file(concat_file)
-
