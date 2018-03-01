@@ -37,7 +37,7 @@ def run_ptc_simulation_instance(simulations, out_prefix, simulation_output_folde
         process_bam_per_individual(bam_files, pseudo_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_ptc_file, remaining_snps_file, filter_bams=False, ptc_snp_simulation=True, simulation_instance_folder=simulation_instance_folder, simulation_number=simulation_number)
 
         #process final psi for simulation
-        final_file = "{0}/{1}_final_output_simulation_{2}.txt".format(simulation_bam_analysis_output_folder, out_prefix, simulation_number)
+        final_file = "{0}/final_output_simulation_{1}.txt".format(simulation_bam_analysis_output_folder, simulation_number)
         bmo.compare_PSI(pseudo_ptc_file, simulation_bam_analysis_output_folder, final_file)
 
 
@@ -139,10 +139,7 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, P
 
         print("Phasing reads...")
         #convert to sam format and phase reads
-        if ptc_snp_simulation:
-            intersect_sam = "{0}/{1}_phased.sam".format(simulation_instance_folder, intersect_bam[:-4])
-        else:
-            intersect_sam = "{0}_phased.sam".format(intersect_bam[:-4])
+        intersect_sam = "{0}_phased.sam".format(intersect_bam[:-4])
         temp_snp_file = "temp_data/snps{0}.txt".format(random.random())
         so.merge_and_header(PTC_file, syn_nonsyn_file, temp_snp_file)
         sample_name = (bam_file.split("/")[-1]).split(".")[0]
