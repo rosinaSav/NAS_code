@@ -493,12 +493,12 @@ def run_process(arguments, return_string = True, input_to_pipe = None, return_er
     else:
         return(stdout)
 
-def update_counter(counter, step):
+def update_counter(counter, step, string = None):
     '''
     Print out and update counter.
     '''
     if counter % step == 0:
-        print(counter)
+        print("{0}{1}".format(string, counter))
     counter = counter + 1
     return(counter)
 

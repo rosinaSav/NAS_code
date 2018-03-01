@@ -7,13 +7,16 @@ import SNP_ops as so
 import time
 
 
-def run_ptc_simulation_instance(simulations, out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, nonsynonymous_snps_file, bam_files):
+def run_ptc_simulation_instance(simulations, out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, nonsynonymous_snps_file, exon_junctions_file, bam_files):
     '''
     Run the ptc simulations for the required number.
     '''
 
     #iterate over simulations
+    counter = 0
     for simulation_number in simulations:
+
+        counter = gen.update_counter(counter, 10, "SIMULATION ")
 
         #setup a folder to contain the individual simulation inside the simulations output
         simulation_instance_folder = "{0}/ptc_simulation_run_{1}".format(simulation_output_folder, simulation_number)
@@ -30,7 +33,6 @@ def run_ptc_simulation_instance(simulations, out_prefix, simulation_output_folde
         bo.filter_exon_junctions(exon_junctions_file, pseudo_ptc_file, pseudo_ptc_exon_junctions_file)
 
         #run the bam analysis for each
-        ##ask rosina why syn_nonsyn_file is required for the phasing
         process_bam_per_individual(bam_files, pseudo_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_ptc_file, remaining_snps_file, filter_bams=False, ptc_snp_simulation=True, simulation_instance_folder=simulation_instance_folder, simulation_number=simulation_number)
 
         #process final psi for simualtion
@@ -50,8 +52,7 @@ def ptc_snp_simulation(out_prefix, simulation_output_folder, ptc_file, syn_nonsy
     gen.create_strict_directory(simulation_output_folder)
 
     #setup up simulation bam analysis output folder
-    if simulation_bam_analysis_output_folder == "None":
-        simulation_bam_analysis_output_folder = "{0}_simulate_ptc_snps_bam_analysis".format(out_prefix)
+    simulation_bam_analysis_output_folder = "{0}_simulate_ptc_snps_bam_analysis".format(out_prefix)
     #if the simulation folder we are specifying already exists, delete and start again
     gen.create_strict_directory(simulation_bam_analysis_output_folder)
 
@@ -145,7 +146,6 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, P
         sample_name = (bam_file.split("/")[-1]).split(".")[0]
         bmo.phase_bams(temp_snp_file, intersect_bam, sample_name, intersect_sam)
         gen.remove_file(temp_snp_file)
-        print(intersect_sam)
 
         print("Counting reads at junctions...")
         #4. count the number of reads supporting either the skipping or the inclusion of each exon
@@ -159,8 +159,8 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, P
 def main():
 
     description = "Check whether PTCs are associated with greater rates of exon skipping."
-    args = gen.parse_arguments(description, ["gtf", "genome_fasta", "bams_folder", "vcf_folder", "panel_file", "out_prefix", "bam_analysis_folder", "filter_genome_data", "get_SNPs", "filter_bams", "process_bams", "simulate_ptc_snps", "number_of_simulations", "simulation_output_folder"], flags = [7, 8, 9, 10, 11, 12, 13])
-    gtf, genome_fasta, bams_folder, vcf_folder, panel_file, out_prefix, bam_analysis_folder, filter_genome_data, get_SNPs, filter_bams, process_bams, simulate_ptc_snps, number_of_simulations, simulation_output_folder = args.gtf, args.genome_fasta, args.bams_folder, args.vcf_folder, args.panel_file, args.out_prefix, args.bam_analysis_folder, args.filter_genome_data, args.get_SNPs, args.filter_bams, args.process_bams args.simulate_ptc_snps, args.number_of_simulations args.simulation_output_folder
+    args = gen.parse_arguments(description, ["gtf", "genome_fasta", "bams_folder", "vcf_folder", "panel_file", "out_prefix", "bam_analysis_folder", "number_of_simulations", "simulation_output_folder", "filter_genome_data", "get_SNPs", "filter_bams", "process_bams", "simulate_ptc_snps"], flags = [9, 10, 11, 12, 13], ints = [7])
+    gtf, genome_fasta, bams_folder, vcf_folder, panel_file, out_prefix, bam_analysis_folder, number_of_simulations, simulation_output_folder, filter_genome_data, get_SNPs, filter_bams, process_bams, simulate_ptc_snps = args.gtf, args.genome_fasta, args.bams_folder, args.vcf_folder, args.panel_file, args.out_prefix, args.bam_analysis_folder, args.number_of_simulations, args.simulation_output_folder, args.filter_genome_data, args.get_SNPs, args.filter_bams, args.process_bams, args.simulate_ptc_snps
 
     start = time.time()
 
