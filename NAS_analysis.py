@@ -20,22 +20,23 @@ def run_ptc_simulation_instance(simulations, out_prefix, simulation_output_folde
 
         #setup a folder to contain the individual simulation inside the simulations output
         simulation_instance_folder = "{0}/ptc_simulation_run_{1}".format(simulation_output_folder, simulation_number)
+        gen.create_strict_directory(simulation_instance_folder)
 
         #generate pseduo ptc snps
         #also need to remove these snps from the file they started in so create a new remaining snps file
         #we can tweak these if we start running out of snps
         pseudo_ptc_file = "{0}/pseudo_ptc_file_{1}.txt".format(simulation_instance_folder, simulation_number)
         remaining_snps_file = "{0}/remaining_snps_file_{1}.txt".format(simulation_instance_folder, simulation_number)
-        so.generate_pseudo_ptc_snps(ptc_file, nonsynonymous_snps_file, pseudo_ptc_file, remaining_snps_file, group_by_gene=True, without_replacement=True, match_allele_frequency=True, match_allele_frequency_window=0.05)
+        so.generate_pseudo_ptc_snps(ptc_file, nonsynonymous_snps_file, pseudo_ptc_file, remaining_snps_file, group_by_gene=False, without_replacement=True, match_allele_frequency=True, match_allele_frequency_window=0.05)
 
         #filter the exon junctions file to only leave those junctions that flank exons retained in the previous step when generating pseudo ptcs
-        pseudo_ptc_exon_junctions_file = "{0}/{1}_filtered_exon_junctions_{2}.bed".format(simulation_instance_folder, out_prefix, simulation_number)
+        pseudo_ptc_exon_junctions_file = "{0}/filtered_exon_junctions_{1}.bed".format(simulation_instance_folder, simulation_number)
         bo.filter_exon_junctions(exon_junctions_file, pseudo_ptc_file, pseudo_ptc_exon_junctions_file)
 
         #run the bam analysis for each
         process_bam_per_individual(bam_files, pseudo_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_ptc_file, remaining_snps_file, filter_bams=False, ptc_snp_simulation=True, simulation_instance_folder=simulation_instance_folder, simulation_number=simulation_number)
 
-        #process final psi for simualtion
+        #process final psi for simulation
         final_file = "{0}/{1}_final_output_simulation_{2}.txt".format(simulation_bam_analysis_output_folder, out_prefix, simulation_number)
         bmo.compare_PSI(pseudo_ptc_file, simulation_bam_analysis_output_folder, final_file)
 

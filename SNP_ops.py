@@ -81,9 +81,16 @@ def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, ptc_output_file, 
             #add to dictionary: alternative_snp_indices[gene_id][ancestral_base][derived_base] = [[snp_index, allele_freqency], [snp_index, allele_freqency],...]
             #index 9 = ancestral base, #index 10 = mutation base
             alternative_snp_indices[gene_id][alternative_snps[i][9]][alternative_snps[i][10]].append(snp_index)
+            #building a second dictionary that doesn't distinguish by gene so that we could handle genes that don't have non-synonymous SNPs
+            if group_by_gene:
+                alternative_snp_indices["all"][alternative_snps[i][9]][alternative_snps[i][10]].append(snp_index)
 
     #set seed for randomisation
     np.random.seed(seed)
+
+    #count how many genes have no non-synonymous SNPs
+    empty_counter = 0
+    total_counter = 0
 
     #create an empty list to hold the alternative snps chosen
     pseudo_ptc_indices = []
@@ -92,6 +99,7 @@ def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, ptc_output_file, 
     #backwards logic but makes more sense in the flags
     replacement = not without_replacement
     for i, ptc in enumerate(ptc_snps):
+        total_counter = total_counter + 1
         #check for header
         if i == 0 and ptc_header:
             pass
@@ -102,6 +110,7 @@ def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, ptc_output_file, 
                 gene_id = ptc[3].split('.')[0]
             else:
                 gene_id = 'all'
+
 
             #if match_allele_frequency, only allow snps with similar allele frequency defined by window
             if match_allele_frequency:
@@ -116,22 +125,29 @@ def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, ptc_output_file, 
                 alt_snp_choices = alternative_snp_indices[gene_id][ptc[9]][ptc[10]]
 
             #check if there are any alternative snps
-            if len(alt_snp_choices) > 0:
-                #have to do it this way round because we have a list of lists, not list of items
-                #which numpy doesnt like
-                #generate a list of indices for the snp choices
-                alt_snp_choices_indices = range(len(alt_snp_choices))
-                #pick one of those indices
-                alt_snp_choice_index = np.random.choice(alt_snp_choices_indices, 1)[0]
-                #add the index of the snp to the list of chosen snps
-                pseudo_ptc_indices.append(alt_snp_choices[alt_snp_choice_index][0])
-                #if no replacement, remove snp from the snp choices list
-                if not replacement:
-                    del alternative_snp_indices[gene_id][ptc[9]][ptc[10]][alt_snp_choice_index]
-            else:
-                #how do we handle it if there are not nonsynonymous snps?
-                print("Gene {0} did not have any non-synonymous SNPs to sample from!".format(gene_id))
-                raise Exception
+            empty_gene = False
+            if len(alt_snp_choices) == 0:
+                empty_gene = True
+                empty_counter = empty_counter + 1
+
+                if match_allele_frequency:
+                    alt_snp_choices = [i for i in alternative_snp_indices["all"][ptc[9]][ptc[10]] if alt_snp_allele_frequency_lower_limit <= i[1] and i[1] <= alt_snp_allele_frequency_upper_limit]
+                else:
+                    alt_snp_choices = alternative_snp_indices["all"][ptc[9]][ptc[10]]
+               
+            #have to do it this way round because we have a list of lists, not list of items
+            #which numpy doesnt like
+            #generate a list of indices for the snp choices
+            alt_snp_choices_indices = range(len(alt_snp_choices))
+            #pick one of those indices
+            alt_snp_choice_index = np.random.choice(alt_snp_choices_indices, 1)[0]
+            #add the index of the snp to the list of chosen snps
+            pseudo_ptc_indices.append(alt_snp_choices[alt_snp_choice_index][0])
+            #if no replacement, remove snp from the snp choices list
+            if (not replacement) and (not empty_gene):
+                del alternative_snp_indices[gene_id][ptc[9]][ptc[10]][alt_snp_choice_index]
+
+##    print("Genes with no non-synonymous SNPs: {0}/{1} ({2}%).".format(empty_counter, total_counter, round(empty_counter / total_counter * 100, 3)))
 
     #open a pesudo ptc snps output file and other snps fileoutput file
     pseudo_ptc_output = open(ptc_output_file, "w")
