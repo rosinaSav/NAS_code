@@ -28,11 +28,12 @@ def get_allele_frequency(snp):
     # print(np.divide(sum(alleles), len(alleles)))
     return(np.divide(sum(alleles), len(alleles)))
 
-def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, output_file, without_replacement=None, match_allele_frequency=None, match_allele_frequency_window=None, group_by_gene=None, seed=None):
+def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, ptc_output_file, other_snps_file, without_replacement=None, match_allele_frequency=None, match_allele_frequency_window=None, group_by_gene=None, seed=None):
     '''
     Generate a new file of pseudo PTC snps that are instead snps of different type.
     For each PTC snp in input_ptc_snps, take a random snp from the alternative file
     ensuring the ancestral and derived alleles match.
+    Need to also then remove that snp from the file
     replacement: random choice with/without replacement
     match_allele_frequency: match the allele frequencies (ptcs are likely rare whereas alternative snps may be more common)
     match_allele_frequency_window: the proporition size of the window around the allele frequency to match, e.g 0.05 for allele frequency of 0.2 is 0.15-0.25.
@@ -128,14 +129,23 @@ def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, output_file, with
                 #how do we handle it if there are not nonsynonymous snps?
                 pass
 
-    #open an output file and write the pseduo snps to file
-    with open(output_file, "w") as output:
-        #write header
-        output.write("echrom\testart\teend\teID\tfeature\tstrand\tschr\tspos\tsID\taa\tma\trel_pos\tstatus\tinfo\tformat\tHG1\tHG3\n")
-        #write each pseduo snp from the original alternative snp list
-        for index in pseudo_ptc_indicies:
-            output.write("{0}\n".format("\t".join(alternative_snps[index])))
+    #open a pesudo ptc snps output file and other snps fileoutput file
+    pseudo_ptc_output = open(ptc_output_file, "w")
+    other_snps_output = open(other_snps_file, "w")
 
+    #write header to both files
+    pseudo_ptc_output.write("echrom\testart\teend\teID\tfeature\tstrand\tschr\tspos\tsID\taa\tma\trel_pos\tstatus\tinfo\tformat\tHG1\tHG3\n")
+    other_snps_output.write("echrom\testart\teend\teID\tfeature\tstrand\tschr\tspos\tsID\taa\tma\trel_pos\tstatus\tinfo\tformat\tHG1\tHG3\n")
+
+    #for each alternative snp, write to ptc file if in the list or other file if not
+    for i, alternative_snp in alternative_snps:
+        if i in pseudo_ptc_indicies:
+            pseudo_ptc_output.write("{0}\n".format("\t".join(alternative_snps[index])))
+        else:
+            other_snps_output.write("{0}\n".format("\t".join(alternative_snps[index])))
+
+    pseudo_ptc_output.close()
+    other_snps_output.close()
 
 
 def get_snp_relative_cds_position(snp_exon_relative_positions, snp_cds_position_output, full_bed):
