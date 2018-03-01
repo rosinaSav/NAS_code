@@ -34,7 +34,7 @@ def run_ptc_simulation_instance(simulations, out_prefix, simulation_output_folde
         process_bam_per_individual(bam_files, pseudo_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_ptc_file, remaining_snps_file, filter_bams=False, ptc_snp_simulation=True, simulation_instance_folder=simulation_instance_folder, simulation_number=simulation_number)
 
         #process final psi for simualtion
-        final_file = "{0}_final_output.txt".format(out_prefix)
+        final_file = "{0}/{1}_final_output_simulation_{2}.txt".format(simulation_bam_analysis_output_folder, out_prefix, simulation_number)
         bmo.compare_PSI(pseudo_ptc_file, simulation_bam_analysis_output_folder, final_file)
 
 
