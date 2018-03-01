@@ -16,6 +16,87 @@ class Test_SNP_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(observed, expected)
 
+    def test_generate_pseudo_ptc_snps(self):
+        input_ptc_snps = "test_data/snp_ops/test_generate_pseudo_ptc_snps/input_ptc_snps.bed"
+        input_nonsyn_snps = "test_data/snp_ops/test_generate_pseudo_ptc_snps/input_nonsyn_snps.bed"
+        expected = "test_data/snp_ops/test_generate_pseudo_ptc_snps/expected_pseudo_ptc_snps.bed"
+        expected_remaining = "test_data/snp_ops/test_generate_pseudo_ptc_snps/expected_remaining_snps.bed"
+        observed = "test_data/snp_ops/test_generate_pseudo_ptc_snps/observed_pseudo_ptc_snps.bed"
+        observed_remaining = "test_data/snp_ops/test_generate_pseudo_ptc_snps/observed_remaining_snps.bed"
+        gen.remove_file(observed)
+        gen.remove_file(observed_remaining)
+        generate_pseudo_ptc_snps(input_ptc_snps, input_nonsyn_snps, observed, observed_remaining, seed=5)
+        expected = gen.read_many_fields(expected, "\t")
+        expected_remaining = gen.read_many_fields(expected_remaining, "\t")
+        observed = gen.read_many_fields(observed, "\t")
+        observed_remaining = gen.read_many_fields(observed_remaining, "\t")
+        self.assertEqual(observed, expected)
+        self.assertEqual(observed_remaining, expected_remaining)
+
+    def test_generate_pseudo_ptc_snps_group_by_gene(self):
+        input_ptc_snps = "test_data/snp_ops/test_generate_pseudo_ptc_snps_group_by_gene/input_ptc_snps.bed"
+        input_nonsyn_snps = "test_data/snp_ops/test_generate_pseudo_ptc_snps_group_by_gene/input_nonsyn_snps.bed"
+        expected = "test_data/snp_ops/test_generate_pseudo_ptc_snps_group_by_gene/expected_pseudo_ptc_snps.bed"
+        expected_remainder = "test_data/snp_ops/test_generate_pseudo_ptc_snps_group_by_gene/expected_remaining_snps.bed"
+        observed = "test_data/snp_ops/test_generate_pseudo_ptc_snps_group_by_gene/observed_pseudo_ptc_snps.bed"
+        observed_remainder = "test_data/snp_ops/test_generate_pseudo_ptc_snps_group_by_gene/observed_remaining_snps.bed"
+        gen.remove_file(observed)
+        gen.remove_file(observed_remaining)
+        generate_pseudo_ptc_snps(input_ptc_snps, input_nonsyn_snps, observed, observed_remainder, group_by_gene=True, seed=10)
+        expected = gen.read_many_fields(expected, "\t")
+        expected_remainder = gen.read_many_fields(expected_remainder, "\t")
+        observed = gen.read_many_fields(observed, "\t")
+        observed_remainder = gen.read_many_fields(observed_remainder, "\t")
+        self.assertEqual(observed, expected)
+        self.assertEqual(observed_remainder, expected_remainder)
+
+    def test_generate_pseudo_ptc_snps_match_allele_frequency(self):
+        input_ptc_snps = "test_data/snp_ops/test_generate_pseudo_ptc_snps_match_allele_frequency/input_ptc_snps.bed"
+        input_nonsyn_snps = "test_data/snp_ops/test_generate_pseudo_ptc_snps_match_allele_frequency/input_nonsyn_snps.bed"
+        expected1 = "test_data/snp_ops/test_generate_pseudo_ptc_snps_match_allele_frequency/expected_pseudo_ptc_snps1.bed"
+        expected_remaining1 = "test_data/snp_ops/test_generate_pseudo_ptc_snps_match_allele_frequency/expected_remaining_snps1.bed"
+        expected2 = "test_data/snp_ops/test_generate_pseudo_ptc_snps_match_allele_frequency/expected_pseudo_ptc_snps2.bed"
+        expected_remaining2 = "test_data/snp_ops/test_generate_pseudo_ptc_snps_match_allele_frequency/expected_remaining_snps2.bed"
+        observed1 = "test_data/snp_ops/test_generate_pseudo_ptc_snps_match_allele_frequency/observed_pseudo_ptc_snps1.bed"
+        observed_remaining1 = "test_data/snp_ops/test_generate_pseudo_ptc_snps_match_allele_frequency/observed_remaining_snps1.bed"
+        observed2 = "test_data/snp_ops/test_generate_pseudo_ptc_snps_match_allele_frequency/observed_pseudo_ptc_snps2.bed"
+        observed_remaining2 = "test_data/snp_ops/test_generate_pseudo_ptc_snps_match_allele_frequency/observed_remaining_snps2.bed"
+        gen.remove_file(observed1)
+        gen.remove_file(observed_remaining1)
+        gen.remove_file(observed2)
+        gen.remove_file(observed_remaining2)
+        generate_pseudo_ptc_snps(input_ptc_snps, input_nonsyn_snps, observed1, observed_remaining1, match_allele_frequency=True, match_allele_frequency_window=0.05, seed=3)
+        generate_pseudo_ptc_snps(input_ptc_snps, input_nonsyn_snps, observed2, observed_remaining2, match_allele_frequency=True, match_allele_frequency_window=0.075, seed=3)
+        expected1 = gen.read_many_fields(expected1, "\t")
+        expected_remaining1 = gen.read_many_fields(expected_remaining1, "\t")
+        expected2 = gen.read_many_fields(expected2, "\t")
+        expected_remaining2 = gen.read_many_fields(expected_remaining2, "\t")
+        observed1 = gen.read_many_fields(observed1, "\t")
+        observed_remaining1 = gen.read_many_fields(observed_remaining1, "\t")
+        observed2 = gen.read_many_fields(observed2, "\t")
+        observed_remaining2 = gen.read_many_fields(observed_remaining2, "\t")
+        self.assertEqual(observed1, expected1)
+        self.assertEqual(observed_remaining1, expected_remaining1)
+        self.assertEqual(observed2, expected2)
+        self.assertEqual(observed_remaining2, expected_remaining2)
+
+    def test_generate_pseudo_ptc_snps_without_replacement(self):
+        input_ptc_snps = "test_data/snp_ops/test_generate_pseudo_ptc_snps_without_replacement/input_ptc_snps.bed"
+        input_nonsyn_snps = "test_data/snp_ops/test_generate_pseudo_ptc_snps_without_replacement/input_nonsyn_snps.bed"
+        expected = "test_data/snp_ops/test_generate_pseudo_ptc_snps_without_replacement/expected_pseudo_ptc_snps.bed"
+        expected_remaining = "test_data/snp_ops/test_generate_pseudo_ptc_snps_without_replacement/expected_remaining_snps.bed"
+        observed = "test_data/snp_ops/test_generate_pseudo_ptc_snps_without_replacement/observed_pseudo_ptc_snps.bed"
+        observed_remaining = "test_data/snp_ops/test_generate_pseudo_ptc_snps_without_replacement/observed_remaining_snps.bed"
+        gen.remove_file(observed)
+        gen.remove_file(observed_remaining)
+        generate_pseudo_ptc_snps(input_ptc_snps, input_nonsyn_snps, observed, observed_remaining, seed=5, without_replacement=True)
+        expected = gen.read_many_fields(expected, "\t")
+        expected_remaining = gen.read_many_fields(expected_remaining, "\t")
+        observed = gen.read_many_fields(observed, "\t")
+        observed_remaining = gen.read_many_fields(observed_remaining, "\t")
+        self.assertEqual(observed, expected)
+        self.assertEqual(observed_remaining, expected_remaining)
+
     def test_get_allele_frequency(self):
         input_snps = "test_data/snp_ops/test_get_allele_frequency/input_snps.bed"
         input_snps = gen.read_many_fields(input_snps, "\t")
@@ -23,57 +104,6 @@ class Test_SNP_ops(unittest.TestCase):
         observed = []
         for snp in input_snps[1:]:
             observed.append(get_allele_frequency(snp))
-        self.assertEqual(observed, expected)
-
-    def test_generate_pseudo_ptc_snps_group_by_gene(self):
-        input_ptc_snps = "test_data/snp_ops/test_generate_pseudo_ptc_snps_group_by_gene/input_ptc_snps.bed"
-        input_nonsyn_snps = "test_data/snp_ops/test_generate_pseudo_ptc_snps_group_by_gene/input_nonsyn_snps.bed"
-        expected = "test_data/snp_ops/test_generate_pseudo_ptc_snps_group_by_gene/expected_pseudo_ptc_snps.bed"
-        observed = "test_data/snp_ops/test_generate_pseudo_ptc_snps_group_by_gene/observed_pseudo_ptc_snps.bed"
-        gen.remove_file(observed)
-        generate_pseudo_ptc_snps(input_ptc_snps, input_nonsyn_snps, observed, group_by_gene=True, seed=10)
-        expected = gen.read_many_fields(expected, "\t")
-        observed = gen.read_many_fields(observed, "\t")
-        self.assertEqual(observed, expected)
-
-    def test_generate_pseudo_ptc_snps_match_allele_frequency(self):
-        input_ptc_snps = "test_data/snp_ops/test_generate_pseudo_ptc_snps_match_allele_frequency/input_ptc_snps.bed"
-        input_nonsyn_snps = "test_data/snp_ops/test_generate_pseudo_ptc_snps_match_allele_frequency/input_nonsyn_snps.bed"
-        expected1 = "test_data/snp_ops/test_generate_pseudo_ptc_snps_match_allele_frequency/expected_pseudo_ptc_snps1.bed"
-        expected2 = "test_data/snp_ops/test_generate_pseudo_ptc_snps_match_allele_frequency/expected_pseudo_ptc_snps2.bed"
-        observed1 = "test_data/snp_ops/test_generate_pseudo_ptc_snps_match_allele_frequency/observed_pseudo_ptc_snps1.bed"
-        observed2 = "test_data/snp_ops/test_generate_pseudo_ptc_snps_match_allele_frequency/observed_pseudo_ptc_snps2.bed"
-        gen.remove_file(observed1)
-        gen.remove_file(observed2)
-        generate_pseudo_ptc_snps(input_ptc_snps, input_nonsyn_snps, observed1, match_allele_frequency=True, match_allele_frequency_window=0.05, seed=3)
-        generate_pseudo_ptc_snps(input_ptc_snps, input_nonsyn_snps, observed2, match_allele_frequency=True, match_allele_frequency_window=0.075, seed=3)
-        expected1 = gen.read_many_fields(expected1, "\t")
-        expected2 = gen.read_many_fields(expected2, "\t")
-        observed1 = gen.read_many_fields(observed1, "\t")
-        observed2 = gen.read_many_fields(observed2, "\t")
-        self.assertEqual(observed1, expected1)
-        self.assertEqual(observed2, expected2)
-
-    def test_generate_pseudo_ptc_snps(self):
-        input_ptc_snps = "test_data/snp_ops/test_generate_pseudo_ptc_snps/input_ptc_snps.bed"
-        input_nonsyn_snps = "test_data/snp_ops/test_generate_pseudo_ptc_snps/input_nonsyn_snps.bed"
-        expected = "test_data/snp_ops/test_generate_pseudo_ptc_snps/expected_pseudo_ptc_snps.bed"
-        observed = "test_data/snp_ops/test_generate_pseudo_ptc_snps/observed_pseudo_ptc_snps.bed"
-        gen.remove_file(observed)
-        generate_pseudo_ptc_snps(input_ptc_snps, input_nonsyn_snps, observed, seed=5)
-        expected = gen.read_many_fields(expected, "\t")
-        observed = gen.read_many_fields(observed, "\t")
-        self.assertEqual(observed, expected)
-
-    def test_generate_pseudo_ptc_snps_without_replacement(self):
-        input_ptc_snps = "test_data/snp_ops/test_generate_pseudo_ptc_snps_without_replacement/input_ptc_snps.bed"
-        input_nonsyn_snps = "test_data/snp_ops/test_generate_pseudo_ptc_snps_without_replacement/input_nonsyn_snps.bed"
-        expected = "test_data/snp_ops/test_generate_pseudo_ptc_snps_without_replacement/expected_pseudo_ptc_snps.bed"
-        observed = "test_data/snp_ops/test_generate_pseudo_ptc_snps_without_replacement/observed_pseudo_ptc_snps.bed"
-        gen.remove_file(observed)
-        generate_pseudo_ptc_snps(input_ptc_snps, input_nonsyn_snps, observed, seed=5, without_replacement=True)
-        expected = gen.read_many_fields(expected, "\t")
-        observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(observed, expected)
 
     def test_get_snp_relative_cds_position(self):

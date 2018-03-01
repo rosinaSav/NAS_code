@@ -138,11 +138,17 @@ def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, ptc_output_file, 
     other_snps_output.write("echrom\testart\teend\teID\tfeature\tstrand\tschr\tspos\tsID\taa\tma\trel_pos\tstatus\tinfo\tformat\tHG1\tHG3\n")
 
     #for each alternative snp, write to ptc file if in the list or other file if not
-    for i, alternative_snp in alternative_snps:
-        if i in pseudo_ptc_indicies:
-            pseudo_ptc_output.write("{0}\n".format("\t".join(alternative_snps[index])))
+    for i, alternative_snp in enumerate(alternative_snps):
+        if i == 0 and alt_header:
+            pass
         else:
-            other_snps_output.write("{0}\n".format("\t".join(alternative_snps[index])))
+            if i in pseudo_ptc_indicies:
+                #need this because if we are doing with replacement, the snp may appear more than once
+                count = pseudo_ptc_indicies.count(i)
+                for j in range(count):
+                    pseudo_ptc_output.write("{0}\n".format("\t".join(alternative_snps[i])))
+            else:
+                other_snps_output.write("{0}\n".format("\t".join(alternative_snps[i])))
 
     pseudo_ptc_output.close()
     other_snps_output.close()
