@@ -7,7 +7,7 @@ import SNP_ops as so
 import time
 
 
-def run_ptc_simulation_instance(simulations, out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, nonsynonymous_snps_file, exon_junctions_file, bam_files):
+def run_ptc_simulation_instance(simulations, out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, nonsynonymous_snps_file, exon_junctions_file, bam_files, parallel = False):
     '''
     Run the ptc simulations for the required number.
     '''
@@ -34,7 +34,13 @@ def run_ptc_simulation_instance(simulations, out_prefix, simulation_output_folde
         bo.filter_exon_junctions(exon_junctions_file, pseudo_ptc_file, pseudo_ptc_exon_junctions_file)
 
         #run the bam analysis for each
-        process_bam_per_individual(bam_files, pseudo_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_ptc_file, remaining_snps_file, filter_bams=False, ptc_snp_simulation=True, simulation_instance_folder=simulation_instance_folder, simulation_number=simulation_number)
+        #(don't parallelize if you're doing the simulations in parallel)
+        if parallel:
+            process_bam_per_individual(bam_files, pseudo_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_ptc_file, remaining_snps_file, filter_bams=False, ptc_snp_simulation=True, simulation_instance_folder=simulation_instance_folder, simulation_number=simulation_number)
+        else:
+            processes = gen.run_in_parallel(bam_files, ["foo", pseudo_ptc_exon_junctions_file, simulation_bam_analysis_folder, pseudo_ptc_file, remaining_snps_file, False, True, simulation_instance_folder, simulation_number], process_bam_per_individual)
+            for process in processes:
+                process.get()
 
         #process final psi for simulation
         final_file = "{0}/{1}_final_output_simulation_{2}.txt".format(simulation_bam_analysis_output_folder, out_prefix, simulation_number)
@@ -63,11 +69,14 @@ def ptc_snp_simulation(out_prefix, simulation_output_folder, ptc_file, syn_nonsy
 
     #create a list of simulations to iterate over
     simulations = list(range(1, required_simulations+1))
-    processes = gen.run_in_parallel(simulations, ["foo", out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, nonsynonymous_snps_file, exon_junctions_file, bam_files], run_ptc_simulation_instance)
-    for process in processes:
-        process.get()
-
-
+    #if you're only doing one simulation, don't parallelize the simulations
+    #parallelize the processing of bams like for true data
+    if required_simulations > 1:
+        processes = gen.run_in_parallel(simulations, ["foo", out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, nonsynonymous_snps_file, exon_junctions_file, bam_files, True], run_ptc_simulation_instance)
+        for process in processes:
+            process.get()
+    else:
+        run_ptc_simulation_instance([1], out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, nonsynonymous_snps_file, exon_junctions_file, bam_files, False)
 
 def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, PTC_file, syn_nonsyn_file, filter_bams, ptc_snp_simulation=None, simulation_instance_folder=None, simulation_number=None):
     #add other arguments

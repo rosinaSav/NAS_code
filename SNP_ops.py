@@ -369,9 +369,6 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
 
             #check whether the cds is in the fasta (can be after the quality control filterings)
             if cds_id in cds_names:
-                #I need to ask Liam what he means by the line below
-                #I've commented it out for the moment because otherwise it'll skip cases where the SNP index is 0
-##                if snp_index:
                 snp_count += 1
                 #check that the snp is only one base
                 if len(ref_base) == 1:
