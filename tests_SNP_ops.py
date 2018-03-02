@@ -16,6 +16,30 @@ class Test_SNP_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(observed, expected)
 
+    def test_filter_motif_SNPs(self):
+        motifs = "test_data/snp_ops/test_filter_motif_snps/ESEs.txt"
+        fasta = "test_data/snp_ops/test_filter_motif_snps/CDS.fasta"
+        SNPs = "test_data/snp_ops/test_filter_motif_snps/snps.bed"
+        expected = "test_data/snp_ops/test_filter_motif_snps/expected.txt"
+        observed = "test_data/snp_ops/test_filter_motif_snps/observed.txt"
+        gen.remove_file(observed)
+        filter_motif_SNPs(fasta, SNPs, motifs, observed)
+        expected = gen.read_many_fields(expected, "\t")
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(expected, observed)
+
+    def test_filter_motif_SNPs_complement(self):
+        motifs = "test_data/snp_ops/test_filter_motif_snps_complement/ESEs.txt"
+        fasta = "test_data/snp_ops/test_filter_motif_snps_complement/CDS.fasta"
+        SNPs = "test_data/snp_ops/test_filter_motif_snps_complement/snps.bed"
+        expected = "test_data/snp_ops/test_filter_motif_snps_complement/expected.txt"
+        observed = "test_data/snp_ops/test_filter_motif_snps_complement/observed.txt"
+        gen.remove_file(observed)
+        filter_motif_SNPs(fasta, SNPs, motifs, observed, complement = True)
+        expected = gen.read_many_fields(expected, "\t")
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(expected, observed)
+
     def test_generate_pseudo_ptc_snps(self):
         input_ptc_snps = "test_data/snp_ops/test_generate_pseudo_ptc_snps/input_ptc_snps.bed"
         input_nonsyn_snps = "test_data/snp_ops/test_generate_pseudo_ptc_snps/input_nonsyn_snps.bed"

@@ -1,4 +1,5 @@
 import bam_ops as bmo
+from cython_func import calc_density_for_concat_several_c
 import generic as gen
 import numpy as np
 import os
@@ -15,6 +16,40 @@ def filter_by_snp_type(input_file, output_file, snp_type, set_seed=None):
     #get header and anything that contains snp type
     grep_args = "echrom\|{0}".format(snp_type)
     gen.run_process(["grep", grep_args, input_file], file_for_output = output_file)
+
+def filter_motif_SNPs(fasta, SNPs, motifs, out_file, complement = False):
+    '''
+    Filter a SNPs file to only leave those SNPs that overlap a set of motifs.
+    If complement, only leave SNPs that DON'T overlap the motifs.
+    '''
+    #read in data
+    with open(motifs) as file:
+        motifs = file.readlines()[1:]
+        motifs = [i.rstrip("\n") for i in motifs]
+    motif_lengths = [len(i) for i in motifs]
+    motifs = gen.motif_to_regex(motifs)
+    names, seqs = gen.read_fasta(fasta)
+    #for each ORF, check where the motif positions are
+    motif_pos = {names[pos]: calc_density_for_concat_several_c(motifs, seqs[pos], motif_lengths) for pos in range(len(names))}
+    for trans in motif_pos:
+        motif_pos[trans] = [i.flatten() for i in  motif_pos[trans] if len(i) > 0]
+        if motif_pos[trans]:
+            motif_pos[trans] = np.unique(np.concatenate(tuple(motif_pos[trans])))
+
+    with open(SNPs) as file, open(out_file, "w") as ofile:
+        header = file.readline()
+        ofile.write(header)
+        for line_raw in file:
+            line = line_raw.split("\t")
+            ORF_pos = int(line[11])
+            trans_name = line[3].split(".")[0]
+            #write down those lines that overlap with motifs
+            if complement:
+                if not np.any(motif_pos[trans_name] == ORF_pos):
+                    ofile.write(line_raw)
+            else:
+                if np.any(motif_pos[trans_name] == ORF_pos):
+                    ofile.write(line_raw)
 
 def get_allele_frequency(snp):
     '''
