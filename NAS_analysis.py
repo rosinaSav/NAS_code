@@ -130,39 +130,46 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, P
             ##filter bam by nm tag NM<=6
             bmo.bam_nm_filter(mapq_flag_xt_filtered_bam, mapq_flag_xt_nm_filtered_bam, nm_less_equal_to=6)
 
-        #extra1: We can then get a count of the total reads possible which can be used for normalisation
-        read_count = int(gen.run_process(["samtools", "view", "-c", mapq_flag_xt_nm_filtered_bam]))
+        #this is so we could run preliminary simulations before all the bams have been processed
+        if os.path.isfile(mapq_flag_xt_nm_filtered_bam):
+            
 
-        print("Filtering .bam to relevant sequence intervals...")
-        ##3. Intersect junctions and .bam, and write down the overlapping .bam alignments, without counting.
-	    #this uses intersect bed, with the intersect bam parameter
-        if ptc_snp_simulation:
-            #if this is a simulation, get the file parts
-            mapq_flag_xt_nm_filtered_bam_parts = os.path.split(mapq_flag_xt_nm_filtered_bam)
-            #the intersect bam is now put in the folder for that simulation, with the same filename as below
-            intersect_bam = "{0}/{1}_exon_junction_filtered_bam_intersect_proc.bam".format(simulation_instance_folder, mapq_flag_xt_nm_filtered_bam_parts[1][:-4])
+            #extra1: We can then get a count of the total reads possible which can be used for normalisation
+            read_count = int(gen.run_process(["samtools", "view", "-c", mapq_flag_xt_nm_filtered_bam]))
+
+            print("Filtering .bam to relevant sequence intervals...")
+            ##3. Intersect junctions and .bam, and write down the overlapping .bam alignments, without counting.
+                #this uses intersect bed, with the intersect bam parameter
+            if ptc_snp_simulation:
+                #if this is a simulation, get the file parts
+                mapq_flag_xt_nm_filtered_bam_parts = os.path.split(mapq_flag_xt_nm_filtered_bam)
+                #the intersect bam is now put in the folder for that simulation, with the same filename as below
+                intersect_bam = "{0}/{1}_exon_junction_filtered_bam_intersect_proc.bam".format(simulation_instance_folder, mapq_flag_xt_nm_filtered_bam_parts[1][:-4])
+            else:
+                intersect_bam = "{0}_exon_junction_filtered_bam_intersect_proc.bam".format(mapq_flag_xt_nm_filtered_bam[:-4])
+            #intersect the filtered bam and the ptc exon junctions file
+            bmo.intersect_bed(mapq_flag_xt_nm_filtered_bam, PTC_exon_junctions_file, output_file = intersect_bam, intersect_bam = True)
+
+            print("Phasing reads...")
+            #convert to sam format and phase reads
+            intersect_sam = "{0}_phased.sam".format(intersect_bam[:-4])
+            temp_snp_file = "temp_data/snps{0}.txt".format(random.random())
+            so.merge_and_header(PTC_file, syn_nonsyn_file, temp_snp_file)
+            sample_name = (bam_file.split("/")[-1]).split(".")[0]
+            bmo.phase_bams(temp_snp_file, intersect_bam, sample_name, intersect_sam)
+            gen.remove_file(temp_snp_file)
+
+            print("Counting reads at junctions...")
+            #4. count the number of reads supporting either the skipping or the inclusion of each exon
+            junctions = bmo.read_exon_junctions(PTC_exon_junctions_file)
+            if ptc_snp_simulation:
+                output_file = "{0}/{1}_simulation_{1}.txt".format(out_folder, sample_name, simulation_number)
+            else:
+                output_file = "{0}/{1}.txt".format(out_folder, sample_name)
+            bmo.count_junction_reads(intersect_sam, junctions, output_file, read_count)
+
         else:
-            intersect_bam = "{0}_exon_junction_filtered_bam_intersect_proc.bam".format(mapq_flag_xt_nm_filtered_bam[:-4])
-        #intersect the filtered bam and the ptc exon junctions file
-        bmo.intersect_bed(mapq_flag_xt_nm_filtered_bam, PTC_exon_junctions_file, output_file = intersect_bam, intersect_bam = True)
-
-        print("Phasing reads...")
-        #convert to sam format and phase reads
-        intersect_sam = "{0}_phased.sam".format(intersect_bam[:-4])
-        temp_snp_file = "temp_data/snps{0}.txt".format(random.random())
-        so.merge_and_header(PTC_file, syn_nonsyn_file, temp_snp_file)
-        sample_name = (bam_file.split("/")[-1]).split(".")[0]
-        bmo.phase_bams(temp_snp_file, intersect_bam, sample_name, intersect_sam)
-        gen.remove_file(temp_snp_file)
-
-        print("Counting reads at junctions...")
-        #4. count the number of reads supporting either the skipping or the inclusion of each exon
-        junctions = bmo.read_exon_junctions(PTC_exon_junctions_file)
-        if ptc_snp_simulation:
-            output_file = "{0}/{1}_simulation_{1}.txt".format(out_folder, sample_name, simulation_number)
-        else:
-            output_file = "{0}/{1}.txt".format(out_folder, sample_name)
-        bmo.count_junction_reads(intersect_sam, junctions, output_file, read_count)
+            print("Skipping {0} because .bam file hasn't been processed!".format(mapq_flag_xt_nm_filtered_bam))
 
 def main():
 
