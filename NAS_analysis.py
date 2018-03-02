@@ -247,18 +247,6 @@ def main():
         so.get_snp_change_status(SNP_file, CDS_fasta, PTC_file, syn_nonsyn_file)
         gen.get_time(start)
 
-    #if required, filter PTCs to only leave ones that overlap motifs from a specified set
-    motif_filtering = False
-    if motif_file != "None":
-        motif_suffix = ((motif_file.split("/"))[-1]).split(".")[0]
-        if motif_complement:
-            out_prefix = "{0}_{1}_complement".format(out_prefix, motif_suffix)
-        else:
-            out_prefix = "{0}_{1}".format(out_prefix, motif_suffix)
-        filtered_ptc = "{0}_ptc_file.txt".format(out_prefix)
-        so.filter_motif_SNPs(CDS_fasta, PTC_file, motif_file, filtered_ptc, complement = motif_complement)
-        PTC_file = filtered_ptc
-
     #filter the exon junctions file to only leave those junctions that flank exons retained in the previous step.
     print("Filtering exon-exon junctions to only leave those that flank exons with a PTC variant...")
     PTC_exon_junctions_file = "{0}_filtered_exon_junctions.bed".format(out_prefix)
@@ -277,6 +265,19 @@ def main():
         for process in processes:
             process.get()
         gen.get_time(start)
+
+    #if required, filter PTCs to only leave ones that overlap motifs from a specified set
+    motif_filtering = False
+    if motif_file != "None":
+        print("Filtering SNPs based on whether or not they overlap a motif from the specified set...")
+        motif_suffix = ((motif_file.split("/"))[-1]).split(".")[0]
+        if motif_complement:
+            out_prefix = "{0}_{1}_complement".format(out_prefix, motif_suffix)
+        else:
+            out_prefix = "{0}_{1}".format(out_prefix, motif_suffix)
+        filtered_ptc = "{0}_ptc_file.txt".format(out_prefix)
+        so.filter_motif_SNPs(CDS_fasta, PTC_file, motif_file, filtered_ptc, complement = motif_complement)
+        PTC_file = filtered_ptc
 
     print("Calculating PSI...")
     final_file = "{0}_final_output.txt".format(out_prefix)

@@ -29,12 +29,6 @@ def filter_motif_SNPs(fasta, SNPs, motifs, out_file, complement = False):
     motif_lengths = [len(i) for i in motifs]
     motifs = gen.motif_to_regex(motifs)
     names, seqs = gen.read_fasta(fasta)
-    #for each ORF, check where the motif positions are
-    motif_pos = {names[pos]: calc_density_for_concat_several_c(motifs, seqs[pos], motif_lengths) for pos in range(len(names))}
-    for trans in motif_pos:
-        motif_pos[trans] = [i.flatten() for i in  motif_pos[trans] if len(i) > 0]
-        if motif_pos[trans]:
-            motif_pos[trans] = np.unique(np.concatenate(tuple(motif_pos[trans])))
 
     with open(SNPs) as file, open(out_file, "w") as ofile:
         header = file.readline()
@@ -43,12 +37,19 @@ def filter_motif_SNPs(fasta, SNPs, motifs, out_file, complement = False):
             line = line_raw.split("\t")
             ORF_pos = int(line[11])
             trans_name = line[3].split(".")[0]
+            #check where the motif positions are
+            motif_pos = calc_density_for_concat_several_c(motifs, seqs[names.index(trans_name)], motif_lengths)
+            motif_pos = [i.flatten() for i in  motif_pos if len(i) > 0]
+            if motif_pos:
+                motif_pos = np.unique(np.concatenate(tuple(motif_pos)))
+            else:
+                motif_pos = []
             #write down those lines that overlap with motifs
             if complement:
-                if not np.any(motif_pos[trans_name] == ORF_pos):
+                if not np.any(motif_pos == ORF_pos):
                     ofile.write(line_raw)
             else:
-                if np.any(motif_pos[trans_name] == ORF_pos):
+                if np.any(motif_pos == ORF_pos):
                     ofile.write(line_raw)
 
 def get_allele_frequency(snp):
