@@ -110,14 +110,26 @@ my_vioplot = function (x, ..., range = 1.5, h = NULL, ylim = NULL, names = NULL,
                  q1 = q1, q3 = q3))
 }
 
-NAS_data = read.csv("results/clean_run/clean_run_final_output.txt", stringsAsFactors = FALSE, sep = "\t")
+prepare_dataset = function(datafile) {
+  NAS_data = read.csv(datafile, stringsAsFactors = FALSE, sep = "\t")
+  max_sample_count = max(NAS_data$sample_count)
+  NAS_data = NAS_data[NAS_data$ptc_count > 0 & NAS_data$sample_count > (0.5 * max_sample_count), ]
+  NAS_data$norm_count_w_PTC = NAS_data$norm_count_w_PTC * 1000000
+  NAS_data$norm_count_het_PTC = NAS_data$norm_count_het_PTC * 1000000
+  NAS_data$norm_count_no_PTC = NAS_data$norm_count_no_PTC * 1000000
+  return(NAS_data)
+}
+
+NAS_data = prepare_dataset("results/clean_run/clean_run_final_output.txt")
 max_sample_count = max(NAS_data$sample_count)
 NAS_data = NAS_data[NAS_data$ptc_count > 0 & NAS_data$sample_count > (0.5 * max_sample_count), ]
 NAS_data$norm_count_w_PTC = NAS_data$norm_count_w_PTC * 1000000
 NAS_data$norm_count_het_PTC = NAS_data$norm_count_het_PTC * 1000000
 NAS_data$norm_count_no_PTC = NAS_data$norm_count_no_PTC * 1000000
-wilcox.test(NAS_data$PSI_het_PTC, NAS_data$PSI_no_PTC, alternative = "less", paired = TRUE)
-wilcox.test(NAS_data$norm_count_het_PTC, NAS_data$norm_count_no_PTC, alternative = "greater", paired = TRUE)
+wilcox.test(NAS_data$PSI_het_PTC, NAS_data$PSI_no_PTC, alternative = "t", paired = TRUE)
+wilcox.test(NAS_data$norm_count_het_PTC, NAS_data$norm_count_no_PTC, alternative = "t", paired = TRUE)
+wilcox.test(NAS_data$PSI_w_PTC, NAS_data$PSI_het_PTC, alternative = "t", paired = TRUE)
+wilcox.test(NAS_data$norm_count_w_PTC, NAS_data$norm_count_het_PTC, alternative = "t", paired = TRUE)
 
 summary(NAS_data)
 
@@ -126,3 +138,7 @@ boxplot(NAS_data$PSI_w_PTC, NAS_data$PSI_het_PTC, NAS_data$PSI_no_PTC, col = "li
 boxplot(NAS_data$norm_count_w_PTC, NAS_data$norm_count_het_PTC, NAS_data$norm_count_no_PTC, col = "RoyalBlue", main = "normalized read count", names = c("hmz PTC", "htz", "hmz no PTC"))
 
 my_vioplot(NAS_data$PSI_w_PTC, NAS_data$PSI_het_PTC, NAS_data$PSI_no_PTC, names = c("hmz PTC", "htz", "hmz no PTC"), col = "limegreen", ylab = "PSI") 
+my_vioplot(NAS_data$norm_count_w_PTC, NAS_data$norm_count_het_PTC, NAS_data$norm_count_no_PTC, names = c("hmz PTC", "htz", "hmz no PTC"), col = "limegreen", ylab = "normalized read count") 
+
+NAS_ESEs_data = read.csv("results/clean_run/clean_run_CaceresHurstESEs_INT3_final_output.txt", stringsAsFactors = FALSE, sep = "\t")
+NAS_ESEs_data = NAS_ESEs_data[NAS_ESEs_data$ptc_count > 0 & NAS_ESEs_data$sample_count > (0.5 * max_sample_count), ]
