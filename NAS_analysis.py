@@ -38,7 +38,7 @@ def run_ptc_simulation_instance(simulations, out_prefix, simulation_output_folde
         if parallel:
             process_bam_per_individual(bam_files, pseudo_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_ptc_file, remaining_snps_file, filter_bams=False, ptc_snp_simulation=True, simulation_instance_folder=simulation_instance_folder, simulation_number=simulation_number)
         else:
-            processes = gen.run_in_parallel(bam_files, ["foo", pseudo_ptc_exon_junctions_file, simulation_bam_analysis_folder, pseudo_ptc_file, remaining_snps_file, False, True, simulation_instance_folder, simulation_number], process_bam_per_individual)
+            processes = gen.run_in_parallel(bam_files, ["foo", pseudo_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_ptc_file, remaining_snps_file, False, True, simulation_instance_folder, simulation_number], process_bam_per_individual)
             for process in processes:
                 process.get()
 
