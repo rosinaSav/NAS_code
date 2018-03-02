@@ -43,7 +43,7 @@ def run_ptc_simulation_instance(simulations, out_prefix, simulation_output_folde
                 process.get()
 
         #process final psi for simulation
-        final_file = "{0}/{1}_final_output_simulation_{2}.txt".format(simulation_bam_analysis_output_folder, out_prefix, simulation_number)
+        final_file = "{0}/final_output_simulation_{1}.txt".format(simulation_bam_analysis_output_folder, simulation_number)
         bmo.compare_PSI(pseudo_ptc_file, simulation_bam_analysis_output_folder, final_file)
 
 
@@ -84,14 +84,15 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, P
     for bam_file in bam_files:
 
         #Process:
-        # 1. Filter bams
+        # 1. Filter bams by quality
         # This gives us a set of "good" quality reads.
         # extra1: Get a count of all reads
         # 2. Map to exon junctions
         # 3. Count reads either skipping or including each exon
 
-        #####1. filter .bam alignments by quality.
-        # upper and lower bam thresholds required
+        #1. filter .bam alignments by quality.
+        #takes both upper and lower bam thresholds
+        #outputs bam file with "_quality_filter_{lower_lim}_{upper_lim}" appended
         # need to do this twice and merge, so we use both intervals used by Geuvadis
 
         bam_file_parts = os.path.split(bam_file)
@@ -147,10 +148,7 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, P
 
         print("Phasing reads...")
         #convert to sam format and phase reads
-        if ptc_snp_simulation:
-            intersect_sam = "{0}/{1}_phased.sam".format(simulation_instance_folder, intersect_bam[:-4])
-        else:
-            intersect_sam = "{0}_phased.sam".format(intersect_bam[:-4])
+        intersect_sam = "{0}_phased.sam".format(intersect_bam[:-4])
         temp_snp_file = "temp_data/snps{0}.txt".format(random.random())
         so.merge_and_header(PTC_file, syn_nonsyn_file, temp_snp_file)
         sample_name = (bam_file.split("/")[-1]).split(".")[0]
