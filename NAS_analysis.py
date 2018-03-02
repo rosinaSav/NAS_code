@@ -83,6 +83,8 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, P
 
     for bam_file in bam_files:
 
+        print(bam_file)
+
         #Process:
         # 1. Filter bams by quality
         # This gives us a set of "good" quality reads.
@@ -132,7 +134,6 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, P
 
         #this is so we could run preliminary simulations before all the bams have been processed
         if os.path.isfile(mapq_flag_xt_nm_filtered_bam):
-            
 
             #extra1: We can then get a count of the total reads possible which can be used for normalisation
             read_count = int(gen.run_process(["samtools", "view", "-c", mapq_flag_xt_nm_filtered_bam]))
@@ -272,7 +273,7 @@ def main():
     gen.create_directory(bam_analysis_folder)
     if process_bams:
         print("Processing RNA-seq data...")
-        processes = gen.run_in_parallel(bam_files, ["foo", PTC_exon_junctions_file, bam_analysis_folder, PTC_file, syn_nonsyn_file, filter_bams], process_bam_per_individual)
+        processes = gen.run_in_parallel(bam_files, ["foo", PTC_exon_junctions_file, bam_analysis_folder, PTC_file, syn_nonsyn_file, filter_bams, out_prefix], process_bam_per_individual)
         for process in processes:
             process.get()
         gen.get_time(start)
