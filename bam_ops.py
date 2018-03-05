@@ -187,8 +187,9 @@ def compare_PSI(SNP_file, bam_folder, out_file, round_norm_count = None):
     #will overwrite the one that appears first so only one of the SNPs will be analyzed
     SNPs = {i[3]: i[15:-1] for i in SNPs[1:]}
     results = {i: {"PSI_w_PTC": [], "PSI_het_PTC": [], "PSI_no_PTC": [], "norm_count_w_PTC": [],
-                   "norm_count_het_PTC": [], "norm_count_no_PTC": [], "ptc_count": 0,
-                   "sample_count": 0} for i in SNPs}
+                   "norm_count_het_PTC": [], "norm_count_no_PTC": [],
+                   "norm_count_w_PTC_incl": [], "norm_count_het_PTC_incl": [], "norm_count_no_PTC_incl": [],
+                   "ptc_count": 0, "sample_count": 0} for i in SNPs}
     for pos, sample in enumerate(samples):
         file_name = "{0}/{1}.txt".format(bam_folder, sample)
         #in case you're analyzing simulation output
@@ -215,16 +216,19 @@ def compare_PSI(SNP_file, bam_folder, out_file, round_norm_count = None):
                                     results[exon]["ptc_count"] = results[exon]["ptc_count"] + 0.5                               
                                     results[exon]["PSI_het_PTC"].append(included/(skipped + included))
                                     results[exon]["norm_count_het_PTC"].append(skipped/total)
+                                    results[exon]["norm_count_het_PTC_incl"].append(included/total)
                                 #if it's homozygous for PTC
                                 else:
                                     results[exon]["ptc_count"] = results[exon]["ptc_count"] + 1                               
                                     results[exon]["PSI_w_PTC"].append(included/(skipped + included))
                                     results[exon]["norm_count_w_PTC"].append(skipped/total)
+                                    results[exon]["norm_count_w_PTC_incl"].append(included/total)
                             #if it's homozygous for lack of PTC
                             else:
                                 results[exon]["PSI_no_PTC"].append(included/(skipped + included))
                                 results[exon]["norm_count_no_PTC"].append(skipped/total)
-    header = "exon\tptc_count\tsample_count\tPSI_w_PTC\tPSI_het_PTC\tPSI_no_PTC\tnorm_count_w_PTC\tnorm_count_het_PTC\tnorm_count_no_PTC\n"
+                                results[exon]["norm_count_no_PTC_incl"].append(included/total)
+    header = "exon\tptc_count\tsample_count\tPSI_w_PTC\tPSI_het_PTC\tPSI_no_PTC\tnorm_count_w_PTC\tnorm_count_het_PTC\tnorm_count_no_PTC\tnorm_count_w_PTC_incl\tnorm_count_het_PTC_incl\tnorm_count_no_PTC_incl\n"
     header_split = header.split("\t")
     header_split[-1] = header_split[-1].rstrip("\n")
     with open(out_file, "w") as file:
