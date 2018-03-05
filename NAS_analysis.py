@@ -85,92 +85,97 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, P
 
         print(bam_file)
 
-        #Process:
-        # 1. Filter bams by quality
-        # This gives us a set of "good" quality reads.
-        # extra1: Get a count of all reads
-        # 2. Map to exon junctions
-        # 3. Count reads either skipping or including each exon
-
-        #1. filter .bam alignments by quality.
-        #takes both upper and lower bam thresholds
-        #outputs bam file with "_quality_filter_{lower_lim}_{upper_lim}" appended
-        # need to do this twice and merge, so we use both intervals used by Geuvadis
-
-        bam_file_parts = os.path.split(bam_file)
-        mapq_filtered_bam = "{0}/{1}_filtered_mapq_proc.bam".format(bam_file_parts[0], bam_file_parts[1])
-        mapq_flag_filtered_bam = "{0}_flag_proc.bam".format(mapq_filtered_bam[:-4])
-        mapq_flag_xt_filtered_bam = "{0}_xt_proc.bam".format(mapq_flag_filtered_bam[:-4])
-        mapq_flag_xt_nm_filtered_bam = "{0}_nm_proc.bam".format(mapq_flag_xt_filtered_bam[:-4])
-
-        if filter_bams:
-            #set the mapq filter parameters here
-            mapq_intervals = [[251, 255], [175, 181]]
-            mapq_filter_filelist = []
-
-            print("Filtering by MAPQ and merging bams...")
-
-            for mapq_interval in mapq_intervals:
-                lower_threshold, upper_threshold = mapq_interval[0], mapq_interval[1]
-                mapq_filter_file = "{0}_mapq_filter_{1}_{2}_proc.bam".format(bam_file[:-4], lower_threshold, upper_threshold)
-                mapq_filter_filelist.append(mapq_filter_file)
-                ##run the mapq filter
-                bmo.bam_quality_filter(bam_file, mapq_filter_file, quality_greater_than_equal_to=lower_threshold, quality_less_than_equal_to=upper_threshold)
-
-            ##merge files in filelist
-            bmo.merge_bams(mapq_filter_filelist, mapq_filtered_bam)
-
-            print("Filtering by .bam flags...")
-
-            ##filter by flags: get all mapped reads
-            #Leaves: mapped unpaired and paired reads
-            bmo.bam_flag_filter(mapq_filtered_bam, mapq_flag_filtered_bam, get_mapped_reads=True)
-
-            ##filter bam by xt tag XT=U
-            bmo.bam_xt_filter(mapq_flag_filtered_bam, mapq_flag_xt_filtered_bam, xt_filter="U")
-
-            ##filter bam by nm tag NM<=6
-            bmo.bam_nm_filter(mapq_flag_xt_filtered_bam, mapq_flag_xt_nm_filtered_bam, nm_less_equal_to=6)
-
-        #this is so we could run preliminary simulations before all the bams have been processed
-        if os.path.isfile(mapq_flag_xt_nm_filtered_bam):
-
-            #extra1: We can then get a count of the total reads possible which can be used for normalisation
-            read_count = int(gen.run_process(["samtools", "view", "-c", mapq_flag_xt_nm_filtered_bam]))
-
-            print("Filtering .bam to relevant sequence intervals...")
-            ##3. Intersect junctions and .bam, and write down the overlapping .bam alignments, without counting.
-                #this uses intersect bed, with the intersect bam parameter
-            if ptc_snp_simulation:
-                #if this is a simulation, get the file parts
-                mapq_flag_xt_nm_filtered_bam_parts = os.path.split(mapq_flag_xt_nm_filtered_bam)
-                #the intersect bam is now put in the folder for that simulation, with the same filename as below
-                intersect_bam = "{0}/{1}_exon_junction_filtered_bam_intersect_proc.bam".format(simulation_instance_folder, mapq_flag_xt_nm_filtered_bam_parts[1][:-4])
-            else:
-                intersect_bam = "{0}_{1}_exon_junction_filtered_bam_intersect_proc.bam".format(out_prefix, mapq_flag_xt_nm_filtered_bam[:-4])
-            #intersect the filtered bam and the ptc exon junctions file
-            bmo.intersect_bed(mapq_flag_xt_nm_filtered_bam, PTC_exon_junctions_file, output_file = intersect_bam, intersect_bam = True)
-
-            print("Phasing reads...")
-            #convert to sam format and phase reads
-            intersect_sam = "{0}_phased.sam".format(intersect_bam[:-4])
-            temp_snp_file = "temp_data/snps{0}.txt".format(random.random())
-            so.merge_and_header(PTC_file, syn_nonsyn_file, temp_snp_file)
-            sample_name = (bam_file.split("/")[-1]).split(".")[0]
-            bmo.phase_bams(temp_snp_file, intersect_bam, sample_name, intersect_sam)
-            gen.remove_file(temp_snp_file)
-
-            print("Counting reads at junctions...")
-            #4. count the number of reads supporting either the skipping or the inclusion of each exon
-            junctions = bmo.read_exon_junctions(PTC_exon_junctions_file)
-            if ptc_snp_simulation:
-                output_file = "{0}/{1}_simulation_{1}.txt".format(out_folder, sample_name, simulation_number)
-            else:
-                output_file = "{0}/{1}.txt".format(out_folder, sample_name)
-            bmo.count_junction_reads(intersect_sam, junctions, output_file, read_count)
-
+        if ptc_snp_simulation:
+            output_file = "{0}/{1}_simulation_{1}.txt".format(out_folder, sample_name, simulation_number)
         else:
-            print("Skipping {0} because .bam file hasn't been processed!".format(mapq_flag_xt_nm_filtered_bam))
+            output_file = "{0}/{1}.txt".format(out_folder, sample_name)
+
+        if not os.path.isfile(output_file):
+
+            #Process:
+            # 1. Filter bams by quality
+            # This gives us a set of "good" quality reads.
+            # extra1: Get a count of all reads
+            # 2. Map to exon junctions
+            # 3. Count reads either skipping or including each exon
+
+            #1. filter .bam alignments by quality.
+            #takes both upper and lower bam thresholds
+            #outputs bam file with "_quality_filter_{lower_lim}_{upper_lim}" appended
+            # need to do this twice and merge, so we use both intervals used by Geuvadis
+
+            bam_file_parts = os.path.split(bam_file)
+            mapq_filtered_bam = "{0}/{1}_filtered_mapq_proc.bam".format(bam_file_parts[0], bam_file_parts[1])
+            mapq_flag_filtered_bam = "{0}_flag_proc.bam".format(mapq_filtered_bam[:-4])
+            mapq_flag_xt_filtered_bam = "{0}_xt_proc.bam".format(mapq_flag_filtered_bam[:-4])
+            mapq_flag_xt_nm_filtered_bam = "{0}_nm_proc.bam".format(mapq_flag_xt_filtered_bam[:-4])
+
+            if filter_bams:
+                #set the mapq filter parameters here
+                mapq_intervals = [[251, 255], [175, 181]]
+                mapq_filter_filelist = []
+
+                print("Filtering by MAPQ and merging bams...")
+
+                for mapq_interval in mapq_intervals:
+                    lower_threshold, upper_threshold = mapq_interval[0], mapq_interval[1]
+                    mapq_filter_file = "{0}_mapq_filter_{1}_{2}_proc.bam".format(bam_file[:-4], lower_threshold, upper_threshold)
+                    mapq_filter_filelist.append(mapq_filter_file)
+                    ##run the mapq filter
+                    bmo.bam_quality_filter(bam_file, mapq_filter_file, quality_greater_than_equal_to=lower_threshold, quality_less_than_equal_to=upper_threshold)
+
+                ##merge files in filelist
+                bmo.merge_bams(mapq_filter_filelist, mapq_filtered_bam)
+
+                print("Filtering by .bam flags...")
+
+                ##filter by flags: get all mapped reads
+                #Leaves: mapped unpaired and paired reads
+                bmo.bam_flag_filter(mapq_filtered_bam, mapq_flag_filtered_bam, get_mapped_reads=True)
+
+                ##filter bam by xt tag XT=U
+                bmo.bam_xt_filter(mapq_flag_filtered_bam, mapq_flag_xt_filtered_bam, xt_filter="U")
+
+                ##filter bam by nm tag NM<=6
+                bmo.bam_nm_filter(mapq_flag_xt_filtered_bam, mapq_flag_xt_nm_filtered_bam, nm_less_equal_to=6)
+
+            #this is so we could run preliminary simulations before all the bams have been processed
+            if os.path.isfile(mapq_flag_xt_nm_filtered_bam):
+
+                #extra1: We can then get a count of the total reads possible which can be used for normalisation
+                read_count = int(gen.run_process(["samtools", "view", "-c", mapq_flag_xt_nm_filtered_bam]))
+
+                print("Filtering .bam to relevant sequence intervals...")
+                ##3. Intersect junctions and .bam, and write down the overlapping .bam alignments, without counting.
+                    #this uses intersect bed, with the intersect bam parameter
+                if ptc_snp_simulation:
+                    #if this is a simulation, get the file parts
+                    mapq_flag_xt_nm_filtered_bam_parts = os.path.split(mapq_flag_xt_nm_filtered_bam)
+                    #the intersect bam is now put in the folder for that simulation, with the same filename as below
+                    intersect_bam = "{0}/{1}_exon_junction_filtered_bam_intersect_proc.bam".format(simulation_instance_folder, mapq_flag_xt_nm_filtered_bam_parts[1][:-4])
+                else:
+                    intersect_bam = "{0}_{1}_exon_junction_filtered_bam_intersect_proc.bam".format(out_prefix, mapq_flag_xt_nm_filtered_bam[:-4])
+                #intersect the filtered bam and the ptc exon junctions file
+                bmo.intersect_bed(mapq_flag_xt_nm_filtered_bam, PTC_exon_junctions_file, output_file = intersect_bam, intersect_bam = True)
+
+                print("Phasing reads...")
+                #convert to sam format and phase reads
+                intersect_sam = "{0}_phased.sam".format(intersect_bam[:-4])
+                temp_snp_file = "temp_data/snps{0}.txt".format(random.random())
+                so.merge_and_header(PTC_file, syn_nonsyn_file, temp_snp_file)
+                sample_name = (bam_file.split("/")[-1]).split(".")[0]
+                bmo.phase_bams(temp_snp_file, intersect_bam, sample_name, intersect_sam)
+                gen.remove_file(temp_snp_file)
+
+                print("Counting reads at junctions...")
+                #4. count the number of reads supporting either the skipping or the inclusion of each exon
+                junctions = bmo.read_exon_junctions(PTC_exon_junctions_file)
+                bmo.count_junction_reads(intersect_sam, junctions, output_file, read_count)
+
+            else:
+                print("Skipping {0} because .bam file hasn't been processed!".format(mapq_flag_xt_nm_filtered_bam))
+        else:
+                print("Skipping {0} because file has already been processed!".format(bam_file))            
 
 def main():
 

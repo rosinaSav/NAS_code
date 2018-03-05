@@ -178,7 +178,7 @@ def compare_PSI(SNP_file, bam_folder, out_file, round_norm_count = None):
     '''
     Given PTC-generating SNPs, as well as read counts at exon-exon junctions, compare exon skipping rates
     within samples that do or do not have a PTC within a given exon.
-    If round_norm_count is specified, the nromalized read counts will be rounded to
+    If round_norm_count is specified, the normalized read counts will be rounded to
     that number of digits after the decimal point.
     '''
     SNPs = gen.read_many_fields(SNP_file, "\t")
@@ -191,6 +191,10 @@ def compare_PSI(SNP_file, bam_folder, out_file, round_norm_count = None):
                    "sample_count": 0} for i in SNPs}
     for pos, sample in enumerate(samples):
         file_name = "{0}/{1}.txt".format(bam_folder, sample)
+        #in case you're analyzing simulation output
+        if not os.path.isfile(file_name):
+            file_name = "{0}/{1}_simulation_{1}.txt".format(bam_folder, sample)
+        #maybe that bam simply hasn't been processed yet, skip it if that's the case
         if os.path.isfile(file_name):
             with open(file_name) as file:
                 for line in file:
