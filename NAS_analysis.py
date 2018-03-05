@@ -84,7 +84,7 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, P
     for bam_file in bam_files:
 
         print(bam_file)
-
+        sample_name = (bam_file.split("/")[-1]).split(".")[0]
         if ptc_snp_simulation:
             output_file = "{0}/{1}_simulation_{1}.txt".format(out_folder, sample_name, simulation_number)
         else:
@@ -163,7 +163,6 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, P
                 intersect_sam = "{0}_phased.sam".format(intersect_bam[:-4])
                 temp_snp_file = "temp_data/snps{0}.txt".format(random.random())
                 so.merge_and_header(PTC_file, syn_nonsyn_file, temp_snp_file)
-                sample_name = (bam_file.split("/")[-1]).split(".")[0]
                 bmo.phase_bams(temp_snp_file, intersect_bam, sample_name, intersect_sam)
                 gen.remove_file(temp_snp_file)
 
