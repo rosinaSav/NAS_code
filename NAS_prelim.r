@@ -95,6 +95,9 @@ prepare_dataset = function(datafile) {
   NAS_data$norm_count_w_PTC = NAS_data$norm_count_w_PTC * 1000000
   NAS_data$norm_count_het_PTC = NAS_data$norm_count_het_PTC * 1000000
   NAS_data$norm_count_no_PTC = NAS_data$norm_count_no_PTC * 1000000
+  NAS_data$norm_count_w_PTC_incl = NAS_data$norm_count_w_PTC_incl * 1000000
+  NAS_data$norm_count_het_PTC_incl = NAS_data$norm_count_het_PTC_incl * 1000000
+  NAS_data$norm_count_no_PTC_incl = NAS_data$norm_count_no_PTC_incl * 1000000
   return(NAS_data)
 }
 
@@ -124,7 +127,7 @@ hist(neg_control$PSI_het_PTC - neg_control$PSI_w_PTC, breaks = 100, col = chosen
 plot_individual_change(NAS_data, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "Exons with >5% change between any two categories", "PSI", 5, 100)
 plot_individual_change(neg_control, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "Negative control", "PSI", 5, 100)
 
-#normalized read counts
+#RPMskip
 par(mfrow = c(1, 2))
 compare_the_two_measures(NAS_data, "true data")
 compare_the_two_measures(neg_control, "neg. control")
@@ -143,9 +146,10 @@ hist(NAS_data$norm_count_het_PTC - NAS_data$norm_count_w_PTC, breaks = 100, col 
 hist(neg_control$norm_count_no_PTC - neg_control$norm_count_het_PTC, breaks = 100, col = chosen_colour, main = "Negative control", xlab = "RPMskip(-/-) - RPMskip(-/+)")
 hist(neg_control$norm_count_het_PTC - neg_control$norm_count_w_PTC, breaks = 100, col = chosen_colour, main = "Negative control", xlab = "RPMskip(-/+) - RPMskip(+/+)")
 
-plot_individual_change(NAS_data, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "Exons with >0.1 change between any two categories", "RPMskip", 0.05, 6, reverse = TRUE)
+plot_individual_change(NAS_data, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "Exons with >0.05 change between any two categories", "RPMskip", 0.05, 6, reverse = TRUE)
 plot_individual_change(neg_control, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "Negative control", "RPMskip", 0.05, 8, reverse = TRUE)
 
+#ESE analysis 
 NAS_ESEs_data = prepare_dataset("results/clean_run/clean_run_CaceresHurstESEs_INT3_final_output.txt")
 perform_tests(NAS_ESEs_data)
 NAS_no_ESEs_data = prepare_dataset("results/clean_run/clean_run_CaceresHurstESEs_INT3_complement_final_output.txt")
@@ -159,6 +163,13 @@ hist(NAS_no_ESEs_data$PSI_no_PTC - NAS_no_ESEs_data$PSI_het_PTC, col = chosen_co
 hist(NAS_ESEs_data$norm_count_no_PTC - NAS_ESEs_data$norm_count_het_PTC, col = chosen_colour, breaks = 20, main = "RPMskip, in ESEs", xlab = "RPMskip(-/-) - RPMskip(-/+)")
 hist(NAS_no_ESEs_data$norm_count_no_PTC - NAS_no_ESEs_data$norm_count_het_PTC, col = chosen_colour, breaks = 20, main = "RPMskip, not in ESEs", xlab = "RPMskip(-/-) - RPMskip(-/+)")
 
-par(mfrow = c(1, 2))
-plot_individual_change(NAS_ESEs_data, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "Exons with >5% change between any two categories (in ESEs)", "PSI", 5, 100)
-plot_individual_change(NAS_no_ESEs_data, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "Exons with >5% change between any two categories (not in ESEs)", "PSI", 5, 100)
+par(mfrow = c(2, 2))
+plot_individual_change(NAS_ESEs_data, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "in ESEs", "PSI", 5, 100)
+plot_individual_change(NAS_no_ESEs_data, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "not in ESEs", "PSI", 5, 100)
+plot_individual_change(NAS_ESEs_data, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "in ESEs", "RPMskip", 0.05, 2, reverse = TRUE)
+plot_individual_change(NAS_no_ESEs_data, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "not in ESEs", "RPMskip", 0.05, 7, reverse = TRUE)
+
+#RPMinclude
+par(mfrow = c(1,1))
+hist(NAS_data$norm_count_no_PTC_incl - NAS_data$norm_count_het_PTC_incl, breaks = 100, col = chosen_colour, main = "Is RPM(incl) higher for PTC-/PTC- than for PTC-/PTC+?", xlab = "RPMincl(-/-) - RPMincl(-/+)")
+wilcox.test(NAS_data$norm_count_no_PTC_incl, NAS_data$norm_count_het_PTC_incl, alternative = "greater", paired = TRUE)
