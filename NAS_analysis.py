@@ -116,9 +116,10 @@ def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_j
             output_file = "{0}/{1}_simulation_{2}.txt".format(out_folder, sample_name, simulation_number)
         else:
             output_file = "{0}/{1}.txt".format(out_folder, sample_name)
-            
+
         if ptc_snp_simulation:
             proc_folder = "{0}/bam_proc_files".format(simulation_instance_folder)
+
         else:
             proc_folder = "{0}_bam_proc_files".format(out_prefix)
         gen.create_directory(proc_folder)
