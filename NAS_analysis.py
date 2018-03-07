@@ -176,7 +176,7 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, P
                     #the intersect bam is now put in the folder for that simulation, with the same filename as below
                     intersect_bam = "{0}/{1}_exon_junction_filtered_bam_intersect_proc.bam".format(simulation_instance_folder, mapq_flag_xt_nm_filtered_bam_parts[1][:-4])
                 else:
-                    intersect_bam = "{0}_{1}_exon_junction_filtered_bam_intersect_proc.bam".format(out_prefix, mapq_flag_xt_nm_filtered_bam[:-4])
+                    intersect_bam = "{0}_{1}_exon_junction_filtered_bam_intersect_proc.bam".format(out_prefix, mapq_flag_xt_nm_filtered_bam_parts[1][:-4])
                 #intersect the filtered bam and the ptc exon junctions file
                 bmo.intersect_bed(mapq_flag_xt_nm_filtered_bam, PTC_exon_junctions_file, output_file = intersect_bam, intersect_bam = True)
 
