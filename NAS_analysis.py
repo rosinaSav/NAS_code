@@ -35,10 +35,11 @@ def run_ptc_simulation_instance(simulations, out_prefix, simulation_output_folde
 
         #run the bam analysis for each
         #(don't parallelize if you're doing the simulations in parallel)
+        kw_dict = {"filter_bams": False, "ptc_snp_simulation": True, "simulation_instance_folder": simulation_instance_folder, "simulation_number": simulation_number}
         if parallel:
-            process_bam_per_individual(bam_files, pseudo_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_ptc_file, remaining_snps_file, out_prefix, filter_bams=False, ptc_snp_simulation=True, simulation_instance_folder=simulation_instance_folder, simulation_number=simulation_number)
+            process_bam_per_individual(bam_files, pseudo_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_ptc_file, remaining_snps_file, out_prefix, kw_dict)
         else:
-            processes = gen.run_in_parallel(bam_files, ["foo", pseudo_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_ptc_file, remaining_snps_file, out_prefix, False, True, simulation_instance_folder, simulation_number], process_bam_per_individual)
+            processes = gen.run_in_parallel(bam_files, ["foo", pseudo_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_ptc_file, remaining_snps_file, out_prefix, kw_dict], process_bam_per_individual)
             for process in processes:
                 process.get()
 
@@ -78,8 +79,29 @@ def ptc_snp_simulation(out_prefix, simulation_output_folder, ptc_file, syn_nonsy
     else:
         run_ptc_simulation_instance([1], out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, nonsynonymous_snps_file, exon_junctions_file, bam_files, False)
 
-def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, PTC_file, syn_nonsyn_file, filter_bams, out_prefix, ptc_snp_simulation=None, simulation_instance_folder=None, simulation_number=None):
-    #add other arguments
+def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, PTC_file, syn_nonsyn_file, out_prefix, kw_dict):
+    #parse keyword_dict
+    #it's done like this to make it easier to parallelize this process
+    if "filter_bams" in kw_dict:
+        filter_bams = kw_dict["filter_bams"]
+    else:
+        filter_bams = False
+    if "ptc_snp_simulation" in kw_dict:
+        ptc_snp_simulation = kw_dict["ptc_snp_simulation"]
+    else:
+        ptc_snp_simulation = False
+    if "simulation_instance_folder" in kw_dict:
+        simulation_instance_folder = kw_dict["simulation_instance_folder"]
+    else:
+        simulation_instance_folder = None
+    if "simulation_number" in kw_dict:
+        simulation_number = kw_dict["simulation_number"]
+    else:
+        simulation_number = None
+    if "overwrite_processed_bams" in kw_dict:
+        overwrite_processed_bams = kw_dict["overwrite_processed_bams"]
+    else:
+        overwrite_processed_bams = False
 
     for bam_file in bam_files:
 
@@ -90,7 +112,7 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, P
         else:
             output_file = "{0}/{1}.txt".format(out_folder, sample_name)
 
-        if not os.path.isfile(output_file):
+        if (not os.path.isfile(output_file)) or overwrite_processed_bams:
 
             #Process:
             # 1. Filter bams by quality
@@ -179,8 +201,8 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder, P
 def main():
 
     description = "Check whether PTCs are associated with greater rates of exon skipping."
-    args = gen.parse_arguments(description, ["gtf", "genome_fasta", "bams_folder", "vcf_folder", "panel_file", "out_prefix", "bam_analysis_folder", "number_of_simulations", "simulation_output_folder", "motif_file", "filter_genome_data", "get_SNPs", "filter_bams", "process_bams", "simulate_ptc_snps", "motif_complement"], flags = [10, 11, 12, 13, 14, 15], ints = [7])
-    gtf, genome_fasta, bams_folder, vcf_folder, panel_file, out_prefix, bam_analysis_folder, number_of_simulations, simulation_output_folder, motif_file, filter_genome_data, get_SNPs, filter_bams, process_bams, simulate_ptc_snps, motif_complement = args.gtf, args.genome_fasta, args.bams_folder, args.vcf_folder, args.panel_file, args.out_prefix, args.bam_analysis_folder, args.number_of_simulations, args.simulation_output_folder, args.motif_file, args.filter_genome_data, args.get_SNPs, args.filter_bams, args.process_bams, args.simulate_ptc_snps, args.motif_complement
+    args = gen.parse_arguments(description, ["gtf", "genome_fasta", "bams_folder", "vcf_folder", "panel_file", "out_prefix", "bam_analysis_folder", "number_of_simulations", "simulation_output_folder", "motif_file", "filter_genome_data", "get_SNPs", "filter_bams", "process_bams", "simulate_ptc_snps", "motif_complement", "overwrite_processed_bams"], flags = [10, 11, 12, 13, 14, 15, 16], ints = [7])
+    gtf, genome_fasta, bams_folder, vcf_folder, panel_file, out_prefix, bam_analysis_folder, number_of_simulations, simulation_output_folder, motif_file, filter_genome_data, get_SNPs, filter_bams, process_bams, simulate_ptc_snps, motif_complement, overwrite_processed_bams = args.gtf, args.genome_fasta, args.bams_folder, args.vcf_folder, args.panel_file, args.out_prefix, args.bam_analysis_folder, args.number_of_simulations, args.simulation_output_folder, args.motif_file, args.filter_genome_data, args.get_SNPs, args.filter_bams, args.process_bams, args.simulate_ptc_snps, args.motif_complement, args.overwrite_processed_bams
 
     start = time.time()
 
@@ -265,7 +287,9 @@ def main():
     gen.create_directory(bam_analysis_folder)
     if process_bams:
         print("Processing RNA-seq data...")
-        processes = gen.run_in_parallel(bam_files, ["foo", PTC_exon_junctions_file, bam_analysis_folder, PTC_file, syn_nonsyn_file, filter_bams, out_prefix], process_bam_per_individual)
+        #we have to do it like this because you can't pass flags into run_in_parallel
+        keyword_dict = {"filter_bams": filter_bams, "overwrite_processed_bams": overwrite_processed_bams}
+        processes = gen.run_in_parallel(bam_files, ["foo", PTC_exon_junctions_file, bam_analysis_folder, PTC_file, syn_nonsyn_file, out_prefix, keyword_dict], process_bam_per_individual)
         for process in processes:
             process.get()
         gen.get_time(start)
