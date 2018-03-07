@@ -324,7 +324,7 @@ def main():
         print("Processing RNA-seq data...")
         #we have to do it like this because you can't pass flags into run_in_parallel
         keyword_dict = {"overwrite_intersect": overwrite_intersect}
-        processes = gen.run_in_parallel(bam_files, ["foo", exon_junctions_file, PTC_exon_junctions_file, bam_analysis_folder, PTC_file, syn_nonsyn_file, out_prefix, keyword_dict], process_bam_per_individual, workers = 1)
+        processes = gen.run_in_parallel(bam_files, ["foo", exon_junctions_file, PTC_exon_junctions_file, bam_analysis_folder, PTC_file, syn_nonsyn_file, out_prefix, keyword_dict], process_bam_per_individual)
         for process in processes:
             process.get()
         gen.get_time(start)
