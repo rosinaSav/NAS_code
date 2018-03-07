@@ -205,7 +205,7 @@ def compare_PSI(SNP_file, bam_folder, out_file, round_norm_count = None):
                     if exon in SNPs:
                         skipped = np.sum([int(i) for i in line[1].split("|")])
                         included = np.sum([int(i) for i in line[2].split("|")])
-                        total = int(line[3])
+                        total = float(line[3])
                         genotype = SNPs[exon][pos]
                         if skipped > 0 or included > 0:
                             results[exon]["sample_count"] = results[exon]["sample_count"] + 1
