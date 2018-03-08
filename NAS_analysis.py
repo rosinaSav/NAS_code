@@ -73,7 +73,7 @@ def ptc_snp_simulation(out_prefix, simulation_output_folder, ptc_file, syn_nonsy
     #if you're only doing one simulation, don't parallelize the simulations
     #parallelize the processing of bams like for true data
     if required_simulations > 1:
-        processes = gen.run_in_parallel(simulations, ["foo", out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, nonsynonymous_snps_file, exon_junctions_file, bam_files, True], run_ptc_simulation_instance)
+        processes = gen.run_in_parallel(simulations, ["foo", out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, nonsynonymous_snps_file, exon_junctions_file, bam_files, True], run_ptc_simulation_instance, workers = 35)
         for process in processes:
             process.get()
     else:
@@ -98,6 +98,8 @@ def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_j
         overwrite_intersect = kw_dict["overwrite_intersect"]
     else:
         overwrite_intersect = False
+
+    gen.create_directory("{0}_exon_junction_bams".format(out_prefix))
 
     bam_file_number = len(bam_files)
     for pos, bam_file in enumerate(bam_files):
@@ -131,19 +133,28 @@ def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_j
         mapq_flag_xt_filtered_bam = "{0}_xt.bam".format(mapq_flag_filtered_bam[:-4])
         mapq_flag_xt_nm_filtered_bam = "{0}_nm.bam".format(mapq_flag_xt_filtered_bam[:-4])
 
-        if (bam_file_parts[-1] in ["NA07056.1.M_111124_3.bam", "HG00242.3.M_120202_7.bam", "HG00243.4.M_120208_2.bam"]) or (not os.path.isfile(mapq_filtered_bam)):
+        if not os.path.isfile(mapq_filtered_bam):
 
             #1: We get a count of the total reads in the sample which can be used for normalisation
-            #I'm inititalizing it to None for safety. That way, if the process fails,
+            #I'm initializing it to None for safety. That way, if the process fails,
             #it won't just silently go with whatever the value was at the end of the previous loop.
+            #also, writing it down cause this bit takes forever, don't want to do it again every time.
+            read_count_file_name = "{0}_exon_junction_bams/read_count_sample_name.txt".format(out_prefix)
             read_count = None
-            read_count = int(gen.run_process(["samtools", "view", "-c", bam_file]))
+            if os.path.isfile(read_count_file_name):
+                with open(read_count_file_name) as file:
+                    read_count = int("".join(file))
+            else:
+                read_count = int(gen.run_process(["samtools", "view", "-c", bam_file]))
+                with open(read_count_file_name, "w") as file:
+                    file.write(str(read_count))
 
             #2: intersect the bam with all exon-exon junctions
             #only has to be done once for each bam
-            global_intersect_bam = "{0}_{1}_exon_junctions.bam".format(out_prefix, bam_file_parts[1][:-4])
-            if (bam_file_parts[-1] in ["NA07056.1.M_111124_3.bam", "HG00242.3.M_120202_7.bam", "HG00243.4.M_120208_2.bam"]) or (not os.path.isfile(global_intersect_bam) or overwrite_intersect):
-                #intersect the filtered bam and the ptc exon junctions file
+            global_intersect_bam = "{0}_exon_junction_bams/{1}_exon_junctions.bam".format(out_prefix, bam_file_parts[1][:-4])
+            if not os.path.isfile(global_intersect_bam) or overwrite_intersect:
+                #intersect the filtered bam and the global exon junctions file
+                print(global_intersect_bam)
                 bmo.intersect_bed(bam_file, global_exon_junctions_file, output_file = global_intersect_bam, intersect_bam = True)
 
             #3: filter to relevant exon-exon junctions
