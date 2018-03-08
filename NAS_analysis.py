@@ -161,8 +161,10 @@ def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_j
             ##Intersect junctions and .bam, and write down the overlapping .bam alignments, without counting.
             #this uses intersect bed, with the intersect bam parameter
             intersect_bam = "{0}/{1}_exon_junction_bam_intersect.bam".format(proc_folder, bam_file_parts[1][:-4])
-            #intersect the filtered bam and the ptc exon junctions file
-            bmo.intersect_bed(global_intersect_bam, PTC_exon_junctions_file, output_file = intersect_bam, intersect_bam = True)
+            
+            if not os.path.isfile(intersect_bam):
+            	#intersect the filtered bam and the ptc exon junctions file
+            	bmo.intersect_bed(global_intersect_bam, PTC_exon_junctions_file, output_file = intersect_bam, intersect_bam = True)
 
             #1: count how many reads there are in the sample after filtering to relevant exon-exon junctions but before quality filtering
             read_count_junctions_no_filter = int(gen.run_process(["samtools", "view", "-c", intersect_bam]))
