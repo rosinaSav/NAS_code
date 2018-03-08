@@ -131,15 +131,18 @@ def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_j
         mapq_flag_xt_filtered_bam = "{0}_xt.bam".format(mapq_flag_filtered_bam[:-4])
         mapq_flag_xt_nm_filtered_bam = "{0}_nm.bam".format(mapq_flag_xt_filtered_bam[:-4])
 
-        if not os.path.isfile(mapq_filtered_bam):
+        if (not os.path.isfile(mapq_filtered_bam)) or (bam_file_parts[-1] in ["NA07056.1.M_111124_3.bam", "HG00242.3.M_120202_7.bam", "HG00243.4.M_120208_2.bam"]):
 
             #1: We get a count of the total reads in the sample which can be used for normalisation
+            #I'm inititalizing it to None for safety. That way, if the process fails,
+            #it won't just silently go with whatever the value was at the end of the previous loop.
+            read_count = None
             read_count = int(gen.run_process(["samtools", "view", "-c", bam_file]))
 
             #2: intersect the bam with all exon-exon junctions
             #only has to be done once for each bam
             global_intersect_bam = "{0}_{1}_exon_junctions.bam".format(out_prefix, bam_file_parts[1][:-4])
-            if (not os.path.isfile(global_intersect_bam)) or overwrite_intersect:
+            if (not os.path.isfile(global_intersect_bam)) or overwrite_intersect or (bam_file_parts[-1] in ["NA07056.1.M_111124_3.bam", "HG00242.3.M_120202_7.bam", "HG00243.4.M_120208_2.bam"]):
                 #intersect the filtered bam and the ptc exon junctions file
                 bmo.intersect_bed(bam_file, global_exon_junctions_file, output_file = global_intersect_bam, intersect_bam = True)
 
