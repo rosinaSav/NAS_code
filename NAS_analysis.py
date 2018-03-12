@@ -30,12 +30,12 @@ def run_ptc_simulation_instance(simulations, out_prefix, simulation_output_folde
         #we can tweak these if we start running out of snps
         pseudo_ptc_file = "{0}/pseudo_ptc_file_{1}.txt".format(simulation_instance_folder, simulation_number)
         remaining_snps_file = "{0}/remaining_snps_file_{1}.txt".format(simulation_instance_folder, simulation_number)
-        if (not use_old_sims) or (not(os.path.isfile(pseudo_ptc_file)):
+        if (not use_old_sims) or (not(os.path.isfile(pseudo_ptc_file))):
             so.generate_pseudo_ptc_snps(ptc_file, nonsynonymous_snps_file, pseudo_ptc_file, remaining_snps_file, group_by_gene=False, without_replacement=True, match_allele_frequency=True, match_allele_frequency_window=0.05)
 
         #filter the exon junctions file to only leave those junctions that flank exons retained in the previous step when generating pseudo ptcs
         pseudo_ptc_exon_junctions_file = "{0}/filtered_exon_junctions_{1}.bed".format(simulation_instance_folder, simulation_number)
-        if (not use_old_sims) or (not(os.path.isfile(pseudo_ptc_file)):
+        if (not use_old_sims) or (not(os.path.isfile(pseudo_ptc_file))):
             bo.filter_exon_junctions(exon_junctions_file, pseudo_ptc_file, pseudo_ptc_exon_junctions_file)
 
         #run the bam analysis for each
