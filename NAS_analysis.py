@@ -40,7 +40,7 @@ def run_ptc_simulation_instance(simulations, out_prefix, simulation_output_folde
 
         #run the bam analysis for each
         #(don't parallelize if you're doing the simulations in parallel)
-        kw_dict = {"ptc_snp_simulation": True, "simulation_instance_folder": simulation_instance_folder, "simulation_number": simulation_number, "conservative": use_old_sims}
+        kw_dict = {"ptc_snp_simulation": True, "simulation_instance_folder": simulation_instance_folder, "simulation_number": simulation_number}
         if parallel:
             process_bam_per_individual(bam_files, exon_junctions_file, pseudo_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_ptc_file, remaining_snps_file, out_prefix, kw_dict)
         else:
@@ -148,22 +148,32 @@ def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_j
         if not os.path.isfile(output_file):
 
             #1: We get a count of the total reads in the sample which can be used for normalisation
-            #I'm inititalizing it to None for safety. That way, if the process fails,
+            #I'm initializing it to None for safety. That way, if the process fails,
             #it won't just silently go with whatever the value was at the end of the previous loop.
+            #also, writing it down cause this bit takes forever, don't want to do it again every time.
+            read_count_file_name = "{0}_exon_junction_bams/read_count_sample_name.txt".format(out_prefix)
             read_count = None
-            read_count = int(gen.run_process(["samtools", "view", "-c", bam_file]))
+            if os.path.isfile(read_count_file_name):
+                with open(read_count_file_name) as file:
+                    read_count = int("".join(file))
+            else:
+                read_count = int(gen.run_process(["samtools", "view", "-c", bam_file]))
+                with open(read_count_file_name, "w") as file:
+                    file.write(str(read_count))
 
             #2: intersect the bam with all exon-exon junctions
             #only has to be done once for each bam
             global_intersect_bam = "{0}_exon_junction_bams/{1}_exon_junctions.bam".format(out_prefix, bam_file_parts[1][:-4])
             if not os.path.isfile(global_intersect_bam) or overwrite_intersect:
                 #intersect the filtered bam and the global exon junctions file
+                print(global_intersect_bam)
                 bmo.intersect_bed(bam_file, global_exon_junctions_file, output_file = global_intersect_bam, intersect_bam = True)
 
             #3: filter to relevant exon-exon junctions
             ##Intersect junctions and .bam, and write down the overlapping .bam alignments, without counting.
             #this uses intersect bed, with the intersect bam parameter
             intersect_bam = "{0}/{1}_exon_junction_bam_intersect.bam".format(proc_folder, bam_file_parts[1][:-4])
+            
             #intersect the filtered bam and the ptc exon junctions file
             bmo.intersect_bed(global_intersect_bam, PTC_exon_junctions_file, output_file = intersect_bam, intersect_bam = True)
 
@@ -308,7 +318,7 @@ def main():
         print("Processing RNA-seq data...")
         #we have to do it like this because you can't pass flags into run_in_parallel
         keyword_dict = {"overwrite_intersect": overwrite_intersect}
-        processes = gen.run_in_parallel(bam_files, ["foo", exon_junctions_file, PTC_exon_junctions_file, bam_analysis_folder, PTC_file, syn_nonsyn_file, out_prefix, keyword_dict], process_bam_per_individual)
+        processes = gen.run_in_parallel(bam_files, ["foo", exon_junctions_file, PTC_exon_junctions_file, bam_analysis_folder, PTC_file, syn_nonsyn_file, out_prefix, keyword_dict], process_bam_per_individual, workers = 36)
         for process in processes:
             process.get()
         gen.get_time(start)
