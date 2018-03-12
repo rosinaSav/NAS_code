@@ -16,11 +16,11 @@ perform_tests = function(NAS_data) {
   #TBA: a repeated measures ANOVA type test
   
   print("H: Heterozygotes have higher normalized read count than PTC- homozygotes")
-  print(wilcox.test(NAS_data$norm_count_het_PTC, NAS_data$norm_count_no_PTC, alternative = "l", paired = TRUE)$p.value)
+  print(wilcox.test(NAS_data$norm_count_het_PTC, NAS_data$norm_count_no_PTC, alternative = "g", paired = TRUE)$p.value)
   print("H: PTC+ homozygotes have higher normalized read count than heterozygotes")
-  print(wilcox.test(NAS_data$norm_count_w_PTC, NAS_data$norm_count_het_PTC, alternative = "l", paired = TRUE)$p.value)
+  print(wilcox.test(NAS_data$norm_count_w_PTC, NAS_data$norm_count_het_PTC, alternative = "g", paired = TRUE)$p.value)
   print("H: PTC+ homozygotes have higher normalized read count than PTC- homozygotes")
-  print(wilcox.test(NAS_data$norm_count_w_PTC, NAS_data$norm_count_no_PTC, alternative = "l", paired = TRUE)$p.value)
+  print(wilcox.test(NAS_data$norm_count_w_PTC, NAS_data$norm_count_no_PTC, alternative = "g", paired = TRUE)$p.value)
 }
 
 plot_individual_change = function(NAS_data, w_PTC_name, het_PTC_name, no_PTC_name, title, ylab, threshold, max_value, reverse = FALSE) {
@@ -152,11 +152,9 @@ plot_individual_change(NAS_data, "norm_count_w_PTC", "norm_count_het_PTC", "norm
 plot_individual_change(neg_control, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "Exons with >0.02 change between any two categories (negative control)", "RPMskip", 0.02, 1.12, reverse = TRUE)
 
 #ESE analysis 
-#NAS_ESEs_data = prepare_dataset("results/clean_run/clean_run_CaceresHurstESEs_INT3_final_output.txt")
-NAS_ESEs_data = prepare_dataset("results/clean_run/clean_run_merged_no_Ke_ESEs_final_output.txt")
+NAS_ESEs_data = prepare_dataset("results/clean_run/clean_run_CaceresHurstESEs_INT3_final_output.txt")
 perform_tests(NAS_ESEs_data)
-#NAS_no_ESEs_data = prepare_dataset("results/clean_run/clean_run_CaceresHurstESEs_INT3_complement_final_output.txt")
-NAS_no_ESEs_data = prepare_dataset("results/clean_run/clean_run_merged_no_Ke_ESEs_complement_final_output.txt")
+NAS_no_ESEs_data = prepare_dataset("results/clean_run/clean_run_CaceresHurstESEs_INT3_complement_final_output.txt")
 perform_tests(NAS_no_ESEs_data)
 wilcox.test(NAS_ESEs_data$PSI_no_PTC - NAS_ESEs_data$PSI_het_PTC, NAS_no_ESEs_data$PSI_no_PTC - NAS_no_ESEs_data$PSI_het_PTC, alternative = "greater")
 wilcox.test(NAS_ESEs_data$norm_count_no_PTC - NAS_ESEs_data$norm_count_het_PTC, NAS_no_ESEs_data$norm_count_no_PTC - NAS_no_ESEs_data$norm_count_het_PTC, alternative = "less")
