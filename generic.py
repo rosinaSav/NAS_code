@@ -321,6 +321,14 @@ def list_to_dict(input_list, index1, index2, as_list = False, uniquify = False, 
         output_dict = {i: sorted(list(set(output_dict[i]))) for i in output_dict}
     return(output_dict)
 
+def motif_to_regex(motifs):
+    '''
+    Convert a string into a lookahead regex where only the first base
+    is matched and the rest is in the lookahead.
+    '''
+    regex = [re.compile("".join([i[0],"(?=",i[1:],")"])) for i in motifs]
+    return(regex)
+
 def parse_arguments(description, arguments, floats = None, flags = None, ints = None):
     '''
     Use argparse to parse a set of input arguments from the command line.
@@ -493,12 +501,12 @@ def run_process(arguments, return_string = True, input_to_pipe = None, return_er
     else:
         return(stdout)
 
-def update_counter(counter, step):
+def update_counter(counter, step, string = None):
     '''
     Print out and update counter.
     '''
     if counter % step == 0:
-        print(counter)
+        print("{0}{1}".format(string, counter))
     counter = counter + 1
     return(counter)
 
