@@ -340,12 +340,12 @@ def count_junction_reads(sam, junctions, outfile, read_count):
             cigar = line[5]
             chrom = line[2]
             #0, 1 or N
-            if "|" in line[0]:
-                #just a dummy in case the file isn't phased
-                #it'll act like all the reads are phase 0
-                haplotype = "0"
-            else:
+            #if the file isn't phased
+            #it'll act like all the reads are phase 0
+            try:
                 haplotype = (line[0].split("|"))[1]
+            except IndexError:
+                haplotype = "0"
             if chrom in junctions:
                 #get intron position in chromosome coordinates based on the alignment cigar
                 putative_junctions = map_intron_from_cigar(cigar, sam_start)
