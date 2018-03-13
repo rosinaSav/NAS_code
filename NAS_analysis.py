@@ -179,14 +179,10 @@ def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_j
 
             #1: count how many reads there are in the sample after filtering to relevant exon-exon junctions but before quality filtering
             read_count_junctions_no_filter = int(gen.run_process(["samtools", "view", "-c", intersect_bam]))
-
-
             #4. filter .bam alignments by quality.
             #takes both upper and lower bam thresholds
             #outputs bam file with "_quality_filter_{lower_lim}_{upper_lim}" appended
             # need to do this twice and merge, so we use both intervals used by Geuvadis
-
-
             #set the mapq filter parameters here
             mapq_intervals = [[251, 255], [175, 181]]
             mapq_filter_filelist = []

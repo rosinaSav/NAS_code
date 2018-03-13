@@ -1,12 +1,13 @@
 import bed_ops as bo
+import copy
 import csv
 import generic as gen
 import numpy as np
 import os
 import random
 import re
+import sys
 import time
-import copy
 
 def bam_flag_filter(input_bam, output_bam, get_paired_reads=None, get_unpaired_reads=None, get_mapped_reads=None, get_unmapped_reads=None, get_proper_paired_reads=None, get_improper_paired_reads=None, get_mate_mapped_reads=None, get_mate_unmapped_reads=None):
     '''
@@ -441,6 +442,7 @@ def map_from_cigar(cigar, sam_start, focal_pos):
                 query_count = query_count + 1
             if letter in consume_ref:
                 ref_count = ref_count + 1
+    print(query_count)
 
 def map_intron_from_cigar(cigar, sam_start):
     '''
@@ -515,12 +517,10 @@ def phase_bams(snps, bam, sample_name, out_sam):
             if "0" in genotype and "1" in genotype:
                 sam_read_name = " ".join([read_name, str(int(read[1]) + 1)])
                 cigar, seq = sam[sam_read_name]
-##                print("\n")
-##                print(read)
-##                print(cigar)
-##                print(seq)
-##                print(map_from_cigar(cigar, int(read[1]) + 1, int(read[13])))
-##                print(seq[map_from_cigar(cigar, int(read[1]) + 1, int(read[13]))])
+                #print("\n")
+                #print(read)
+                #print(cigar)
+                #print(seq)
                 current_base = seq[map_from_cigar(cigar, int(read[1]) + 1, int(read[13]))]
                 reference = read[15]
                 variant = read[16]

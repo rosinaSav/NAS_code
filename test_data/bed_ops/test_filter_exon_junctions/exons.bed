@@ -1,3 +1,4 @@
+echrom	estart	eend	eID	feature	strand
 chr3	129	600	ENST06.2	.	+
 chr1	400	450	ENST02.4	.	+
 chr1	963	977	ENST02.9	.	+

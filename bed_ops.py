@@ -418,6 +418,42 @@ def filter_bed_from_fasta(bed, fasta, out_bed, families_file = None):
             os.remove(out_bed)
             shutil.move(temp_file_name, out_bed)
 
+def filter_exon_junctions(junctions_file, exons_file, out_file):
+        '''
+        Given two bed files, one containing exon junction coordinates and one containing exon coordinates,
+        filter the former to only leave intervals that either overlap exons in the latter or form part of an exon-exon
+        junction with an exon that appears in the exon file.
+        '''
+        #read in exons file
+        exons = gen.read_many_fields(exons_file, "\t")
+        #only leave name field, parse, remove empty lines
+        exons = [i[3].split(".") for i in exons if len(i) > 1]
+        #exons[1:] because the first line is the header
+        exons = gen.list_to_dict(exons[1:], 0, 1, as_list = True)
+        #open output file
+        with open(out_file, "w") as o_file:
+                #loop over exon junctions file
+                with open(junctions_file) as ej_file:
+                        for line in ej_file:
+                                #ignore empty lines
+                                if len(line) > 1:
+                                        name_field = line.split("\t")[3]
+                                        name_field = name_field.split(".")
+                                        #check if the transcript appears
+                                        if name_field[0] in exons:
+                                                #check if the exon appears
+                                                if name_field[1] in exons[name_field[0]]:
+                                                        o_file.write(line)
+                                                #check if the upstream/downstream exon appears (depending on whether it's the 3' or 5' part of the junction)
+                                                else:
+                                                        if name_field[2] == "3":
+                                                                if str(int(name_field[1]) + 1) in exons[name_field[0]]:
+                                                                        o_file.write(line)
+                                                        #elif safer than else
+                                                        elif name_field[2] == "5":
+                                                                if str(int(name_field[1]) - 1) in exons[name_field[0]]:
+                                                                        o_file.write(line)
+
 def filter_fasta_intervals_from_fasta(intervals_fasta, fasta, output):
         '''
         Given a fasta file and a fasta intervals file, filter the intervals file to only leave records where the 'name' field appears
@@ -456,41 +492,6 @@ def filter_fasta_intervals_from_fasta(intervals_fasta, fasta, output):
             os.remove(output)
             shutil.move(temp_file_name, output)
 
-def filter_exon_junctions(junctions_file, exons_file, out_file):
-        '''
-        Given two bed files, one containing exon junction coordinates and one containing exon coordinates,
-        filter the former to only leave intervals that either overlap exons in the latter or form part of an exon-exon
-        junction with an exon that appears in the exon file.
-        '''
-        #read in exons file
-        exons = gen.read_many_fields(exons_file, "\t")
-        #only leave name field, parse, remove empty lines
-        exons = [i[3].split(".") for i in exons if len(i) > 1]
-        #exons[1:] because the first line is the header
-        exons = gen.list_to_dict(exons[1:], 0, 1, as_list = True)
-        #open output file
-        with open(out_file, "w") as o_file:
-                #loop over exon junctions file
-                with open(junctions_file) as ej_file:
-                        for line in ej_file:
-                                #ignore empty lines
-                                if len(line) > 1:
-                                        name_field = line.split("\t")[3]
-                                        name_field = name_field.split(".")
-                                        #check if the transcript appears
-                                        if name_field[0] in exons:
-                                                #check if the exon appears
-                                                if name_field[1] in exons[name_field[0]]:
-                                                        o_file.write(line)
-                                                #check if the upstream/downstream exon appears (depending on whether it's the 3' or 5' part of the junction)
-                                                else:
-                                                        if name_field[2] == "3":
-                                                                if str(int(name_field[1]) + 1) in exons[name_field[0]]:
-                                                                        o_file.write(line)
-                                                        #elif safer than else
-                                                        elif name_field[2] == "5":
-                                                                if str(int(name_field[1]) - 1) in exons[name_field[0]]:
-                                                                        o_file.write(line)
 def get_descriptions(names, gtf, out_file):
         '''
         Given a set of Ensembl transcript identifiers and a GTF file,

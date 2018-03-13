@@ -408,7 +408,7 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
                 snp_count += 1
                 #check that the snp is only one base
                 if len(ref_base) == 1:
-                    #from RS: filter out polyomrphisms with more than 2 segregating alleles
+                    #from RS: filter out polymorphisms with more than 2 segregating alleles
                     #need to check the number both before and after filtering out non-canonical bases
                     #also check whether the variant type is annotated as a snp
                     if var_base_count == 1 and len(var_base) == 1 and var_type and var_type == "SNP":
