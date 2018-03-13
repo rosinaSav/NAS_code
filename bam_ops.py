@@ -14,7 +14,7 @@ def bam_flag_filter(input_bam, output_bam, get_paired_reads=None, get_unpaired_r
     Filters bam reads by flag.
     get_paired_reads: get all reads from paired-end (or multiple-segment) sequencing technology
     get_unpaired_reads: get all reads that not from paired-end (or multiple-segment) sequencing technology
-    get_mapped_reads: get all reads where the segment is mapped
+    get_mapped_reads: get all reads where the segment is maspped
     get_unmapped_reads: get all reads where the segment is unmapped
     get_proper_paired_reads: get all reads that where each segment is properly aligned according to the aligner
     get_improper_paired_reads: get all reads that where each segment is not properly aligned according to the aligner
@@ -340,7 +340,12 @@ def count_junction_reads(sam, junctions, outfile, read_count):
             cigar = line[5]
             chrom = line[2]
             #0, 1 or N
-            haplotype = (line[0].split("|"))[1]
+            if "|" in line[0]:
+                #just a dummy in case the file isn't phased
+                #it'll act like all the reads are phase 0
+                haplotype = "0"
+            else:
+                haplotype = (line[0].split("|"))[1]
             if chrom in junctions:
                 #get intron position in chromosome coordinates based on the alignment cigar
                 putative_junctions = map_intron_from_cigar(cigar, sam_start)
