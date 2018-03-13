@@ -110,6 +110,10 @@ def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_j
         overwrite_intersect = kw_dict["overwrite_intersect"]
     else:
         overwrite_intersect = False
+    if "phase" in kw_dict:
+        phase = kw_dict["phase"]
+    else:
+        phase = False
 
     gen.create_directory("{0}_exon_junction_bams".format(out_prefix))
 
@@ -214,11 +218,14 @@ def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_j
                                                                                                                       
             #convert to sam format and phase reads
             intersect_sam = "{0}_phased.sam".format(mapq_flag_xt_nm_filtered_bam[:-4])
-            temp_snp_file = "temp_data/snps{0}.txt".format(random.random())
-            so.merge_and_header(PTC_file, syn_nonsyn_file, temp_snp_file)
-            bmo.phase_bams(temp_snp_file, mapq_flag_xt_nm_filtered_bam, sample_name, intersect_sam)
-            gen.remove_file(temp_snp_file)
-
+            if phase:
+                temp_snp_file = "temp_data/snps{0}.txt".format(random.random())
+                so.merge_and_header(PTC_file, syn_nonsyn_file, temp_snp_file)
+                bmo.phase_bams(temp_snp_file, mapq_flag_xt_nm_filtered_bam, sample_name, intersect_sam)
+                gen.remove_file(temp_snp_file)
+            else:
+                gen.run_process(["samtools", "view", mapq_flag_xt_nm_filtered_bam], file_for_output = intersect_sam)
+                
             #6. count the number of reads supporting either the skipping or the inclusion of each exon
             junctions = bmo.read_exon_junctions(PTC_exon_junctions_file)
             bmo.count_junction_reads(intersect_sam, junctions, output_file, read_count)
