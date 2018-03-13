@@ -41,12 +41,6 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder):
         mapq_filtered_bam = "{0}/{1}_mapq_filtered.bam".format(bam_file_parts[0], bam_file_parts[1])
         bmo.merge_bams(mapq_filter_filelist, mapq_filtered_bam)
 
-
-        '''
-        **********
-        MISSING: Find cases where both of the reads in a pair have been retained in step 1, and randomly remove one of them.
-        **********
-        '''
         #2. Get cases where there are both read pairs, retain 1.
         # Leave: unpaired reads, single reads from paired reads (all with the mapped flag?)
         mapq_filtered_flag_filtered_bam = "{0}_flag_filtered.bam".format(mapq_filtered_bam[-4:])
@@ -54,16 +48,16 @@ def process_bam_per_individual(bam_files, PTC_exon_junctions_file, out_folder):
 
         #extra1: We can then get a count of the total reads possible which can be used for normalisation
 
-		##3. Intersect junctions and .bam, and write down the overlapping .bam alignments, without counting.
-		#this uses intersect bed, with the intersect bam paramter
-		bmo.intersect_bed(PTC_exon_junctions_file, mapq_filtered_flag_filtered_bam, output_file="{0}_exon_junction_filtered_bam_intersect.bam".format(mapq_filtered_flag_filtered_bam[-4:]), intersect_bam=True)
+	##3. Intersect junctions and .bam, and write down the overlapping .bam alignments, without counting.
+	#this uses intersect bed, with the intersect bam paramter
+	bmo.intersect_bed(PTC_exon_junctions_file, mapq_filtered_flag_filtered_bam, output_file="{0}_exon_junction_filtered_bam_intersect.bam".format(mapq_filtered_flag_filtered_bam[-4:]), intersect_bam=True)
 
 
 
 
-                #4. count the number of reads supporting either the skipping or the inclusion of each exon
-                junctions = bmo.read_exon_junctions(PTC_exon_junctions_file)
-                bmo.count_junction_reads(clean_sam, junctions, "{0}/{1}.txt".format(out_folder, bam_file.split(".")[0])
+        #4. count the number of reads supporting either the skipping or the inclusion of each exon
+        junctions = bmo.read_exon_junctions(PTC_exon_junctions_file)
+        bmo.count_junction_reads(clean_sam, junctions, "{0}/{1}.txt".format(out_folder, bam_file.split(".")[0])
 
 def main():
 
