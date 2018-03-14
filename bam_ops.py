@@ -175,12 +175,13 @@ def bam_quality_filter(input_bam, output_bam, quality_greater_than_equal_to=None
         samtools_args.extend(["-q", upper_limit, input_bam, "-U", output_bam])
         gen.run_process(samtools_args)
 
-def compare_PSI(SNP_file, bam_folder, out_file, round_norm_count = None):
+def compare_PSI(SNP_file, bam_folder, out_file, round_norm_count = None, sim_number = None):
     '''
     Given PTC-generating SNPs, as well as read counts at exon-exon junctions, compare exon skipping rates
     within samples that do or do not have a PTC within a given exon.
     If round_norm_count is specified, the normalized read counts will be rounded to
     that number of digits after the decimal point.
+    If this is a simulation, specify the simulation number.
     '''
     SNPs = gen.read_many_fields(SNP_file, "\t")
     samples = SNPs[0][15:-1]
@@ -195,9 +196,11 @@ def compare_PSI(SNP_file, bam_folder, out_file, round_norm_count = None):
         file_name = "{0}/{1}.txt".format(bam_folder, sample)
         #in case you're analyzing simulation output
         if not os.path.isfile(file_name):
-            file_name = "{0}/{1}_simulation_{1}.txt".format(bam_folder, sample)
-        #maybe that bam simply hasn't been processed yet, skip it if that's the case
-        if os.path.isfile(file_name):
+            file_name = "{0}/{1}_simulation_{2}.txt".format(bam_folder, sample, sim_number)
+        
+        if not os.path.isfile(file_name):
+            print("{0} isn't there.".format(sample))
+        else:
             with open(file_name) as file:
                 for line in file:
                     line = line.split("\t")

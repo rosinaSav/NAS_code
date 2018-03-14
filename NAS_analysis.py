@@ -50,7 +50,7 @@ def run_ptc_simulation_instance(simulations, out_prefix, simulation_output_folde
 
         #process final psi for simulation
         final_file = "{0}/final_output_simulation_{1}.txt".format(simulation_bam_analysis_output_folder, simulation_number)
-        bmo.compare_PSI(pseudo_ptc_file, simulation_bam_analysis_output_folder, final_file)
+        bmo.compare_PSI(pseudo_ptc_file, simulation_bam_analysis_output_folder, final_file, sim_number = simulation_number)
 
 
 def ptc_snp_simulation(out_prefix, simulation_output_folder, ptc_file, syn_nonsyn_file, exon_junctions_file, bam_files, required_simulations, use_old_sims = False):
