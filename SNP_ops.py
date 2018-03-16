@@ -78,7 +78,7 @@ def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, ptc_output_file, 
     '''
 
     if (match_allele_frequency and not match_allele_frequency_window) or (match_allele_frequency_window and not match_allele_frequency):
-        print("_match_allele_frequency_ and _match_allele_frequency_threshold_ must both be set")
+        print("_match_allele_frequency_ and _match_allele_frequency_window_ must both be set")
         raise Exception
 
     #set up a default dictionary to hold indices of positions in list of alternative snps,
@@ -129,7 +129,7 @@ def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, ptc_output_file, 
     total_counter = 0
 
     #create an empty list to hold the alternative snps chosen
-    pseudo_ptc_indices = []
+    pseudo_ptc_indices = {}
     #get the real ptc snps
     ptc_snps = gen.read_many_fields(input_ptc_snps, "\t")
     #backwards logic but makes more sense in the flags
@@ -140,6 +140,8 @@ def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, ptc_output_file, 
         if i == 0 and ptc_header:
             pass
         else:
+
+            ptc_id = ptc[14]
 
             #if group_by_gene, get the dict for the particular gene id
             if group_by_gene:
@@ -177,15 +179,20 @@ def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, ptc_output_file, 
             alt_snp_choices_indices = range(len(alt_snp_choices))
             #pick one of those indices
             alt_snp_choice_index = np.random.choice(alt_snp_choices_indices, 1)[0]
-            #add the index of the snp to the list of chosen snps
-            pseudo_ptc_indices.append(alt_snp_choices[alt_snp_choice_index][0])
+            #add the index of the snp to the dictionary of chosen snps
+            #it's a dictionary of lists because some SNPs might be sampled several times when sampling
+            #with replacement
+            chosen_abs_index = alt_snp_choices[alt_snp_choice_index][0]
+            if chosen_abs_index not in pseudo_ptc_indices:
+                pseudo_ptc_indices[chosen_abs_index] = []
+            pseudo_ptc_indices[chosen_abs_index].append(ptc_id)
             #if no replacement, remove snp from the snp choices list
             if (not replacement) and (not empty_gene):
                 del alternative_snp_indices[gene_id][ptc[9]][ptc[10]][alt_snp_choice_index]
 
 ##    print("Genes with no non-synonymous SNPs: {0}/{1} ({2}%).".format(empty_counter, total_counter, round(empty_counter / total_counter * 100, 3)))
 
-    #open a pesudo ptc snps output file and other snps fileoutput file
+    #open a pesudo ptc snps output file and other snps output file
     pseudo_ptc_output = open(ptc_output_file, "w")
     other_snps_output = open(other_snps_file, "w")
 
@@ -200,15 +207,15 @@ def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, ptc_output_file, 
         else:
             if i in pseudo_ptc_indices:
                 #need this because if we are doing with replacement, the snp may appear more than once
-                count = pseudo_ptc_indices.count(i)
-                for j in range(count):
-                    pseudo_ptc_output.write("{0}\n".format("\t".join(alternative_snps[i])))
+                for ptc_id in pseudo_ptc_indices[i]:
+                    snp_to_write = alternative_snps[i].copy()
+                    snp_to_write[14] = ptc_id
+                    pseudo_ptc_output.write("{0}\n".format("\t".join(snp_to_write)))
             else:
                 other_snps_output.write("{0}\n".format("\t".join(alternative_snps[i])))
 
     pseudo_ptc_output.close()
     other_snps_output.close()
-
 
 def get_snp_relative_cds_position(snp_exon_relative_positions, snp_cds_position_output, full_bed):
     '''
@@ -377,7 +384,8 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
     var_type_reg = re.compile("VT=([A-z]+)")
     ancestral_reg = re.compile("AA=([A-z]+)")
 
-
+    ptc_id_counter = 1
+    other_id_counter = 1
     with open(ptcs_output_file, "w") as ptc_outputs, open(others_output_file, "w") as other_outputs:
         refbase_error = 0
         snp_count = 0
@@ -438,8 +446,12 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
                             snp[13] = "CDS_CODON={0}$SNP_CODON={1}$AA={2}".format(cds_codon, snp_codon, ancestral_allele.group(1))
                             snp[12] = mutation_type
                             if(mutation_type == "ptc"):
+                                snp[14] = str(ptc_id_counter)
+                                ptc_id_counter = ptc_id_counter + 1
                                 ptc_outputs.write("{0}\n".format("\t".join(snp)))
                             else:
+                                snp[14] = str(other_id_counter)
+                                other_id_counter = other_id_counter + 1
                                 other_outputs.write("{0}\n".format("\t".join(snp)))
 
     if snp_count:
