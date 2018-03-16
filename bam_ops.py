@@ -346,8 +346,6 @@ def count_junction_reads(sam, junctions, outfile, read_count):
                 haplotype = "0"
             else:
                 haplotype = (line[0].split("|"))[1]
-            except IndexError:
-                haplotype = "0"
             if chrom in junctions:
                 #get intron position in chromosome coordinates based on the alignment cigar
                 putative_junctions = map_intron_from_cigar(cigar, sam_start)
