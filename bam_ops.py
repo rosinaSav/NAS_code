@@ -185,6 +185,7 @@ def compare_PSI(SNP_file, bam_folder, out_file, round_norm_count = None):
     samples = SNPs[0][15:-1]
     #note that if two SNPs appear in the same exon, the one that appears later
     #will overwrite the one that appears first so only one of the SNPs will be analyzed
+    SNP_ids = {i[3]: i[14] for i in SNPs[1:]}
     SNPs = {i[3]: i[15:-1] for i in SNPs[1:]}
     results = {i: {"PSI_w_PTC": [], "PSI_het_PTC": [], "PSI_no_PTC": [], "norm_count_w_PTC": [],
                    "norm_count_het_PTC": [], "norm_count_no_PTC": [],
@@ -228,7 +229,7 @@ def compare_PSI(SNP_file, bam_folder, out_file, round_norm_count = None):
                                 results[exon]["PSI_no_PTC"].append(included/(skipped + included))
                                 results[exon]["norm_count_no_PTC"].append(skipped/total)
                                 results[exon]["norm_count_no_PTC_incl"].append(included/total)
-    header = "exon\tptc_count\tsample_count\tPSI_w_PTC\tPSI_het_PTC\tPSI_no_PTC\tnorm_count_w_PTC\tnorm_count_het_PTC\tnorm_count_no_PTC\tnorm_count_w_PTC_incl\tnorm_count_het_PTC_incl\tnorm_count_no_PTC_incl\n"
+    header = "exon\tptc_count\tsample_count\tPSI_w_PTC\tPSI_het_PTC\tPSI_no_PTC\tnorm_count_w_PTC\tnorm_count_het_PTC\tnorm_count_no_PTC\tnorm_count_w_PTC_incl\tnorm_count_het_PTC_incl\tnorm_count_no_PTC_incl\tid\n"
     header_split = header.split("\t")
     header_split[-1] = header_split[-1].rstrip("\n")
     with open(out_file, "w") as file:
@@ -244,13 +245,9 @@ def compare_PSI(SNP_file, bam_folder, out_file, round_norm_count = None):
                         if round_norm_count:
                             to_write = round(to_write, round_norm_count)
                     file.write("{0}\t".format(to_write))
-                to_write = results[exon][header_split[-1]]
-                to_write = np.mean(to_write)
-                if round_norm_count:
-                    to_write = round(to_write, round_norm_count)
-                file.write("{0}\n".format(to_write))
+                file.write("{0}\n".format(SNP_ids[exon]))
 
-def compare_PSI_haplotypes(SNP_file, bam_folder, out_file):
+def compare_PSI_haplotypes(SNP_file, bam_folder, out_file, round_norm_count = False):
     '''
     Given PTC-generating SNPs, as well as read counts at exon-exon junctions, compare exon skipping rates
     within samples that do or do not have a PTC within a given exon. Consider the two haplotypes in a sample as separate data points.
@@ -260,6 +257,7 @@ def compare_PSI_haplotypes(SNP_file, bam_folder, out_file):
     samples = SNPs[0][15:-1]
     #note that if two SNPs appear in the same exon, the one that appears later
     #will overwrite the one that appears first so only one of the SNPs will be analyzed
+    SNP_ids = {i[3]: i[14] for i in SNPs[1:]}
     SNPs = {i[3]: i[15:-1] for i in SNPs[1:]}
     results = {i: {"PSI_w_PTC": [], "PSI_no_PTC": [], "norm_count_w_PTC": [],
                    "norm_count_no_PTC": [], "ptc_count": 0,
@@ -288,7 +286,7 @@ def compare_PSI_haplotypes(SNP_file, bam_folder, out_file):
                             else:
                                 results[exon]["PSI_no_PTC"].append(included[haplotype]/(skipped[haplotype] + included[haplotype]))
                                 results[exon]["norm_count_no_PTC"].append(skipped[haplotype]/total)
-    header = "exon\tptc_count\tsample_count\tPSI_w_PTC\tPSI_no_PTC\tnorm_count_w_PTC\tnorm_count_no_PTC\n"
+    header = "exon\tptc_count\tsample_count\tPSI_w_PTC\tPSI_no_PTC\tnorm_count_w_PTC\tnorm_count_no_PTC\tid\n"
     header_split = header.split("\t")
     header_split[-1] = header_split[-1].rstrip("\n")
     with open(out_file, "w") as file:
@@ -300,12 +298,11 @@ def compare_PSI_haplotypes(SNP_file, bam_folder, out_file):
                 for info in header_split[1:-1]:
                     to_write = results[exon][info]
                     if type(to_write) == list:
-                        to_write = round(np.mean(to_write), 3)
+                        to_write = np.mean(to_write)
+                        if round_norm_count:
+                            to_write = round(to_write, round_norm_count)
                     file.write("{0}\t".format(to_write))
-                to_write = results[exon][header_split[-1]]
-                to_write = round(np.mean(to_write), 3)
-                file.write("{0}\n".format(to_write))
-
+                file.write("{0}\n".format(SNP_ids[exon]))
 
 def convert2bed(input_file_name, output_file_name, group_flags = None):
     '''
@@ -339,7 +336,7 @@ def count_junction_reads(sam, junctions, outfile, read_count):
             cigar = line[5]
             chrom = line[2]
             #0, 1 or N
-            if "|" in line[0]:
+            if "|" not in line[0]:
                 #just a dummy in case the file isn't phased
                 #it'll act like all the reads are phase 0
                 haplotype = "0"
