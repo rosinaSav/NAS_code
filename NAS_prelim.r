@@ -6,6 +6,54 @@ compare_the_two_measures = function(NAS_data, title) {
   text(x = 10, y = 1, labels = paste("rho ~ ", round(cor_test$estimate, 3), "\np ~ ", round(cor_test$p.value, 3), sep = ""), adj = 0, cex = 1.3)
 }
 
+get_n_t =  function(feature1, feature2, neg_control, NAS_data, title, swap = FALSE, big_only = FALSE) {
+  threshold = 0
+  y_pos = 60
+  if (big_only != FALSE) {
+    threshold = big_only
+    y_pos = 10
+  }
+  if (swap == TRUE) {
+    temp = feature1
+    feature1 = feature2
+    feature2 = temp
+  }
+  n_t = rep(NA, length(neg_control))
+  for (index in 1:length(neg_control)) {
+    true_diff = NAS_data[index, feature1] - NAS_data[index, feature2]
+    if (abs(true_diff) >= threshold) {
+      sim_diffs = neg_control[[index]][feature1] - neg_control[[index]][feature2]
+      sim_diffs = sim_diffs[!is.na(sim_diffs)]
+      n = sum((true_diff > sim_diffs) & (true_diff != sim_diffs))
+      t = length(sim_diffs[true_diff != sim_diffs])
+      n_t[index] = n/t      
+    }
+  }  
+  hist(n_t, col = "RoyalBlue", breaks = 20, main = title, xlab = "Proportion of simulants that show an effect smaller or equal to true effect.")
+  abline(v = 0.5, lty = 2, lwd = 2)
+  p = binom.test(sum((n_t > 0.5) & (!is.na(n_t))), sum(!is.na(n_t)), alternative = "g")$p.value
+  text(0.7, y_pos, label = paste("p ~ ", round(p, 3), sep = ""), cex = 2)
+  return(p)
+}
+
+get_n_t_visual =  function(feature1, feature2, neg_control, NAS_data, swap = FALSE) {
+  par(mfrow = c(4, 4))
+  if (swap == TRUE) {
+    temp = feature1
+    feature1 = feature2
+    feature2 = temp
+  }
+  for (index in 1:length(neg_control)) {
+    true_diff = NAS_data[index, feature1] - NAS_data[index, feature2]
+    sim_diffs = neg_control[[index]][feature1] - neg_control[[index]][feature2]
+    sim_diffs = sim_diffs[!is.na(sim_diffs)]
+    x_min = min(sim_diffs, true_diff)
+    x_max = max(sim_diffs, true_diff)
+    hist(sim_diffs, xlim = c(x_min, x_max), breaks = 20, col = "RoyalBlue", main = "")
+    abline(v = true_diff, lwd = 2, col = "orange")
+  }
+}
+
 perform_tests = function(NAS_data) {
   print("H: Heterozygotes have lower PSI than PTC- homozygotes")
   print(wilcox.test(NAS_data$PSI_het_PTC, NAS_data$PSI_no_PTC, alternative = "l", paired = TRUE)$p.value)
@@ -100,34 +148,55 @@ prepare_dataset = function(datafile) {
     NAS_data$norm_count_het_PTC_incl = NAS_data$norm_count_het_PTC_incl * 1000000
     NAS_data$norm_count_no_PTC_incl = NAS_data$norm_count_no_PTC_incl * 1000000
   }
+  NAS_data = NAS_data[order(NAS_data$id),]
   return(NAS_data)
+}
+
+read_in_simulations = function(simulant_prefix, simulant_number, ids, column_names) {
+  sim_mat = matrix(NA, 1, 13)
+  colnames(sim_mat) = column_names
+  out_list = rep(list(sim_mat), length(ids))
+  for (sim in 1:simulant_number) {
+    print(sim)
+    current_data = read.csv(paste(simulant_prefix, sim, ".txt", sep = ""), header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+    for (exon in 1:dim(current_data)[1]) {
+      current_id = current_data[exon, "id"]
+      if (current_id %in% ids) {
+        out_list[[match(current_id, ids)]] = rbind(out_list[[match(current_id, ids)]], current_data[exon, ])
+      }
+    }
+  }
+  return(out_list)
 }
 
 chosen_colour = "RoyalBlue"
 
 #PSI
 NAS_data = prepare_dataset("results/clean_run/clean_run_final_output.txt")
-neg_control = prepare_dataset("results/clean_run/clean_run_simulate_ptc_snps_bam_analysis/final_output_simulation_1.txt")
+neg_control = read_in_simulations("results/clean_run/simulation_output/final_output_simulation_", 30, NAS_data$id, colnames(NAS_data))
 perform_tests(NAS_data)
-perform_tests(neg_control)
 summary(NAS_data)
-summary(neg_control)
-par(mfrow = c(2, 3))
+
+par(mfrow = c(2, 2))
+p_PSI = get_n_t("PSI_no_PTC", "PSI_het_PTC", neg_control, NAS_data, "PSI-/- - PSI-/+", swap = FALSE)
+p_RPMskip = get_n_t("norm_count_no_PTC", "norm_count_het_PTC", neg_control, NAS_data, "RPMskip-/- - RPMskip-/+", swap = TRUE)
+p_PSI_big = get_n_t("PSI_no_PTC", "PSI_het_PTC", neg_control, NAS_data, "PSI-/- - PSI-/+ (5+)", swap = FALSE, big_only = 5)
+p_RPMskip_big = get_n_t("norm_count_no_PTC", "norm_count_het_PTC", neg_control, NAS_data, "RPMskip-/- - RPMskip-/+ (0.05+)", swap = TRUE, big_only = 0.05)
+
+get_n_t_visual("PSI_no_PTC", "PSI_het_PTC", neg_control, NAS_data, swap = FALSE)
+get_n_t_visual("norm_count_no_PTC", "norm_count_het_PTC", neg_control, NAS_data, swap = TRUE)
+
+par(mfrow = c(1, 3))
 hist(NAS_data$PSI_no_PTC, main = "PTC-/-", xlab = "PSI", col = chosen_colour, breaks = 20)
 hist(NAS_data$PSI_het_PTC, main = "PTC-/+", xlab = "PSI", col = chosen_colour, breaks = 20)
 hist(NAS_data$PSI_w_PTC, main = "PTC+/+", xlab = "PSI", col = chosen_colour, breaks = 20)
-hist(neg_control$PSI_no_PTC, main = "PTC-/- (neg. control)", xlab = "PSI", col = chosen_colour, breaks = 20)
-hist(neg_control$PSI_het_PTC, main = "PTC-/+ (neg. control)", xlab = "PSI", col = chosen_colour, breaks = 20)
-hist(neg_control$PSI_w_PTC, main = "PTC+/+ (neg.control)", xlab = "PSI", col = chosen_colour, breaks = 20)
 
-par(mfrow = c(2,2))
+par(mfrow = c(1,2))
 hist(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC, breaks = 100, col = chosen_colour, main = "Is PSI higher for PTC-/PTC- than for PTC-/PTC+?", xlab = "PSI(-/-) - PSI(-/+)")
 hist(NAS_data$PSI_het_PTC - NAS_data$PSI_w_PTC, breaks = 100, col = chosen_colour, main = "Is PSI higher for PTC-/PTC+ than for PTC+/PTC+?", xlab = "PSI(-/+) - PSI(+/+)")
-hist(neg_control$PSI_no_PTC - neg_control$PSI_het_PTC, breaks = 100, col = chosen_colour, main = "Negative control", xlab = "PSI(-/-) - PSI(-/+)")
-hist(neg_control$PSI_het_PTC - neg_control$PSI_w_PTC, breaks = 100, col = chosen_colour, main = "Negative control", xlab = "PSI(-/+) - PSI(+/+)")
 
+graphics.off()
 plot_individual_change(NAS_data, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "Exons with >5% change between any two categories", "PSI", 5, 100)
-plot_individual_change(neg_control, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "Exons with >2.75% change between any two categories (negative control)", "PSI", 2.75, 100)
 
 #RPMskip
 par(mfrow = c(1, 2))
