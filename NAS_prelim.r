@@ -6,7 +6,7 @@ compare_the_two_measures = function(NAS_data, title) {
   text(x = 10, y = 1, labels = paste("rho ~ ", round(cor_test$estimate, 3), "\np ~ ", round(cor_test$p.value, 3), sep = ""), adj = 0, cex = 1.3)
 }
 
-perform_tests = function(NAS_data) {
+perform_tests = function(NAS_data, neg_control) {
   print("H: Heterozygotes have lower PSI than PTC- homozygotes")
   print(wilcox.test(NAS_data$PSI_het_PTC, NAS_data$PSI_no_PTC, alternative = "l", paired = TRUE)$p.value)
   print("H: PTC+ homozygotes have lower PSI than heterozygotes")
@@ -21,6 +21,30 @@ perform_tests = function(NAS_data) {
   print(wilcox.test(NAS_data$norm_count_w_PTC, NAS_data$norm_count_het_PTC, alternative = "g", paired = TRUE)$p.value)
   print("H: PTC+ homozygotes have higher normalized read count than PTC- homozygotes")
   print(wilcox.test(NAS_data$norm_count_w_PTC, NAS_data$norm_count_no_PTC, alternative = "g", paired = TRUE)$p.value)
+}
+
+plot_diff_hists_het = function(NAS_data, title) {
+  if (!is.null(NAS_data$PSI_het_PTC) & !is.null(NAS_data$PSI_no_PTC)) {
+    hist(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC, breaks = 100, col = chosen_colour, main = title, xlab = "PSI(-/-) - PSI(-/+)")
+  }
+}
+
+plot_diff_hists_homo = function(NAS_data, title) {
+  if (!is.null(NAS_data$PSI_het_PTC) & !is.null(NAS_data$PSI_w_PTC)) {
+    hist(NAS_data$PSI_het_PTC - NAS_data$PSI_w_PTC, breaks = 100, col = chosen_colour, main = title, xlab = "PSI(-/+) - PSI(+/+)")
+  }
+}
+
+plot_diff_RPM_hists_het = function(NAS_data, title) {
+  if (!is.null(NAS_data$norm_count_het_PTC) & !is.null(NAS_data$norm_count_no_PTC)) {
+    hist(NAS_data$norm_count_no_PTC - NAS_data$norm_count_het_PTC, breaks = 100, col = chosen_colour, main = title, xlab = "RPMskip(-/-) - RPMskip(-/+)")
+  }
+}
+
+plot_diff_RPM_hists_homo = function(NAS_data, title) {
+  if (!is.null(NAS_data$norm_count_het_PTC) & !is.null(NAS_data$norm_count_w_PTC)) {
+    hist(NAS_data$norm_count_het_PTC - NAS_data$norm_count_w_PTC, breaks = 100, col = chosen_colour, main = title, xlab = "RPMskip(-/+) - RPMskip(+/+)")
+  }
 }
 
 plot_individual_change = function(NAS_data, w_PTC_name, het_PTC_name, no_PTC_name, title, ylab, threshold, max_value, reverse = FALSE) {
@@ -103,28 +127,44 @@ prepare_dataset = function(datafile) {
   return(NAS_data)
 }
 
+read_in_simulants = function(sim_path, sim_number) {
+  outlist = vector("list", sim_number + 1)
+  for (sim in 1:sim_number) {
+    current_data = read.csv(paste(sim_path, sim, ".txt", sep = ""), header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+    outlist[[sim + 1]] = current_data
+  }
+  return(outlist)
+}
+
 chosen_colour = "RoyalBlue"
 
 #PSI
 NAS_data = prepare_dataset("results/clean_run/clean_run_final_output.txt")
-neg_control = prepare_dataset("results/clean_run/clean_run_simulate_ptc_snps_bam_analysis/final_output_simulation_1.txt")
+neg_control = read_in_simulants("results/clean_run/simulation_output/final_output_simulation_", 30)
 perform_tests(NAS_data)
-perform_tests(neg_control)
 summary(NAS_data)
-summary(neg_control)
-par(mfrow = c(2, 3))
+par(mfrow = c(1, 3))
 hist(NAS_data$PSI_no_PTC, main = "PTC-/-", xlab = "PSI", col = chosen_colour, breaks = 20)
 hist(NAS_data$PSI_het_PTC, main = "PTC-/+", xlab = "PSI", col = chosen_colour, breaks = 20)
 hist(NAS_data$PSI_w_PTC, main = "PTC+/+", xlab = "PSI", col = chosen_colour, breaks = 20)
-hist(neg_control$PSI_no_PTC, main = "PTC-/- (neg. control)", xlab = "PSI", col = chosen_colour, breaks = 20)
-hist(neg_control$PSI_het_PTC, main = "PTC-/+ (neg. control)", xlab = "PSI", col = chosen_colour, breaks = 20)
-hist(neg_control$PSI_w_PTC, main = "PTC+/+ (neg.control)", xlab = "PSI", col = chosen_colour, breaks = 20)
 
-par(mfrow = c(2,2))
-hist(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC, breaks = 100, col = chosen_colour, main = "Is PSI higher for PTC-/PTC- than for PTC-/PTC+?", xlab = "PSI(-/-) - PSI(-/+)")
-hist(NAS_data$PSI_het_PTC - NAS_data$PSI_w_PTC, breaks = 100, col = chosen_colour, main = "Is PSI higher for PTC-/PTC+ than for PTC+/PTC+?", xlab = "PSI(-/+) - PSI(+/+)")
-hist(neg_control$PSI_no_PTC - neg_control$PSI_het_PTC, breaks = 100, col = chosen_colour, main = "Negative control", xlab = "PSI(-/-) - PSI(-/+)")
-hist(neg_control$PSI_het_PTC - neg_control$PSI_w_PTC, breaks = 100, col = chosen_colour, main = "Negative control", xlab = "PSI(-/+) - PSI(+/+)")
+jpeg("results/clean_run/minusminus_vs_het.jpeg", width = 23.4, height = 15.4, units = 'cm', res = 300)
+par(mfrow = c(5, 6))
+par("mar" = c(3.1, 2.1, 2.1, 1))
+plot_diff_hists_het(NAS_data, "PTC-/PTC- - PTC-/PTC+")
+for (sim in 1:30) {
+  plot_diff_hists_het(neg_control[[sim]], sim)
+}
+dev.off()
+
+jpeg("results/clean_run/het_vs_plusplus.jpeg", width = 24.4, height = 15.4, units = 'cm', res = 300)
+par(mfrow = c(5, 6))
+par("mar" = c(3.1, 2.1, 2.1, 1))
+plot_diff_hists_homo(NAS_data, "PTC-/PTC+ - PTC+/PTC+")
+for (sim in 1:30) {
+  plot_diff_hists_homo(neg_control[[sim]], sim)
+}
+dev.off()
 
 plot_individual_change(NAS_data, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "Exons with >5% change between any two categories", "PSI", 5, 100)
 plot_individual_change(neg_control, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "Exons with >2.75% change between any two categories (negative control)", "PSI", 2.75, 100)
@@ -142,12 +182,23 @@ hist(neg_control$norm_count_no_PTC, main = "PTC-/- (neg. control)", xlab = "RPM 
 hist(neg_control$norm_count_het_PTC, main = "PTC-/+ (neg. control)", xlab = "RPM that support skipping", col = chosen_colour, breaks = 20)
 hist(neg_control$norm_count_w_PTC, main = "PTC+/+ (neg.control)", xlab = "RPM that support skipping", col = chosen_colour, breaks = 20)
 
-par(mfrow = c(2,2))
-hist(NAS_data$norm_count_no_PTC - NAS_data$norm_count_het_PTC, breaks = 100, col = chosen_colour, main = "Is RPM(skip) lower for PTC-/PTC- than for PTC-/PTC+?", xlab = "RPMskip(-/-) - RPMskip(-/+)")
-hist(NAS_data$norm_count_het_PTC - NAS_data$norm_count_w_PTC, breaks = 100, col = chosen_colour, main = "Is RPM(skip) lower for PTC-/PTC+ than for PTC+/PTC+?", xlab = "RPMskip(-/+) - RPMskip(+/+)")
-hist(neg_control$norm_count_no_PTC - neg_control$norm_count_het_PTC, breaks = 100, col = chosen_colour, main = "Negative control", xlab = "RPMskip(-/-) - RPMskip(-/+)")
-hist(neg_control$norm_count_het_PTC - neg_control$norm_count_w_PTC, breaks = 100, col = chosen_colour, main = "Negative control", xlab = "RPMskip(-/+) - RPMskip(+/+)")
+jpeg("results/clean_run/minusminus_vs_het_RPM.jpeg", width = 25.4, height = 15.4, units = 'cm', res = 300)
+par(mfrow = c(5, 6))
+par("mar" = c(3.1, 2.1, 2.1, 1))
+plot_diff_RPM_hists_het(NAS_data, "-/-hom - het (RPM)")
+for (sim in 1:30) {
+  plot_diff_RPM_hists_het(neg_control[[sim]], sim)
+}
+dev.off()
 
+jpeg("results/clean_run/het_vs_plusplus_RPM.jpeg", width = 25.4, height = 15.4, units = 'cm', res = 300)
+par(mfrow = c(5, 6))
+par("mar" = c(3.1, 2.1, 2.1, 1))
+plot_diff_RPM_hists_homo(NAS_data, "het - +/+hom (RPM)")
+for (sim in 1:30) {
+  plot_diff_hists_homo(neg_control[[sim]], sim)
+}
+dev.off()
 plot_individual_change(NAS_data, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "Exons with >0.05 change between any two categories", "RPMskip", 0.05, 6, reverse = TRUE)
 plot_individual_change(neg_control, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "Exons with >0.02 change between any two categories (negative control)", "RPMskip", 0.02, 1.12, reverse = TRUE)
 
