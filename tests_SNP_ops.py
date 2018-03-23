@@ -130,6 +130,18 @@ class Test_SNP_ops(unittest.TestCase):
             observed.append(get_allele_frequency(snp))
         self.assertEqual(observed, expected)
 
+    def test_get_codon_start(self):
+        cases = [(10, 14), (11, 14), (9, 14), (0, 14), (13, 14)]
+        expected = [9, 9, 9, 0, 12]
+        observed = [get_codon_start(i[0], i[1]) for i in cases]
+        self.assertEqual(expected, observed)
+
+    def test_get_codon_start_shift(self):
+        cases = [(9, 15), (0, 15), (4, 15), (8, 15), (13, 15)]
+        expected = [8, "error", 4, 7, "error"]
+        observed = [get_codon_start(i[0], i[1], shift = True) for i in cases]
+        self.assertEqual(expected, observed)
+
     def test_get_snp_relative_cds_position(self):
         relative_exon_position_file = gen.read_many_fields("test_data/snp_ops/test_get_snp_relative_cds_position/test_snp_relative_exon_position.bed", "\t")
         full_bed_file = "test_data/snp_ops/test_get_snp_relative_cds_position/test_full_bed.bed"

@@ -167,7 +167,11 @@ def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_j
 
             #2: intersect the bam with all exon-exon junctions
             #only has to be done once for each bam
-            global_intersect_bam = "{0}_exon_junction_bams/{1}_exon_junctions.bam".format(out_prefix, bam_file_parts[1][:-4])
+            #also removing "_out_of_frame" from out_prefix if it is present
+            global_out_prefix = out_prefix
+            if "out_of_frame" in global_out_prefix:
+                global_out_prefix = global_out_prefix[:6]
+            global_intersect_bam = "{0}_exon_junction_bams/{1}_exon_junctions.bam".format(global_out_prefix, bam_file_parts[1][:-4])
             if not os.path.isfile(global_intersect_bam) or overwrite_intersect:
                 #intersect the filtered bam and the global exon junctions file
                 print(global_intersect_bam)
@@ -233,8 +237,8 @@ def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_j
 def main():
 
     description = "Check whether PTCs are associated with greater rates of exon skipping."
-    args = gen.parse_arguments(description, ["gtf", "genome_fasta", "bams_folder", "vcf_folder", "panel_file", "out_prefix", "bam_analysis_folder", "number_of_simulations", "simulation_output_folder", "motif_file", "filter_genome_data", "get_SNPs", "process_bams", "simulate_ptc_snps", "motif_complement", "overwrite_intersect", "use_old_sims"], flags = [10, 11, 12, 13, 14, 15, 16], ints = [7])
-    gtf, genome_fasta, bams_folder, vcf_folder, panel_file, out_prefix, bam_analysis_folder, number_of_simulations, simulation_output_folder, motif_file, filter_genome_data, get_SNPs, process_bams, simulate_ptc_snps, motif_complement, overwrite_intersect, use_old_sims = args.gtf, args.genome_fasta, args.bams_folder, args.vcf_folder, args.panel_file, args.out_prefix, args.bam_analysis_folder, args.number_of_simulations, args.simulation_output_folder, args.motif_file, args.filter_genome_data, args.get_SNPs, args.process_bams, args.simulate_ptc_snps, args.motif_complement, args.overwrite_intersect, args.use_old_sims
+    args = gen.parse_arguments(description, ["gtf", "genome_fasta", "bams_folder", "vcf_folder", "panel_file", "out_prefix", "bam_analysis_folder", "number_of_simulations", "simulation_output_folder", "motif_file", "filter_genome_data", "get_SNPs", "process_bams", "simulate_ptc_snps", "motif_complement", "overwrite_intersect", "use_old_sims", "out_of_frame"], flags = [10, 11, 12, 13, 14, 15, 16, 17], ints = [7])
+    gtf, genome_fasta, bams_folder, vcf_folder, panel_file, out_prefix, bam_analysis_folder, number_of_simulations, simulation_output_folder, motif_file, filter_genome_data, get_SNPs, process_bams, simulate_ptc_snps, motif_complement, overwrite_intersect, use_old_sims, out_of_frame = args.gtf, args.genome_fasta, args.bams_folder, args.vcf_folder, args.panel_file, args.out_prefix, args.bam_analysis_folder, args.number_of_simulations, args.simulation_output_folder, args.motif_file, args.filter_genome_data, args.get_SNPs, args.process_bams, args.simulate_ptc_snps, args.motif_complement, args.overwrite_intersect, args.use_old_sims, args.out_of_frame
 
     start = time.time()
 
@@ -280,6 +284,8 @@ def main():
 
     SNP_file = "{0}_SNP_file.txt".format(out_prefix)
     PTC_file = "{0}_ptc_file.txt".format(out_prefix)
+    if out_of_frame:
+        out_prefix = out_prefix + "out_of_frame"
     syn_nonsyn_file = "{0}_syn_nonsyn_file.txt".format(out_prefix)
     CDS_interval_file = "{0}_intervals{1}".format(os.path.splitext(CDS_fasta)[0], os.path.splitext(CDS_fasta)[1])
     #check which individuals were included in Geuvadis
@@ -301,9 +307,10 @@ def main():
         print("Getting SNP data...")
         so.get_snps_in_cds(coding_exon_bed, CDS_bed, vcf_folder, panel_file, sample_names, sample_file, SNP_file, out_prefix)
         gen.get_time(start)
-        print("Determining SNP type...")
-        so.get_snp_change_status(SNP_file, CDS_fasta, PTC_file, syn_nonsyn_file)
-        gen.get_time(start)
+        
+    print("Determining SNP type...")
+    so.get_snp_change_status(SNP_file, CDS_fasta, PTC_file, syn_nonsyn_file, out_of_frame = out_of_frame)
+    gen.get_time(start)
 
     #filter the exon junctions file to only leave those junctions that flank exons retained in the previous step.
     print("Filtering exon-exon junctions to only leave those that flank exons with a PTC variant...")

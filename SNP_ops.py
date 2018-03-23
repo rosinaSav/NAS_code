@@ -217,6 +217,30 @@ def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, ptc_output_file, 
     pseudo_ptc_output.close()
     other_snps_output.close()
 
+def get_codon_start(variant_pos, seq_len, shift = False):
+    '''
+    Given the (0-based) position of a SNP in a CDS, determine what (0-based) position is the 1st in the overlapping codon.
+    seq_len: length of the CDS
+    shift: whether or not the codon position should be shifted (see get_snp_type
+    for further details)
+    '''
+    codon_start = (variant_pos//3) * 3
+    if not shift:
+        return(codon_start)
+    else:
+        #if the SNP overlaps the first position in the codon,
+        #then you can't shift forward by a base or your new codon wouldn't
+        #include the SNP
+        if variant_pos == codon_start:
+            codon_start = codon_start - 1
+            if codon_start < 0:
+                return("error")
+            return(codon_start)
+        codon_start = codon_start + 1
+        if (codon_start + 3) >= seq_len:
+            return("error")
+        return(codon_start)
+
 def get_snp_relative_cds_position(snp_exon_relative_positions, snp_cds_position_output, full_bed):
     '''
     Get the position of the snp within a CDS using the relative positions of snps in the features they are found
@@ -376,7 +400,7 @@ def get_snp_relative_exon_position(intersect_file):
         relative_positions.append(intersect)
     return(relative_positions)
 
-def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_file, others_output_file):
+def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_file, others_output_file, out_of_frame = False):
 
     snps = gen.read_many_fields(snp_cds_relative_positions, "\t")
     cds_names, cds_seqs = gen.read_fasta(cds_fasta)
@@ -442,7 +466,7 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
 ##                            print("\n")
                             pass
                         else:
-                            cds_codon, snp_codon, mutation_type = get_snp_type(cds_seqs[cds_names.index(cds_id)], [snp_index, var_base])
+                            cds_codon, snp_codon, mutation_type = get_snp_type(cds_seqs[cds_names.index(cds_id)], [snp_index, var_base], shift = out_of_frame)
                             snp[13] = "CDS_CODON={0}$SNP_CODON={1}$AA={2}".format(cds_codon, snp_codon, ancestral_allele.group(1))
                             snp[12] = mutation_type
                             if(mutation_type == "ptc"):
@@ -460,7 +484,13 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
         print("No SNPs were extracted!")
         raise Exception
 
-def get_snp_type(sequence, variant):
+def get_snp_type(sequence, variant, shift = False):
+    '''
+    If shift is True, the codon that each SNP is in will be shifted 3' by a single base
+    (for the purposes of determining the type of SNP),
+    except if this would move the SNP out of the codon or the codon further than the sequence end, in which case
+    the codon is shifted one base 5' instead.
+    '''
 
     codon_map = {
         "TTT":"F", "TTC":"F", "TTA":"L", "TTG":"L",
@@ -481,26 +511,31 @@ def get_snp_type(sequence, variant):
         "GGT":"G", "GGC":"G", "GGA":"G", "GGG":"G",
     }
 
+    shift_amount = 0
+
     #get the sequence with the snp in position
     snp_sequence = sequence[:int(variant[0])] + variant[1] + sequence[int(variant[0])+1:]
     #extract the SNP codon both with the reference and the SNP allele
-    codon_start = (int(variant[0])//3) * 3
-    cds_codon = sequence[codon_start:codon_start + 3]
-    snp_codon = snp_sequence[codon_start:codon_start + 3]
-    if cds_codon != snp_codon:
-        #determine the type of snp
-        #if the snp generated an in frame stop
-        if codon_map[snp_codon] == "*":
-            mutation_type = "ptc"
-        #if the snp generated a synonymous codon
-        elif codon_map[cds_codon] == codon_map[snp_codon]:
-            mutation_type = "syn"
-        #if the snp generated a nonsynonymous codon
-        elif codon_map[cds_codon] != codon_map[snp_codon] and codon_map[snp_codon] != "*":
-            mutation_type = "non"
-        #error calling the snp (shouldn't occur)
+    codon_start = get_codon_start(int(variant[0]), len(sequence), shift = shift)
+    if codon_start != "error":
+        cds_codon = sequence[codon_start:codon_start + 3]
+        snp_codon = snp_sequence[codon_start:codon_start + 3]
+        if cds_codon != snp_codon:
+            #determine the type of snp
+            #if the snp generated an in frame stop
+            if codon_map[snp_codon] == "*":
+                mutation_type = "ptc"
+            #if the snp generated a synonymous codon
+            elif codon_map[cds_codon] == codon_map[snp_codon]:
+                mutation_type = "syn"
+            #if the snp generated a nonsynonymous codon
+            elif codon_map[cds_codon] != codon_map[snp_codon] and codon_map[snp_codon] != "*":
+                mutation_type = "non"
+            #error calling the snp (shouldn't occur)
+            else:
+                mutation_type = "call_error"
         else:
-            mutation_type = "call_error"
+            cds_codon, snp_codon, mutation_type = "error", "error", "error"
     else:
         cds_codon, snp_codon, mutation_type = "error", "error", "error"
 
