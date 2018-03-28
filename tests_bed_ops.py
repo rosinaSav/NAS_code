@@ -44,7 +44,7 @@ class Test_bed_ops(unittest.TestCase):
         genome_file = "./test_data/bed_ops/test_extract_cds_quality_control/test_extract_cds_quality_control_genome.fa"
         bed_output = "./test_data/bed_ops/test_extract_cds_quality_control/observed_test_extract_cds_quality_control_cds.bed"
         observed = "./test_data/bed_ops/test_extract_cds_quality_control/observed_test_extract_cds_quality_control_fasta.fasta"
-        intervals = "./test_data/bed_ops/test_extract_cds_quality_control/observed_intervals.fasta"        
+        intervals = "./test_data/bed_ops/test_extract_cds_quality_control/observed_intervals.fasta"
         gen.remove_file(observed)
         gen.remove_file(intervals)
         gen.remove_file(bed_output)
@@ -120,6 +120,16 @@ class Test_bed_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(observed,expected)
 
+    def test_extract_nt_indicies(self):
+        fasta_file = "test_data/bed_ops/test_extract_nt_indicies/test_fasta_input.fasta"
+        observed = "test_data/bed_ops/test_extract_nt_indicies/observed_nt_indicies.fasta"
+        expected = "test_data/bed_ops/test_extract_nt_indicies/expected_nt_indicies.fasta"
+        gen.remove_file(observed)
+        extract_nt_indicies(fasta_file, observed)
+        expected = gen.read_fasta(expected)
+        observed = gen.read_fasta(observed)
+        self.assertEqual(observed,expected)
+
     def test_fasta_from_intervals(self):
         observed = "test_data/bed_ops/test_fasta_from_intervals/observed_converted_fasta.fasta"
         gen.remove_file(observed)
@@ -160,7 +170,7 @@ class Test_bed_ops(unittest.TestCase):
         expected = gen.read_many_fields(expected, "\t")
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(expected, observed)
-        
+
     def test_filter_fasta_intervals_from_fasta(self):
         fasta = "test_data/bed_ops/test_filter_fasta_intervals_from_fasta/test_filter_fasta_intervals_from_fasta_fasta.fasta"
         fasta_intervals = "test_data/bed_ops/test_filter_fasta_intervals_from_fasta/test_filter_fasta_intervals_from_fasta_intervals.fasta"

@@ -65,6 +65,26 @@ def get_allele_frequency(snp):
     # print(np.divide(sum(alleles), len(alleles)))
     return(np.divide(sum(alleles), len(alleles)))
 
+
+def generate_pesudo_monomorphic_ptcs(ptc_file, fasta, output_file, seed=None, without_replacement=None):
+
+    names, input_nt_indices = gen.read_fasta(fasta)
+    ptcs = gen.read_many_fields(ptc_file, "\t")
+
+    indices = collections.defaultdict(lambda: collections.defaultdict(lambda: []))
+    for i, name in enumerate(names):
+        nt_list = input_nt_indices[i].strip('\n')
+        nt_list = nt_list.split(';')
+        for split in nt_list:
+            if len(split):
+                nt = split[0]
+                index_list = split[2:].split(',')
+                # print(index_list)
+                indices[name][nt].extend([int(x) for x in index_list])
+
+
+
+
 def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, ptc_output_file, other_snps_file, without_replacement=None, match_allele_frequency=None, match_allele_frequency_window=None, group_by_gene=None, seed=None):
     '''
     Generate a new file of pseudo PTC snps that are instead snps of different type.
@@ -172,7 +192,7 @@ def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, ptc_output_file, 
                     alt_snp_choices = [i for i in alternative_snp_indices["all"][ptc[9]][ptc[10]] if alt_snp_allele_frequency_lower_limit <= i[1] and i[1] <= alt_snp_allele_frequency_upper_limit]
                 else:
                     alt_snp_choices = alternative_snp_indices["all"][ptc[9]][ptc[10]]
-               
+
             #have to do it this way round because we have a list of lists, not list of items
             #which numpy doesnt like
             #generate a list of indices for the snp choices

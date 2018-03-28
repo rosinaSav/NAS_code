@@ -40,6 +40,17 @@ class Test_SNP_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(expected, observed)
 
+    def test_generate_pseudo_monomorphic_ptcs(self):
+        fasta = "test_data/snp_ops/test_generate_pseudo_monomorphic_ptcs/input_nt_indicies.fasta"
+        ptc_file = "test_data/snp_ops/test_generate_pseudo_monomorphic_ptcs/input_ptc_file.bed"
+        observed = "test_data/snp_ops/test_generate_pseudo_monomorphic_ptcs/observed_pseudo_monomorphic_ptcs.bed"
+        expected = "test_data/snp_ops/test_generate_pseudo_monomorphic_ptcs/expected_pseudo_monomorphic_ptcs.bed"
+        gen.remove_file(observed)
+        generate_pesudo_monomorphic_ptcs(ptc_file, fasta, observed, seed=5)
+        expected = gen.read_many_fields(expected, "\t")
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(expected, observed)
+
     def test_generate_pseudo_ptc_snps(self):
         input_ptc_snps = "test_data/snp_ops/test_generate_pseudo_ptc_snps/input_ptc_snps.bed"
         input_nonsyn_snps = "test_data/snp_ops/test_generate_pseudo_ptc_snps/input_nonsyn_snps.bed"

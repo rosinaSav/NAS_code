@@ -113,7 +113,7 @@ def extract_cds(gtf, bed_output, output_fasta, genome_fasta, full_chr_name=None,
     #extract required cds features
     extract_features(gtf, bed_output, ['CDS', 'stop_codon'], full_chr_name, clean_chrom_only = clean_chrom_only)
     #extract to fasta
-    fasta_interval_file = "{0}_intervals{1}".format(os.path.splitext(output_fasta)[0], os.path.splitext(output_fasta)[1])    
+    fasta_interval_file = "{0}_intervals{1}".format(os.path.splitext(output_fasta)[0], os.path.splitext(output_fasta)[1])
     extract_cds_from_bed(bed_output, output_fasta, genome_fasta, fasta_interval_file, check_acgt, check_start, check_length, check_stop, check_inframe_stop, all_checks, uniquify)
     #filter the previous files to only include those that passed the filters
     filter_bed_from_fasta(bed_output, output_fasta, bed_output)
@@ -326,6 +326,39 @@ def extract_features(gtf_file, out_file, features, full_chr_name=None, clean_chr
                                                                 #output and convert to base 0
                                                                 output.write('\t'.join([chr_name, str(int(item[0])-1), item[1], '{0}.{1}.{2}'.format(trans, exon, gene), feature, item[2]]) + '\n')
 
+
+def extract_nt_indicies(fasta_file, output_file):
+
+    '''
+    Extract the indicies for each nt given a fasta file.
+    '''
+
+    names, seqs = gen.read_fasta(fasta_file)
+    pos_regex = re.compile('^(chr\d+):(\d+)-(\d+)(?=\([+-]\))');
+
+    indicies = collections.defaultdict(lambda: collections.defaultdict(lambda: []))
+
+    for i, seq in enumerate(seqs):
+        id = names[i]
+        positions = re.search(pos_regex, id)
+        sampleid = positions.group(1)
+        start = int(positions.group(2))
+        nts = list(seq)
+        for j, nt in enumerate(nts):
+            indicies[sampleid][nt].append(start+j)
+
+    with open(output_file, "w") as output:
+        for sampleid in sorted(indicies):
+            output.write('>{0}\n'.format(sampleid))
+            line = ""
+            for nt in sorted(indicies[sampleid]):
+                # remove any duplicates
+                indicies[sampleid][nt] = sorted(list(set(indicies[sampleid][nt])))
+                indicies[sampleid][nt] = [str(x) for x in indicies[sampleid][nt]]
+                line += "{0}:{1};".format(nt, ",".join(indicies[sampleid][nt]))
+            output.write("{0}\n".format(line))
+
+
 def fasta_from_intervals(bed_file, fasta_file, genome_fasta, force_strand = True, names = False):
         '''
         Takes a bed file and creates a fasta file with the corresponding sequences.
@@ -383,13 +416,13 @@ def filter_bed_from_fasta(bed, fasta, out_bed, families_file = None):
             temp_file_name = "{0}.{1}{2}".format(os.path.splitext(out_bed)[0], random.random(), os.path.splitext(out_bed)[1])
         else:
             temp_file_name = out_bed
-        
+
         fasta_names, fasta_seqs = gen.read_fasta(fasta)
 
         #read in family information and pick one transcript per family
         if families_file:
                 families = gen.read_families(families_file)
-                #make sure the families file doesn't contain transcripts that are not in the fasta 
+                #make sure the families file doesn't contain transcripts that are not in the fasta
                 for pos, family in enumerate(families):
                         families[pos] = [i for i in family if i in fasta_names]
                 flat_families = gen.flatten(families)
@@ -544,7 +577,7 @@ def remove_overlaps(in_bed, out_bed):
                                 line = line[:-2]
                                 file.write(line)
                                 file.write("\n")
-        
+
 def uniquify_trans(names, seqs, gene_to_trans):
         '''
         Filter a set of transcript IDs and corresponding sequences to only leave one transcript per gene (the longest).
