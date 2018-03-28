@@ -8,7 +8,8 @@ ese_sets = {
     "RESCUE": "./ese_data/RESCUE/RESCUE.txt",
     "INT3": "./ese_data/CaceresHurstESEs_INT3/CaceresHurstESEs_INT3.txt",
     "RBP_motifs": "./ese_data/RBP_motifs/RBP_motifs.txt",
-    "RBP_motifs_filtered": "./ese_data/RBP_motifs/filtered_RBP_motifs_nd.txt"
+    "RBP_motifs_filtered": "./ese_data/RBP_motifs/filtered_RBP_motifs_nd.txt",
+    "RBP_motifs_filtered_nonCDS": "./ese_data/RBP_motifs/filtered_RBP_motifs_nonCDS.txt",
 }
 
 def run_simulations(simulation_sets, required_simulations):
@@ -39,7 +40,7 @@ def run_simulations(simulation_sets, required_simulations):
             [motif_list.extend(raw_motifs[i].split('|') for i in index_list)]
             [motifs.extend(i) for i in motif_list]
 
-        elif ese_set[0] == "RBP_motifs":
+        elif ese_set[0] == "RBP_motifs" or ese_set[0] == "RBP_motifs_filtered_nonCDS":
             raw_motif_ids, raw_motifs = gen.read_fasta(ese_sets[ese_set[0]])
             motif_list.extend(i.split('|') for i in raw_motifs)
             [motifs.extend(i) for i in motif_list]
@@ -74,8 +75,8 @@ def run_simulations(simulation_sets, required_simulations):
 def main():
 
     description = "Check whether stop codons are depleted in motif sets by simulating the motif set."
-    args = gen.parse_arguments(description, ["required_simulations", "all_sets", "ESR", "Ke", "PESE", "RESCUE", "INT3", "RBP_motifs", "filter_RBPs", "split_RBPs"], flags = [1,2,3,4,5,6,7,8,9])
-    required_simulations, all_sets, ESR, Ke, PESE, RESCUE, INT3, RBP_motifs, filter_RBPs, split_rbps = args.required_simulations, args.all_sets, args.ESR, args.Ke, args.PESE, args.RESCUE, args.INT3, args.RBP_motifs, args.filter_RBPs, args.split_RBPs
+    args = gen.parse_arguments(description, ["required_simulations", "all_sets", "ESR", "Ke", "PESE", "RESCUE", "INT3", "RBP_motifs", "filter_RBPs", "split_RBPs", "RBP_motifs_filtered_nonCDS"], flags = [1,2,3,4,5,6,7,8,9,10])
+    required_simulations, all_sets, ESR, Ke, PESE, RESCUE, INT3, RBP_motifs, filter_RBPs, split_rbps, RBP_motifs_filtered_nonCDS = args.required_simulations, args.all_sets, args.ESR, args.Ke, args.PESE, args.RESCUE, args.INT3, args.RBP_motifs, args.filter_RBPs, args.split_RBPs, args.RBP_motifs_filtered_nonCDS
 
 
     if split_rbps and not filter_RBPs:
@@ -109,6 +110,8 @@ def main():
             required_sets.append("RBP_motifs")
         if RBP_motifs and filter_RBPs:
             required_sets.append("RBP_motifs_filtered")
+        if RBP_motifs_filtered_nonCDS:
+            required_sets.append("RBP_motifs_filtered_nonCDS")
 
     #check whether any sets have been chosen
     if len(required_sets) == 0:

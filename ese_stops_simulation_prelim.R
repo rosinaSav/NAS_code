@@ -32,7 +32,7 @@ if (args[2] == "all_sets") {
 run_plots <- function(simulations) {
   for (set in sets) {
     print(set)
-    file_path <- paste("ese_stops_simulations_output/", set, "_" , simulations, ".csv", sep="")
+    file_path <- paste("ese_stops_simulations_output/", set, "/", set, "_stop_counts_" , simulations, ".csv", sep="")
     file <- read.csv(file_path, sep=",", head=T)
     simulants <- file[file$id != 'real',]
     real <- file[file$id == 'real',]
@@ -43,7 +43,7 @@ run_plots <- function(simulations) {
       labs(x="Stop codon count in all frames", y="Count") +
       geom_vline(xintercept=file$stop_count[file$id == "real"], lty=2, col="red")
 
-    out_path = paste("ese_stops_simulations_output/", set, "_", simulations, "_hist.pdf", sep="")
+    out_path = paste("ese_stops_simulations_output/", set, "/", set, "_", simulations, "_hist.head(id", sep="")
     ggsave(out_path, plot=plot)
   }
 }
