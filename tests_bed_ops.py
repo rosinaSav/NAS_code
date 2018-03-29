@@ -122,13 +122,37 @@ class Test_bed_ops(unittest.TestCase):
 
     def test_extract_nt_indices(self):
         fasta_file = "test_data/bed_ops/test_extract_nt_indices/test_fasta_input.fasta"
-        observed = "test_data/bed_ops/test_extract_nt_indices/observed_nt_indices.fasta"
-        expected = "test_data/bed_ops/test_extract_nt_indices/expected_nt_indices.fasta"
-        gen.remove_file(observed)
-        extract_nt_indicies(fasta_file, observed)
-        expected = gen.read_fasta(expected)
-        observed = gen.read_fasta(observed)
-        self.assertEqual(observed,expected)
+        observed_a = "test_data/bed_ops/test_extract_nt_indices/observed_indices_a.fasta"
+        observed_c = "test_data/bed_ops/test_extract_nt_indices/observed_indices_c.fasta"
+        observed_g = "test_data/bed_ops/test_extract_nt_indices/observed_indices_g.fasta"
+        observed_t = "test_data/bed_ops/test_extract_nt_indices/observed_indices_t.fasta"
+        expected_a = "test_data/bed_ops/test_extract_nt_indices/expected_indices_a.fasta"
+        expected_c = "test_data/bed_ops/test_extract_nt_indices/expected_indices_c.fasta"
+        expected_g = "test_data/bed_ops/test_extract_nt_indices/expected_indices_g.fasta"
+        expected_t = "test_data/bed_ops/test_extract_nt_indices/expected_indices_t.fasta"
+        gen.remove_file(observed_a)
+        gen.remove_file(observed_c)
+        gen.remove_file(observed_g)
+        gen.remove_file(observed_t)
+        observed_files = {
+            "A": observed_a,
+            "C": observed_c,
+            "G": observed_g,
+            "T": observed_t,
+        }
+        extract_nt_indicies(fasta_file, observed_files)
+        expected_a = gen.read_fasta(expected_a)
+        expected_c = gen.read_fasta(expected_c)
+        expected_g = gen.read_fasta(expected_g)
+        expected_t = gen.read_fasta(expected_t)
+        observed_a = gen.read_fasta(observed_a)
+        observed_c = gen.read_fasta(observed_c)
+        observed_g = gen.read_fasta(observed_g)
+        observed_t = gen.read_fasta(observed_t)
+        self.assertEqual(observed_a,expected_a)
+        self.assertEqual(observed_c,expected_c)
+        self.assertEqual(observed_g,expected_g)
+        self.assertEqual(observed_t,expected_t)
 
     def test_fasta_from_intervals(self):
         observed = "test_data/bed_ops/test_fasta_from_intervals/observed_converted_fasta.fasta"

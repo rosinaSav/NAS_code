@@ -65,7 +65,7 @@ import time
 #         final_file = "{0}/final_output_simulation_{1}.txt".format(simulation_bam_analysis_output_folder, simulation_number)
 #         bmo.compare_PSI(pseudo_monomorphic_ptc_file, simulation_bam_analysis_output_folder, final_file, sim_number = simulation_number)
 
-def ptc_monomorphic_simulation(out_prefix, simulation_output_folder, ptc_file, exon_junctions_file, bam_files, required_simulations, use_old_sims = False):
+def ptc_monomorphic_simulation(out_prefix, simulation_output_folder, PTC_file, coding_exon_bed, exon_junctions_file, bam_files, number_of_simulations, generate_indices = False, use_old_sims = False):
     '''
     Set up the PTC simulations and then run.
     if use_old_sims is True, don't pick new simulant SNPs from monomorphic sites.
@@ -87,6 +87,9 @@ def ptc_monomorphic_simulation(out_prefix, simulation_output_folder, ptc_file, e
         gen.create_strict_directory(simulation_bam_analysis_output_folder)
     else:
         gen.create_directory(simulation_bam_analysis_output_folder)
+
+    if generate_indices:
+        get_non_mutation_indices
 
     #create a list of simulations to iterate over
     simulations = list(range(1, required_simulations+1))
@@ -450,16 +453,12 @@ def main():
             raise Exception
         ptc_snp_simulation(out_prefix, simulation_output_folder, PTC_file, syn_nonsyn_file, exon_junctions_file, bam_files, number_of_simulations, use_old_sims = use_old_sims)
 
-    # # run the control that picks monomorphic sites
-    # if simulate_ptcs_with_monomorphic:
-    #     if simulate_ptcs_with_monomorphic and not number_of_simulations:
-    #         print("Please specify the number of simulations")
-    #         raise Exception
-    #     # if you want to generate file containing indicies for each nt in exon that doesnt have a mutation
-    #     if generate_no_mutation_indicies:
-    #         get_no_mutations_indicies()
-    #
-    #     ptc_monomorphic_simulation(out_prefix, simulation_output_folder, PTC_file, coding_exon_bed, CDS_bed, )
+    # run the simulation that picks monomorphic sites
+    if simulate_ptcs_with_monomorphic:
+        if simulate_ptcs_with_monomorphic and not number_of_simulations:
+            print("Please specify the number of simulations")
+            raise Exception
+        ptc_monomorphic_simulation(out_prefix, simulation_output_folder, PTC_file, coding_exon_bed, exon_junctions_file, bam_files, number_of_simulations, generate_indices = generate_indices, use_old_sims = use_old_sims)
 
 if __name__ == "__main__":
     main()

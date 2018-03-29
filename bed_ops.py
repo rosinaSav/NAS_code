@@ -327,7 +327,7 @@ def extract_features(gtf_file, out_file, features, full_chr_name=None, clean_chr
                                                                 output.write('\t'.join([chr_name, str(int(item[0])-1), item[1], '{0}.{1}.{2}'.format(trans, exon, gene), feature, item[2]]) + '\n')
 
 
-def extract_nt_indicies(fasta_file, output_file):
+def extract_nt_indicies(fasta_file, output_files):
 
     '''
     Extract the indicies for each nt given a fasta file.
@@ -344,13 +344,18 @@ def extract_nt_indicies(fasta_file, output_file):
         for nt in nts:
             indices[id][nt] = [str(m.start(0)) for m in re.finditer('{0}'.format(nt), seq)]
 
-    with open(output_file, "w") as output:
-        for id in indices:
-            output.write('>{0}\n'.format(id))
-            line = ""
-            for nt in indices[id]:
-                line += "{0}${1};".format(nt, ",".join(indices[id][nt]))
-            output.write("{0}\n".format(line))
+    outfiles = {}
+    for nt in nts:
+        outfiles[nt] = open(output_files[nt], "w")
+
+
+    for id in indices:
+        for nt in indices[id]:
+            outfiles[nt].write(">{0}\n".format(id))
+            outfiles[nt].write("{0}\n".format(",".join(indices[id][nt])))
+
+    for nt in nts:
+        outfiles[nt].close()
 
         # positions = re.search(pos_regex, id)
         # sampleid = positions.group(1)

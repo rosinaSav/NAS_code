@@ -1,4 +1,4 @@
-echrom	estart	eend	eID	feature	strand	schr	sim_spos	sID	aa	ma	sim_rel_exon_pos	sim_status	info	format	HG1	HG3
+echrom	estart	eend	eID	feature	strand	schr	sim_spos	sID	aa	ma	sim_rel_chunk_pos	sim_status	info	format	HG1	HG3
 chr3	8	17	ENST0001.1	CDS	-	chr2	13	rs11	C	T	0	pseduo_ptc	CDS_CODON=TGA$SNP_CODON=TCA$AA=G	GT	0|0	1|1	1
 chr3	8	17	ENST0001.1	CDS	-	chr2	13	rs11	A	T	3	pseduo_ptc	CDS_CODON=TGA$SNP_CODON=TCA$AA=G	GT	0|0	1|1	1
 chr3	8	17	ENST0001.2	CDS	-	chr2	13	rs11	A	T	10	pseduo_ptc	CDS_CODON=TGA$SNP_CODON=TCA$AA=G	GT	0|1	1|1	1

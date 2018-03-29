@@ -7,6 +7,7 @@ import random
 import string
 import collections
 import re
+import itertools
 
 def filter_by_snp_type(input_file, output_file, snp_type, set_seed=None):
     '''
@@ -66,60 +67,55 @@ def get_allele_frequency(snp):
     return(np.divide(sum(alleles), len(alleles)))
 
 
-def generate_pesudo_monomorphic_ptcs(ptc_file, fasta, output_file, seed=None, without_replacement=None):
+def generate_pesudo_monomorphic_ptcs(ptc_file, index_fastas, output_file, seed=None, without_replacement=None, with_weighting=None):
 
     '''
-    Generate a file of pseudo  PTC mutations where infact the site is a monomorphic site.
+    Generate a file of pseudo PTC mutations where infact the site is a monomorphic site.
     Give the 'new' PTC the same allele freqeuncies as the real PTC.
-
-    ***
-    TO DO: this isn't quite right yet as I haven't got the correct way to call the locations yet
-
+    with_weighting: give each chunk without a mutation a weighting dependingon how many of a particular nt there are in that chunk
     '''
 
-    # get the indices of sites without mutations and ptcs
-    names, input_nt_indices = gen.read_fasta(fasta)
-    ptcs = gen.read_many_fields(ptc_file, "\t")
+    nts = ["A", "C", "G", "T"]
+    index_files = {}
+    for nt in nts:
+        names, indices = gen.read_fasta(index_fastas[nt])
+        indices = [x.split(',') for x in indices]
+        if with_weighting:
+            # get a ist of all indices
+            concat_indices = list(itertools.chain.from_iterable(indices))
+            # create the weightings
+            weights = [len(x)/len(concat_indices) for x in indices]
+        else:
+            # give all chunks the same weighting
+            weights = [1/len(indices) for x in indices]
+        index_files[nt] = [names, indices, weights]
 
-    # set up the dictionary to hold the indices
-    indices = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: [])))
-    for i, name in enumerate(names):
-        id = name.split('.')[0]
-        exon = name.split('.')[1]
-        nt_list = input_nt_indices[i].strip('\n')
-        nt_list = nt_list.split(';')
-        for split in nt_list:
-            if len(split):
-                nt = split[0]
-                index_list = split[2:].split(',')
-                indices[id][exon][nt].extend([int(x) for x in index_list])
-
-    # set simulation seed
+    # set the randomisation seed
     np.random.seed(seed)
 
+    ptcs = gen.read_many_fields(ptc_file, "\t")
     with open(output_file, "w") as output:
         head = ptcs[0]
         head[7] = "sim_spos"
-        head[11] = "sim_rel_exon_pos"
+        head[11] = "sim_rel_chunk_pos"
         head[12] = "sim_status"
         output.write("{0}\n".format("\t".join(head)))
 
-        # for each ptc, pick a random index and replace the real PTC with the new idex
+        # for each ptc
         for ptc in ptcs[1:]:
-            id = ptc[3].split('.')[0]
-            exon = ptc[3].split('.')[1]
             aa = ptc[9]
             pseudo_ptc = ptc
 
-            if len(indices[id]) > 1:
-                possible_exons = [e for e in indices[id]]
-                exon_choice = np.random.choice(possible_exons, 1, replace=True)[0]
-            else:
-                exon_choice = exon
+            # choose a random exon chunk
+            random_exon = np.random.choice(list(range(len(index_files[aa][1]))), 1, p=index_files[nt][2])[0]
+            # choose a random position within that chunk
+            random_pos = np.random.choice([p for p in index_files[aa][1][random_exon]], 1, replace=True)[0]
 
-            pseudo_ptc[11] = str(np.random.choice(indices[id][exon][aa], 1, replace=True)[0])
-            pseudo_ptc[12] = "pseduo_ptc"
-            output.write("{0}\n".format("\t".join(pseudo_ptc)))
+            # output to file, keeping same allele frequencies
+            pseudo_ptc[3] = index_files[aa][0][int(random_exon)]
+            pseudo_ptc[11] = random_pos
+            pseudo_ptc[12] = "pseudo_ptc_snp"
+            output.write('{0}\n'.format("\t".join(pseudo_ptc)))
 
 
 def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, ptc_output_file, other_snps_file, without_replacement=None, match_allele_frequency=None, match_allele_frequency_window=None, group_by_gene=None, seed=None):
