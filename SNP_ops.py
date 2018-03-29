@@ -68,29 +68,58 @@ def get_allele_frequency(snp):
 
 def generate_pesudo_monomorphic_ptcs(ptc_file, fasta, output_file, seed=None, without_replacement=None):
 
+    '''
+    Generate a file of pseudo  PTC mutations where infact the site is a monomorphic site.
+    Give the 'new' PTC the same allele freqeuncies as the real PTC.
+
+    ***
+    TO DO: this isn't quite right yet as I haven't got the correct way to call the locations yet
+
+    '''
+
+    # get the indices of sites without mutations and ptcs
     names, input_nt_indices = gen.read_fasta(fasta)
     ptcs = gen.read_many_fields(ptc_file, "\t")
 
-    indices = collections.defaultdict(lambda: collections.defaultdict(lambda: []))
+    # set up the dictionary to hold the indices
+    indices = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: [])))
     for i, name in enumerate(names):
+        id = name.split('.')[0]
+        exon = name.split('.')[1]
         nt_list = input_nt_indices[i].strip('\n')
         nt_list = nt_list.split(';')
         for split in nt_list:
             if len(split):
                 nt = split[0]
                 index_list = split[2:].split(',')
-                # print(index_list)
-                indices[name][nt].extend([int(x) for x in index_list])
+                indices[id][exon][nt].extend([int(x) for x in index_list])
 
-    for i in sorted(indices):
-        for nt in sorted(indices[i]):
-            print(i, nt, indices[i][nt])
-
-    for ptc in ptcs[1:]:
-        pass
+    # set simulation seed
+    np.random.seed(seed)
 
     with open(output_file, "w") as output:
-        output.write("{0}\n".format("\t".join(ptcs[0])))
+        head = ptcs[0]
+        head[7] = "sim_spos"
+        head[11] = "sim_rel_exon_pos"
+        head[12] = "sim_status"
+        output.write("{0}\n".format("\t".join(head)))
+
+        # for each ptc, pick a random index and replace the real PTC with the new idex
+        for ptc in ptcs[1:]:
+            id = ptc[3].split('.')[0]
+            exon = ptc[3].split('.')[1]
+            aa = ptc[9]
+            pseudo_ptc = ptc
+
+            if len(indices[id]) > 1:
+                possible_exons = [e for e in indices[id]]
+                exon_choice = np.random.choice(possible_exons, 1, replace=True)[0]
+            else:
+                exon_choice = exon
+
+            pseudo_ptc[11] = str(np.random.choice(indices[id][exon][aa], 1, replace=True)[0])
+            pseudo_ptc[12] = "pseduo_ptc"
+            output.write("{0}\n".format("\t".join(pseudo_ptc)))
 
 
 def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, ptc_output_file, other_snps_file, without_replacement=None, match_allele_frequency=None, match_allele_frequency_window=None, group_by_gene=None, seed=None):

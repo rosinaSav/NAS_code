@@ -333,56 +333,68 @@ def extract_nt_indicies(fasta_file, output_file):
     Extract the indicies for each nt given a fasta file.
     '''
 
+    nts = ["A", "C", "G", "T"]
     names, seqs = gen.read_fasta(fasta_file)
-    pos_regex = re.compile('^(chr\d+):(\d+)-(\d+)(?=\([+-]\))');
+    # pos_regex = re.compile('^(chr\d+):(\d+)-(\d+)(?=\([+-]\))');
 
-    indicies = collections.defaultdict(lambda: collections.defaultdict(lambda: []))
+    indices = collections.defaultdict(lambda: collections.defaultdict(lambda: []))
 
     for i, seq in enumerate(seqs):
-        id = names[i]
-        positions = re.search(pos_regex, id)
-        sampleid = positions.group(1)
-        start = int(positions.group(2))
-        nts = list(seq)
-        for j, nt in enumerate(nts):
-            indicies[sampleid][nt].append(start+j)
+        id = names[i].strip('>')
+        for nt in nts:
+            indices[id][nt] = [str(m.start(0)) for m in re.finditer('{0}'.format(nt), seq)]
 
     with open(output_file, "w") as output:
-        for sampleid in sorted(indicies):
-            output.write('>{0}\n'.format(sampleid))
+        for id in indices:
+            output.write('>{0}\n'.format(id))
             line = ""
-            for nt in sorted(indicies[sampleid]):
-                # remove any duplicates
-                indicies[sampleid][nt] = sorted(list(set(indicies[sampleid][nt])))
-                indicies[sampleid][nt] = [str(x) for x in indicies[sampleid][nt]]
-                line += "{0}:{1};".format(nt, ",".join(indicies[sampleid][nt]))
+            for nt in indices[id]:
+                line += "{0}${1};".format(nt, ",".join(indices[id][nt]))
             output.write("{0}\n".format(line))
+
+        # positions = re.search(pos_regex, id)
+        # sampleid = positions.group(1)
+        # start = int(positions.group(2))
+        # nts = list(seq)
+        # for j, nt in enumerate(nts):
+        #     indicies[sampleid][nt].append(start+j)
+
+    # with open(output_file, "w") as output:
+    #     for sampleid in sorted(indicies):
+    #         output.write('>{0}\n'.format(sampleid))
+    #         line = ""
+    #         for nt in sorted(indicies[sampleid]):
+    #             # remove any duplicates
+    #             indicies[sampleid][nt] = sorted(list(set(indicies[sampleid][nt])))
+    #             indicies[sampleid][nt] = [str(x) for x in indicies[sampleid][nt]]
+    #             line += "{0}:{1};".format(nt, ",".join(indicies[sampleid][nt]))
+    #         output.write("{0}\n".format(line))
 
 
 def fasta_from_intervals(bed_file, fasta_file, genome_fasta, force_strand = True, names = False):
-        '''
-        Takes a bed file and creates a fasta file with the corresponding sequences.
-        If names == False, the fasta record names will be generated from the sequence coordinates.
-        If names == True, the fasta name will correspond to whatever is in the 'name' field of the bed file
-        '''
+    '''
+    Takes a bed file and creates a fasta file with the corresponding sequences.
+    If names == False, the fasta record names will be generated from the sequence coordinates.
+    If names == True, the fasta name will correspond to whatever is in the 'name' field of the bed file
+    '''
 
-        #if the index file exists, check whether the expected features are present
-        genome_fasta_index = genome_fasta + '.fai'
-        if(os.path.exists(genome_fasta_index)):
-                bed_chrs = sorted(list(set([entry[0] for entry in gen.read_many_fields(bed_file, "\t")])))
-                index_chrs = sorted(list(set([entry[0] for entry in gen.read_many_fields(genome_fasta_index, "\t")])))
-                if(not set(bed_chrs).issubset(set(index_chrs))):
-                        gen.remove_file(genome_fasta_index)
+    #if the index file exists, check whether the expected features are present
+    genome_fasta_index = genome_fasta + '.fai'
+    if(os.path.exists(genome_fasta_index)):
+        bed_chrs = sorted(list(set([entry[0] for entry in gen.read_many_fields(bed_file, "\t")])))
+        index_chrs = sorted(list(set([entry[0] for entry in gen.read_many_fields(genome_fasta_index, "\t")])))
+        if(not set(bed_chrs).issubset(set(index_chrs))):
+            gen.remove_file(genome_fasta_index)
 
-        bedtools_args = ["bedtools", "getfasta", "-s", "-fi", genome_fasta, "-bed", bed_file, "-fo", fasta_file]
-        if not force_strand:
-                del bedtools_args[2]
-        if names:
-                bedtools_args.append("-name")
-        gen.run_process(bedtools_args)
-        names, seqs = gen.read_fasta(fasta_file)
-        seqs = [i.upper() for i in seqs]
-        gen.write_to_fasta(names, seqs, fasta_file)
+    bedtools_args = ["bedtools", "getfasta", "-s", "-fi", genome_fasta, "-bed", bed_file, "-fo", fasta_file]
+    if not force_strand:
+        del bedtools_args[2]
+    if names:
+        bedtools_args.append("-name")
+    gen.run_process(bedtools_args)
+    names, seqs = gen.read_fasta(fasta_file)
+    seqs = [i.upper() for i in seqs]
+    gen.write_to_fasta(names, seqs, fasta_file)
 
 def fasta_from_intervals_temp_file(bed_file, output_fasta, genome_fasta, random_directory=None):
         '''

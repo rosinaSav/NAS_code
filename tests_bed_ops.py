@@ -120,10 +120,10 @@ class Test_bed_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(observed,expected)
 
-    def test_extract_nt_indicies(self):
-        fasta_file = "test_data/bed_ops/test_extract_nt_indicies/test_fasta_input.fasta"
-        observed = "test_data/bed_ops/test_extract_nt_indicies/observed_nt_indicies.fasta"
-        expected = "test_data/bed_ops/test_extract_nt_indicies/expected_nt_indicies.fasta"
+    def test_extract_nt_indices(self):
+        fasta_file = "test_data/bed_ops/test_extract_nt_indices/test_fasta_input.fasta"
+        observed = "test_data/bed_ops/test_extract_nt_indices/observed_nt_indices.fasta"
+        expected = "test_data/bed_ops/test_extract_nt_indices/expected_nt_indices.fasta"
         gen.remove_file(observed)
         extract_nt_indicies(fasta_file, observed)
         expected = gen.read_fasta(expected)
