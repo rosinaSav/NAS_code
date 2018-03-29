@@ -43,8 +43,8 @@ class Test_SNP_ops(unittest.TestCase):
     def test_generate_pseudo_monomorphic_ptcs(self):
         fasta = "test_data/snp_ops/test_generate_pseudo_monomorphic_ptcs/input_nt_indicies.fasta"
         ptc_file = "test_data/snp_ops/test_generate_pseudo_monomorphic_ptcs/input_ptc_file.bed"
-        observed = "test_data/snp_ops/test_generate_pseudo_monomorphic_ptcs/observed_pseudo_monomorphic_ptcs.bed"
-        expected = "test_data/snp_ops/test_generate_pseudo_monomorphic_ptcs/expected_pseudo_monomorphic_ptcs.bed"
+        observed = "test_data/snp_ops/test_generate_pseudo_monomorphic_ptcs/observed_monomorphoc_ptc_simulants.bed"
+        expected = "test_data/snp_ops/test_generate_pseudo_monomorphic_ptcs/expected_monomorphoc_ptc_simulants.bed"
         gen.remove_file(observed)
         generate_pesudo_monomorphic_ptcs(ptc_file, fasta, observed, seed=5)
         expected = gen.read_many_fields(expected, "\t")

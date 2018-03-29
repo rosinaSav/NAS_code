@@ -82,7 +82,15 @@ def generate_pesudo_monomorphic_ptcs(ptc_file, fasta, output_file, seed=None, wi
                 # print(index_list)
                 indices[name][nt].extend([int(x) for x in index_list])
 
+    for i in sorted(indices):
+        for nt in sorted(indices[i]):
+            print(i, nt, indices[i][nt])
 
+    for ptc in ptcs[1:]:
+        pass
+
+    with open(output_file, "w") as output:
+        output.write("{0}\n".format("\t".join(ptcs[0])))
 
 
 def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, ptc_output_file, other_snps_file, without_replacement=None, match_allele_frequency=None, match_allele_frequency_window=None, group_by_gene=None, seed=None):
