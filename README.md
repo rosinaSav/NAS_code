@@ -1,3 +1,7 @@
+Work in progress for a collaborative project between Liam Abrahams and Rosina Savisaar.
+A full README will be added subsequently.
+
+
 | File | Function | Description | Output example | Notes |
 | ------------ | ------------- | ------------ | ------------ | ------------ |
 | bed_ops | extract_exons | Extract exons from .gtf file and write to .bed | chr1	5	30	ENST1.1	.	+ |

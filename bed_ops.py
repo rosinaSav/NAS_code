@@ -1,3 +1,9 @@
+'''
+Authors: Rosina Savisaar and Liam Abrahams.
+Contains functions for operations on sequence coordinates.
+Some functions wrap bedtools or bedops, others are all Python.
+'''
+
 import generic as gen
 import bam_ops as bmo
 import re
@@ -172,8 +178,11 @@ def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, fasta_interval_fi
         gen.write_to_fasta(names, seqs, output_fasta)
 
 def extract_exons(gtf, bed):
-        '''Given a GTF file, extract exon coordinates and write them to .bed.
-        EX.: extract_exons("../source_data/Homo_sapiens.GRCh37.87.gtf", "../source_data/Homo_sapiens.GRCh37.87_exons.bed")'''
+        '''
+        Given a GTF file, extract exon coordinates and write them to .bed.
+        EX.: extract_exons("../source_data/Homo_sapiens.GRCh37.87.gtf",
+        "../source_data/Homo_sapiens.GRCh37.87_exons.bed")
+        '''
         #extract exons from GTF
         exons = gen.run_process(["grep", "\texon\t", gtf])
         #filter down to only protein-coding ones

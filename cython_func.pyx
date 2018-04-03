@@ -1,3 +1,8 @@
+'''
+Author: Rosina Savisaar.
+Functions that will be converted to C using Cython.
+'''
+
 #compile using python3 cython_setup.py build_ext --inplace
 
 import numpy as np

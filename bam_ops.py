@@ -1,3 +1,9 @@
+'''
+Authors: Rosina Savisaar and Liam Abrahams.
+Contains functions for operations on bam files, or data derived
+from bam files.
+'''
+
 import bed_ops as bo
 import copy
 import csv

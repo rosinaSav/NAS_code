@@ -1,3 +1,7 @@
+'''
+Author: Liam Abrahams.
+'''
+
 import simulate_eses_ops as se
 import generic as gen
 
