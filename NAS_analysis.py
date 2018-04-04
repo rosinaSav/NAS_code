@@ -108,7 +108,7 @@ def ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file
         gen.create_directory(simulation_bam_analysis_output_folder)
 
     if generate_indices:
-        get_non_mutation_indices(simulation_output_folder, sample_file, coding_exon_bed, out_prefix)
+        get_non_mutation_indices(simulation_output_folder, sample_file, coding_exon_bed, out_prefix, genome_fasta)
 
     # #create a list of simulations to iterate over
     # simulations = list(range(1, required_simulations+1))
