@@ -4,6 +4,24 @@ import unittest
 
 class Test_bed_ops(unittest.TestCase):
 
+    def test_change_bed_names(self):
+        full_bed = "test_data/bed_ops/test_change_bed_names/input_full.bed"
+        short_bed = "test_data/bed_ops/test_change_bed_names/input_short.bed"
+        expected_full = "test_data/bed_ops/test_change_bed_names/expected_full.bed"
+        expected_short = "test_data/bed_ops/test_change_bed_names/expected_short.bed"
+        observed_full = "test_data/bed_ops/test_change_bed_names/observed_full.bed"
+        observed_short = "test_data/bed_ops/test_change_bed_names/observed_short.bed"
+        gen.remove_file(observed_full)
+        gen.remove_file(observed_short)
+        change_bed_names(full_bed, observed_full, full_names=True, header=False)
+        change_bed_names(short_bed, observed_short, full_names=False, header=False)
+        expected_full = gen.read_many_fields(expected_full, "\t")
+        expected_short = gen.read_many_fields(expected_short, "\t")
+        observed_full = gen.read_many_fields(observed_full, "\t")
+        observed_short = gen.read_many_fields(observed_short, "\t")
+        self.assertEqual(expected_full, observed_full)
+        self.assertEqual(expected_short, observed_short)
+
     def test_check_coding(self):
         exon_file = "test_data/bed_ops/test_check_coding/exons.bed"
         CDS_file = "test_data/bed_ops/test_check_coding/CDSs.bed"
@@ -44,7 +62,7 @@ class Test_bed_ops(unittest.TestCase):
         genome_file = "./test_data/bed_ops/test_extract_cds_quality_control/test_extract_cds_quality_control_genome.fa"
         bed_output = "./test_data/bed_ops/test_extract_cds_quality_control/observed_test_extract_cds_quality_control_cds.bed"
         observed = "./test_data/bed_ops/test_extract_cds_quality_control/observed_test_extract_cds_quality_control_fasta.fasta"
-        intervals = "./test_data/bed_ops/test_extract_cds_quality_control/observed_intervals.fasta"        
+        intervals = "./test_data/bed_ops/test_extract_cds_quality_control/observed_intervals.fasta"
         gen.remove_file(observed)
         gen.remove_file(intervals)
         gen.remove_file(bed_output)
@@ -120,6 +138,40 @@ class Test_bed_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(observed,expected)
 
+    def test_extract_nt_indices(self):
+        fasta_file = "test_data/bed_ops/test_extract_nt_indices/test_fasta_input.fasta"
+        observed_a = "test_data/bed_ops/test_extract_nt_indices/observed_indices_a.fasta"
+        observed_c = "test_data/bed_ops/test_extract_nt_indices/observed_indices_c.fasta"
+        observed_g = "test_data/bed_ops/test_extract_nt_indices/observed_indices_g.fasta"
+        observed_t = "test_data/bed_ops/test_extract_nt_indices/observed_indices_t.fasta"
+        expected_a = "test_data/bed_ops/test_extract_nt_indices/expected_indices_a.fasta"
+        expected_c = "test_data/bed_ops/test_extract_nt_indices/expected_indices_c.fasta"
+        expected_g = "test_data/bed_ops/test_extract_nt_indices/expected_indices_g.fasta"
+        expected_t = "test_data/bed_ops/test_extract_nt_indices/expected_indices_t.fasta"
+        gen.remove_file(observed_a)
+        gen.remove_file(observed_c)
+        gen.remove_file(observed_g)
+        gen.remove_file(observed_t)
+        observed_files = {
+            "A": observed_a,
+            "C": observed_c,
+            "G": observed_g,
+            "T": observed_t,
+        }
+        extract_nt_indicies(fasta_file, observed_files)
+        expected_a = gen.read_fasta(expected_a)
+        expected_c = gen.read_fasta(expected_c)
+        expected_g = gen.read_fasta(expected_g)
+        expected_t = gen.read_fasta(expected_t)
+        observed_a = gen.read_fasta(observed_a)
+        observed_c = gen.read_fasta(observed_c)
+        observed_g = gen.read_fasta(observed_g)
+        observed_t = gen.read_fasta(observed_t)
+        self.assertEqual(observed_a,expected_a)
+        self.assertEqual(observed_c,expected_c)
+        self.assertEqual(observed_g,expected_g)
+        self.assertEqual(observed_t,expected_t)
+
     def test_fasta_from_intervals(self):
         observed = "test_data/bed_ops/test_fasta_from_intervals/observed_converted_fasta.fasta"
         gen.remove_file(observed)
@@ -160,7 +212,7 @@ class Test_bed_ops(unittest.TestCase):
         expected = gen.read_many_fields(expected, "\t")
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(expected, observed)
-        
+
     def test_filter_fasta_intervals_from_fasta(self):
         fasta = "test_data/bed_ops/test_filter_fasta_intervals_from_fasta/test_filter_fasta_intervals_from_fasta_fasta.fasta"
         fasta_intervals = "test_data/bed_ops/test_filter_fasta_intervals_from_fasta/test_filter_fasta_intervals_from_fasta_intervals.fasta"

@@ -204,7 +204,7 @@ def compare_PSI(SNP_file, bam_folder, out_file, round_norm_count = None, sim_num
         #in case you're analyzing simulation output
         if not os.path.isfile(file_name):
             file_name = "{0}/{1}_simulation_{2}.txt".format(bam_folder, sample, sim_number)
-        
+
         if not os.path.isfile(file_name):
             print("{0} isn't there.".format(sample))
         else:
@@ -224,13 +224,13 @@ def compare_PSI(SNP_file, bam_folder, out_file, round_norm_count = None, sim_num
                             if "1" in genotype:
                                 #if it's heterozygous:
                                 if "0" in genotype:
-                                    results[exon]["ptc_count"] = results[exon]["ptc_count"] + 0.5                               
+                                    results[exon]["ptc_count"] = results[exon]["ptc_count"] + 0.5
                                     results[exon]["PSI_het_PTC"].append(included/(skipped + included))
                                     results[exon]["norm_count_het_PTC"].append(skipped/total)
                                     results[exon]["norm_count_het_PTC_incl"].append(included/total)
                                 #if it's homozygous for PTC
                                 else:
-                                    results[exon]["ptc_count"] = results[exon]["ptc_count"] + 1                               
+                                    results[exon]["ptc_count"] = results[exon]["ptc_count"] + 1
                                     results[exon]["PSI_w_PTC"].append(included/(skipped + included))
                                     results[exon]["norm_count_w_PTC"].append(skipped/total)
                                     results[exon]["norm_count_w_PTC_incl"].append(included/total)
@@ -290,7 +290,7 @@ def compare_PSI_haplotypes(SNP_file, bam_folder, out_file, round_norm_count = Fa
                             results[exon]["sample_count"] = results[exon]["sample_count"] + 1
                             #if this sample contains a PTC
                             if genotype[haplotype] == "1":
-                                results[exon]["ptc_count"] = results[exon]["ptc_count"] + 1                               
+                                results[exon]["ptc_count"] = results[exon]["ptc_count"] + 1
                                 results[exon]["PSI_w_PTC"].append(included[haplotype]/(skipped[haplotype] + included[haplotype]))
                                 results[exon]["norm_count_w_PTC"].append(skipped[haplotype]/total)
                             else:
@@ -391,7 +391,7 @@ def group_flags(input_bed, output_bed, flag_start):
 
 def intersect_bed(bed_file1, bed_file2, use_bedops = False, overlap = False, overlap_rec = False, write_both = False, sort = False, output_file = None,
                              force_strand = False, no_name_check = False, no_dups = True, chrom = None, intersect = False, hit_count = False, bed_path = None, intersect_bam=None,
-                  write_zero = False, write_bed = False):
+                  write_zero = False, write_bed = False, subtract=None):
     '''Use bedtools/bedops to intersect coordinates from two bed files.
     Return those lines in bed file 1 that overlap with intervals in bed file 2.
     OPTIONS
@@ -421,7 +421,7 @@ def intersect_bed(bed_file1, bed_file2, use_bedops = False, overlap = False, ove
     if use_bedops:
         bedtools_output = run_bedops(bed_file1, bed_file2, force_strand, write_both, chrom, overlap, sort, output_file = temp_file_name, intersect = intersect, hit_number = hit_count, no_dups = no_dups, intersect_bam = intersect_bam, overlap_rec = overlap_rec)
     else:
-        bedtools_output = run_bedtools(bed_file1, bed_file2, force_strand, write_both, chrom, overlap, sort, no_name_check, no_dups, output_file = temp_file_name, intersect = intersect, hit_number = hit_count, bed_path = bed_path, intersect_bam = intersect_bam, write_zero = write_zero, overlap_rec = overlap_rec, write_bed = write_bed)
+        bedtools_output = run_bedtools(bed_file1, bed_file2, force_strand, write_both, chrom, overlap, sort, no_name_check, no_dups, output_file = temp_file_name, intersect = intersect, hit_number = hit_count, bed_path = bed_path, intersect_bam = intersect_bam, write_zero = write_zero, overlap_rec = overlap_rec, write_bed = write_bed, subtract = subtract)
     #move it to a permanent location only if you want to keep it
     if output_file:
         gen.run_process(["mv", temp_file_name, output_file])
@@ -434,7 +434,7 @@ def map_from_cigar(cigar, sam_start, focal_pos):
     '''
     Given the cigar and the start coordinate (base 1) of an exon-exon read in a bam file,
     as well as the (base 1) coordinate of a focal position, determine where the focal
-    position falls in the read sequence (in base 0). 
+    position falls in the read sequence (in base 0).
     '''
     consume_query = ["M", "I", "S"]
     consume_ref = ["M", "D", "N"]
@@ -512,7 +512,7 @@ def phase_bams(snps, bam, sample_name, out_sam):
     #get order of samples in SNP file
     samples = ((((gen.run_process(["head", "-2", temp_snps])).split("\n"))[1]).split("\t"))[9:-1]
     sample_pos = samples.index(sample_name)
-    
+
     out_dict = {}
     for read in intersecting_reads:
         #because the bam to bed conversion appends read pair member identifier
@@ -741,7 +741,7 @@ def run_bedops(A_file, B_file, force_strand = False, write_both = False, chrom =
     bedops_output = gen.run_process(bedops_args, file_for_output = output_file)
     return(bedops_output)
 
-def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom = None, overlap = None, sort = False, no_name_check = False, no_dups = True, hit_number = False, output_file = None, intersect = False, bed_path = None, overlap_rec = None, intersect_bam = None, write_zero = None, write_bed = False):
+def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom = None, overlap = None, sort = False, no_name_check = False, no_dups = True, hit_number = False, output_file = None, intersect = False, bed_path = None, overlap_rec = None, intersect_bam = None, write_zero = None, write_bed = False, subtract=False):
     '''
     See intersect_bed for details.
     '''
@@ -756,7 +756,11 @@ def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom
     if sort:
         sort_bed(A_file, A_file)
         sort_bed(B_file, B_file)
-    bedtools_args = ["intersectBed", "-a", A_file,"-b", B_file, write_option]
+    if subtract:
+        arg = "subtractBed"
+    else:
+        arg = "intersectBed"
+    bedtools_args = [arg, "-a", A_file,"-b", B_file, write_option]
     if intersect:
         del bedtools_args[-1]
     if overlap:

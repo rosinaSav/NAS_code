@@ -15,6 +15,35 @@ from pathlib import Path
 import random
 import shutil
 
+
+def change_bed_names(input_bed, output_bed, full_names, header):
+    '''
+    Convert between full chromosome names and just chromosome numbers.
+    As is, output_bed needs to be different to input_bed.
+    full_names: Set to true if the input_bed has the full chr name, e.g. chr1
+    header: Set to true if the bed file has a header
+    '''
+    lines = gen.read_many_fields(input_bed, "\t")
+
+    # Set whether the bed file has a header or not
+    if header:
+        start_index = 1
+    else:
+        start_index = 0
+
+    with open(output_bed, "w") as outfile:
+        if header:
+            outfile.write("{0}\n".format("\t".join(lines[0])))
+        for line in lines[start_index:]:
+            if full_names:
+                line[0] = line[0].strip("chr")
+            else:
+                line[0] = "chr{0}".format(line[0])
+            outfile.write("{0}\n".format("\t".join(line)))
+
+
+
+
 def check_coding(exons_file, CDSs_file, outfile, remove_overlapping = False):
         '''
         Given a bed file of exon coordinates and a bed file of CDS coordinates,
@@ -119,7 +148,7 @@ def extract_cds(gtf, bed_output, output_fasta, genome_fasta, full_chr_name=None,
     #extract required cds features
     extract_features(gtf, bed_output, ['CDS', 'stop_codon'], full_chr_name, clean_chrom_only = clean_chrom_only)
     #extract to fasta
-    fasta_interval_file = "{0}_intervals{1}".format(os.path.splitext(output_fasta)[0], os.path.splitext(output_fasta)[1])    
+    fasta_interval_file = "{0}_intervals{1}".format(os.path.splitext(output_fasta)[0], os.path.splitext(output_fasta)[1])
     extract_cds_from_bed(bed_output, output_fasta, genome_fasta, fasta_interval_file, check_acgt, check_start, check_length, check_stop, check_inframe_stop, all_checks, uniquify)
     #filter the previous files to only include those that passed the filters
     filter_bed_from_fasta(bed_output, output_fasta, bed_output)
@@ -335,30 +364,81 @@ def extract_features(gtf_file, out_file, features, full_chr_name=None, clean_chr
                                                                 #output and convert to base 0
                                                                 output.write('\t'.join([chr_name, str(int(item[0])-1), item[1], '{0}.{1}.{2}'.format(trans, exon, gene), feature, item[2]]) + '\n')
 
+
+def extract_nt_indicies(fasta_file, output_files):
+
+    '''
+    Extract the indicies for each nt given a fasta file
+    Output files need to be of format: output_files: "A": "filepath_for_A", "C", "filepath_for_C" etc
+    '''
+
+    nts = ["A", "C", "G", "T"]
+    names, seqs = gen.read_fasta(fasta_file)
+    # pos_regex = re.compile('^(chr\d+):(\d+)-(\d+)(?=\([+-]\))');
+
+    indices = collections.defaultdict(lambda: collections.defaultdict(lambda: []))
+
+    for i, seq in enumerate(seqs):
+        id = names[i].strip('>')
+        for nt in nts:
+            indices[id][nt] = [str(m.start(0)) for m in re.finditer('{0}'.format(nt), seq)]
+
+    outfiles = {}
+    for nt in nts:
+        outfiles[nt] = open(output_files[nt], "w")
+
+
+    for id in indices:
+        for nt in indices[id]:
+            outfiles[nt].write(">{0}\n".format(id))
+            outfiles[nt].write("{0}\n".format(",".join(indices[id][nt])))
+
+    for nt in nts:
+        outfiles[nt].close()
+
+        # positions = re.search(pos_regex, id)
+        # sampleid = positions.group(1)
+        # start = int(positions.group(2))
+        # nts = list(seq)
+        # for j, nt in enumerate(nts):
+        #     indicies[sampleid][nt].append(start+j)
+
+    # with open(output_file, "w") as output:
+    #     for sampleid in sorted(indicies):
+    #         output.write('>{0}\n'.format(sampleid))
+    #         line = ""
+    #         for nt in sorted(indicies[sampleid]):
+    #             # remove any duplicates
+    #             indicies[sampleid][nt] = sorted(list(set(indicies[sampleid][nt])))
+    #             indicies[sampleid][nt] = [str(x) for x in indicies[sampleid][nt]]
+    #             line += "{0}:{1};".format(nt, ",".join(indicies[sampleid][nt]))
+    #         output.write("{0}\n".format(line))
+
+
 def fasta_from_intervals(bed_file, fasta_file, genome_fasta, force_strand = True, names = False):
-        '''
-        Takes a bed file and creates a fasta file with the corresponding sequences.
-        If names == False, the fasta record names will be generated from the sequence coordinates.
-        If names == True, the fasta name will correspond to whatever is in the 'name' field of the bed file
-        '''
+    '''
+    Takes a bed file and creates a fasta file with the corresponding sequences.
+    If names == False, the fasta record names will be generated from the sequence coordinates.
+    If names == True, the fasta name will correspond to whatever is in the 'name' field of the bed file
+    '''
 
-        #if the index file exists, check whether the expected features are present
-        genome_fasta_index = genome_fasta + '.fai'
-        if(os.path.exists(genome_fasta_index)):
-                bed_chrs = sorted(list(set([entry[0] for entry in gen.read_many_fields(bed_file, "\t")])))
-                index_chrs = sorted(list(set([entry[0] for entry in gen.read_many_fields(genome_fasta_index, "\t")])))
-                if(not set(bed_chrs).issubset(set(index_chrs))):
-                        gen.remove_file(genome_fasta_index)
+    #if the index file exists, check whether the expected features are present
+    genome_fasta_index = genome_fasta + '.fai'
+    if(os.path.exists(genome_fasta_index)):
+        bed_chrs = sorted(list(set([entry[0] for entry in gen.read_many_fields(bed_file, "\t")])))
+        index_chrs = sorted(list(set([entry[0] for entry in gen.read_many_fields(genome_fasta_index, "\t")])))
+        if(not set(bed_chrs).issubset(set(index_chrs))):
+            gen.remove_file(genome_fasta_index)
 
-        bedtools_args = ["bedtools", "getfasta", "-s", "-fi", genome_fasta, "-bed", bed_file, "-fo", fasta_file]
-        if not force_strand:
-                del bedtools_args[2]
-        if names:
-                bedtools_args.append("-name")
-        gen.run_process(bedtools_args)
-        names, seqs = gen.read_fasta(fasta_file)
-        seqs = [i.upper() for i in seqs]
-        gen.write_to_fasta(names, seqs, fasta_file)
+    bedtools_args = ["bedtools", "getfasta", "-s", "-fi", genome_fasta, "-bed", bed_file, "-fo", fasta_file]
+    if not force_strand:
+        del bedtools_args[2]
+    if names:
+        bedtools_args.append("-name")
+    gen.run_process(bedtools_args)
+    names, seqs = gen.read_fasta(fasta_file)
+    seqs = [i.upper() for i in seqs]
+    gen.write_to_fasta(names, seqs, fasta_file)
 
 def fasta_from_intervals_temp_file(bed_file, output_fasta, genome_fasta, random_directory=None):
         '''
@@ -392,13 +472,13 @@ def filter_bed_from_fasta(bed, fasta, out_bed, families_file = None):
             temp_file_name = "{0}.{1}{2}".format(os.path.splitext(out_bed)[0], random.random(), os.path.splitext(out_bed)[1])
         else:
             temp_file_name = out_bed
-        
+
         fasta_names, fasta_seqs = gen.read_fasta(fasta)
 
         #read in family information and pick one transcript per family
         if families_file:
                 families = gen.read_families(families_file)
-                #make sure the families file doesn't contain transcripts that are not in the fasta 
+                #make sure the families file doesn't contain transcripts that are not in the fasta
                 for pos, family in enumerate(families):
                         families[pos] = [i for i in family if i in fasta_names]
                 flat_families = gen.flatten(families)
@@ -553,7 +633,7 @@ def remove_overlaps(in_bed, out_bed):
                                 line = line[:-2]
                                 file.write(line)
                                 file.write("\n")
-        
+
 def uniquify_trans(names, seqs, gene_to_trans):
         '''
         Filter a set of transcript IDs and corresponding sequences to only leave one transcript per gene (the longest).

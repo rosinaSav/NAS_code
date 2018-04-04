@@ -12,6 +12,7 @@ import random
 import string
 import collections
 import re
+import itertools
 
 def filter_by_snp_type(input_file, output_file, snp_type, set_seed=None):
     '''
@@ -69,6 +70,63 @@ def get_allele_frequency(snp):
 
     # print(np.divide(sum(alleles), len(alleles)))
     return(np.divide(sum(alleles), len(alleles)))
+
+
+def generate_pesudo_monomorphic_ptcs(ptc_file, index_fastas, output_file, seed=None, without_replacement=None, with_weighting=None):
+
+    '''
+    Generate a file of pseudo PTC mutations where infact the site is a monomorphic site.
+    Give the 'new' PTC the same allele freqeuncies as the real PTC.
+    with_weighting: give each chunk without a mutation a weighting dependingon how many of a particular nt there are in that chunk
+    '''
+
+    nts = ["A", "C", "G", "T"]
+    index_files = {}
+    if without_replacement:
+        replace = False
+    else:
+        replace = True
+
+    for nt in nts:
+        names, indices = gen.read_fasta(index_fastas[nt])
+        indices = [x.split(',') for x in indices]
+        if with_weighting:
+            # get a ist of all indices
+            concat_indices = list(itertools.chain.from_iterable(indices))
+            # create the weightings
+            weights = [len(x)/len(concat_indices) for x in indices]
+        else:
+            # give all chunks the same weighting
+            weights = [1/len(indices) for x in indices]
+        index_files[nt] = [names, indices, weights]
+
+    # set the randomisation seed
+    np.random.seed(seed)
+
+    ptcs = gen.read_many_fields(ptc_file, "\t")
+    with open(output_file, "w") as output:
+        head = ptcs[0]
+        head[7] = "sim_spos"
+        head[11] = "sim_rel_chunk_pos"
+        head[12] = "sim_status"
+        output.write("{0}\n".format("\t".join(head)))
+
+        # for each ptc
+        for ptc in ptcs[1:]:
+            aa = ptc[9]
+            pseudo_ptc = ptc
+
+            # choose a random exon chunk
+            random_exon = np.random.choice(list(range(len(index_files[aa][1]))), 1, p=index_files[nt][2])[0]
+            # choose a random position within that chunk
+            random_pos = np.random.choice([p for p in index_files[aa][1][random_exon]], 1, replace=replace)[0]
+
+            # output to file, keeping same allele frequencies
+            pseudo_ptc[3] = index_files[aa][0][int(random_exon)]
+            pseudo_ptc[11] = random_pos
+            pseudo_ptc[12] = "pseudo_ptc_snp"
+            output.write('{0}\n'.format("\t".join(pseudo_ptc)))
+
 
 def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, ptc_output_file, other_snps_file, without_replacement=None, match_allele_frequency=None, match_allele_frequency_window=None, group_by_gene=None, seed=None):
     '''
@@ -177,7 +235,7 @@ def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, ptc_output_file, 
                     alt_snp_choices = [i for i in alternative_snp_indices["all"][ptc[9]][ptc[10]] if alt_snp_allele_frequency_lower_limit <= i[1] and i[1] <= alt_snp_allele_frequency_upper_limit]
                 else:
                     alt_snp_choices = alternative_snp_indices["all"][ptc[9]][ptc[10]]
-               
+
             #have to do it this way round because we have a list of lists, not list of items
             #which numpy doesnt like
             #generate a list of indices for the snp choices
