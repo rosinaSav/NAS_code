@@ -366,8 +366,8 @@ def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_j
 def main():
 
     description = "Check whether PTCs are associated with greater rates of exon skipping."
-    args = gen.parse_arguments(description, ["gtf", "genome_fasta", "bams_folder", "vcf_folder", "panel_file", "out_prefix", "bam_analysis_folder", "number_of_simulations", "simulation_output_folder", "motif_file", "filter_genome_data", "get_SNPs", "process_bams", "simulate_ptc_snps", "motif_complement", "overwrite_intersect", "use_old_sims", "out_of_frame", "simulate_ptcs_with_monomorphic"], flags = [10, 11, 12, 13, 14, 15, 16, 17, 18], ints = [7])
-    gtf, genome_fasta, bams_folder, vcf_folder, panel_file, out_prefix, bam_analysis_folder, number_of_simulations, simulation_output_folder, motif_file, filter_genome_data, get_SNPs, process_bams, simulate_ptc_snps, motif_complement, overwrite_intersect, use_old_sims, out_of_frame, simulate_ptcs_with_monomorphic = args.gtf, args.genome_fasta, args.bams_folder, args.vcf_folder, args.panel_file, args.out_prefix, args.bam_analysis_folder, args.number_of_simulations, args.simulation_output_folder, args.motif_file, args.filter_genome_data, args.get_SNPs, args.process_bams, args.simulate_ptc_snps, args.motif_complement, args.overwrite_intersect, args.use_old_sims, args.out_of_frame, args.simulate_ptcs_with_monomorphic
+    args = gen.parse_arguments(description, ["gtf", "genome_fasta", "bams_folder", "vcf_folder", "panel_file", "out_prefix", "bam_analysis_folder", "number_of_simulations", "simulation_output_folder", "motif_file", "filter_genome_data", "get_SNPs", "process_bams", "simulate_ptc_snps", "motif_complement", "overwrite_intersect", "use_old_sims", "out_of_frame", "simulate_ptcs_with_monomorphic", "generate_monomorphic_indices"], flags = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19], ints = [7])
+    gtf, genome_fasta, bams_folder, vcf_folder, panel_file, out_prefix, bam_analysis_folder, number_of_simulations, simulation_output_folder, motif_file, filter_genome_data, get_SNPs, process_bams, simulate_ptc_snps, motif_complement, overwrite_intersect, use_old_sims, out_of_frame, simulate_ptcs_with_monomorphic, generate_monomorphic_indices = args.gtf, args.genome_fasta, args.bams_folder, args.vcf_folder, args.panel_file, args.out_prefix, args.bam_analysis_folder, args.number_of_simulations, args.simulation_output_folder, args.motif_file, args.filter_genome_data, args.get_SNPs, args.process_bams, args.simulate_ptc_snps, args.motif_complement, args.overwrite_intersect, args.use_old_sims, args.out_of_frame, args.simulate_ptcs_with_monomorphic, args.generate_monomorphic_indices
 
     start = time.time()
 
@@ -491,7 +491,7 @@ def main():
         if simulate_ptcs_with_monomorphic and not number_of_simulations:
             print("Please specify the number of simulations")
             raise Exception
-        ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file, genome_fasta, PTC_file, coding_exon_bed, exon_junctions_file, bam_files, number_of_simulations, generate_indices = generate_indices, use_old_sims = use_old_sims)
+        ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file, genome_fasta, PTC_file, coding_exon_bed, exon_junctions_file, bam_files, number_of_simulations, generate_indices = generate_monomorphic_indices, use_old_sims = use_old_sims)
 
 if __name__ == "__main__":
     main()
