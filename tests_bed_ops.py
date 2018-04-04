@@ -4,6 +4,24 @@ import unittest
 
 class Test_bed_ops(unittest.TestCase):
 
+    def test_change_bed_names(self):
+        full_bed = "test_data/bed_ops/test_change_bed_names/input_full.bed"
+        short_bed = "test_data/bed_ops/test_change_bed_names/input_short.bed"
+        expected_full = "test_data/bed_ops/test_change_bed_names/expected_full.bed"
+        expected_short = "test_data/bed_ops/test_change_bed_names/expected_short.bed"
+        observed_full = "test_data/bed_ops/test_change_bed_names/observed_full.bed"
+        observed_short = "test_data/bed_ops/test_change_bed_names/observed_short.bed"
+        gen.remove_file(observed_full)
+        gen.remove_file(observed_short)
+        change_bed_names(full_bed, observed_full, full_names=True, header=False)
+        change_bed_names(short_bed, observed_short, full_names=False, header=False)
+        expected_full = gen.read_many_fields(expected_full, "\t")
+        expected_short = gen.read_many_fields(expected_short, "\t")
+        observed_full = gen.read_many_fields(observed_full, "\t")
+        observed_short = gen.read_many_fields(observed_short, "\t")
+        self.assertEqual(expected_full, observed_full)
+        self.assertEqual(expected_short, observed_short)
+
     def test_check_coding(self):
         exon_file = "test_data/bed_ops/test_check_coding/exons.bed"
         CDS_file = "test_data/bed_ops/test_check_coding/CDSs.bed"

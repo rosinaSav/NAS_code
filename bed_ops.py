@@ -9,6 +9,35 @@ from pathlib import Path
 import random
 import shutil
 
+
+def change_bed_names(input_bed, output_bed, full_names, header):
+    '''
+    Convert between full chromosome names and just chromosome numbers.
+    As is, output_bed needs to be different to input_bed.
+    full_names: Set to true if the input_bed has the full chr name, e.g. chr1
+    header: Set to true if the bed file has a header
+    '''
+    lines = gen.read_many_fields(input_bed, "\t")
+
+    # Set whether the bed file has a header or not
+    if header:
+        start_index = 1
+    else:
+        start_index = 0
+
+    with open(output_bed, "w") as outfile:
+        if header:
+            outfile.write("{0}\n".format("\t".join(lines[0])))
+        for line in lines[start_index:]:
+            if full_names:
+                line[0] = line[0].strip("chr")
+            else:
+                line[0] = "chr{0}".format(line[0])
+            outfile.write("{0}\n".format("\t".join(line)))
+
+
+
+
 def check_coding(exons_file, CDSs_file, outfile, remove_overlapping = False):
         '''
         Given a bed file of exon coordinates and a bed file of CDS coordinates,
@@ -330,7 +359,8 @@ def extract_features(gtf_file, out_file, features, full_chr_name=None, clean_chr
 def extract_nt_indicies(fasta_file, output_files):
 
     '''
-    Extract the indicies for each nt given a fasta file.
+    Extract the indicies for each nt given a fasta file
+    Output files need to be of format: output_files: "A": "filepath_for_A", "C", "filepath_for_C" etc
     '''
 
     nts = ["A", "C", "G", "T"]
