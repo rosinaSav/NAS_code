@@ -1,3 +1,7 @@
+'''
+Author: Liam Abrahams
+'''
+
 import generic as gen
 import itertools as it
 import re

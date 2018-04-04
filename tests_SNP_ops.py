@@ -40,6 +40,22 @@ class Test_SNP_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(expected, observed)
 
+    def test_generate_pseudo_monomorphic_ptcs(self):
+        input_indices = {
+            "A": "test_data/snp_ops/test_generate_pseudo_monomorphic_ptcs/input_indices_a.fasta",
+            "C": "test_data/snp_ops/test_generate_pseudo_monomorphic_ptcs/input_indices_c.fasta",
+            "G": "test_data/snp_ops/test_generate_pseudo_monomorphic_ptcs/input_indices_g.fasta",
+            "T": "test_data/snp_ops/test_generate_pseudo_monomorphic_ptcs/input_indices_t.fasta"
+        }
+        ptc_file = "test_data/snp_ops/test_generate_pseudo_monomorphic_ptcs/input_ptc_file.bed"
+        observed = "test_data/snp_ops/test_generate_pseudo_monomorphic_ptcs/observed_monomorphoc_ptc_simulants.bed"
+        expected = "test_data/snp_ops/test_generate_pseudo_monomorphic_ptcs/expected_monomorphoc_ptc_simulants.bed"
+        gen.remove_file(observed)
+        generate_pesudo_monomorphic_ptcs(ptc_file, input_indices, observed, seed=5)
+        expected = gen.read_many_fields(expected, "\t")
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(expected, observed)
+
     def test_generate_pseudo_ptc_snps(self):
         input_ptc_snps = "test_data/snp_ops/test_generate_pseudo_ptc_snps/input_ptc_snps.bed"
         input_nonsyn_snps = "test_data/snp_ops/test_generate_pseudo_ptc_snps/input_nonsyn_snps.bed"
@@ -129,6 +145,18 @@ class Test_SNP_ops(unittest.TestCase):
         for snp in input_snps[1:]:
             observed.append(get_allele_frequency(snp))
         self.assertEqual(observed, expected)
+
+    def test_get_codon_start(self):
+        cases = [(10, 14), (11, 14), (9, 14), (0, 14), (13, 14)]
+        expected = [9, 9, 9, 0, 12]
+        observed = [get_codon_start(i[0], i[1]) for i in cases]
+        self.assertEqual(expected, observed)
+
+    def test_get_codon_start_shift(self):
+        cases = [(9, 15), (0, 15), (4, 15), (8, 15), (13, 15)]
+        expected = [8, "error", 4, 7, "error"]
+        observed = [get_codon_start(i[0], i[1], shift = True) for i in cases]
+        self.assertEqual(expected, observed)
 
     def test_get_snp_relative_cds_position(self):
         relative_exon_position_file = gen.read_many_fields("test_data/snp_ops/test_get_snp_relative_cds_position/test_snp_relative_exon_position.bed", "\t")
