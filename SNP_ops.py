@@ -77,6 +77,11 @@ def generate_pesudo_monomorphic_ptcs(ptc_file, index_fastas, output_file, seed=N
 
     nts = ["A", "C", "G", "T"]
     index_files = {}
+    if without_replacement:
+        replace = False
+    else:
+        replace = True
+
     for nt in nts:
         names, indices = gen.read_fasta(index_fastas[nt])
         indices = [x.split(',') for x in indices]
@@ -109,7 +114,7 @@ def generate_pesudo_monomorphic_ptcs(ptc_file, index_fastas, output_file, seed=N
             # choose a random exon chunk
             random_exon = np.random.choice(list(range(len(index_files[aa][1]))), 1, p=index_files[nt][2])[0]
             # choose a random position within that chunk
-            random_pos = np.random.choice([p for p in index_files[aa][1][random_exon]], 1, replace=True)[0]
+            random_pos = np.random.choice([p for p in index_files[aa][1][random_exon]], 1, replace=replace)[0]
 
             # output to file, keeping same allele frequencies
             pseudo_ptc[3] = index_files[aa][0][int(random_exon)]
