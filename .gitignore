@@ -6,3 +6,4 @@ testfile.py
 .DS_Store
 observed*.*
 ese_stops_simulations_output/
+cython_func.cpython*
