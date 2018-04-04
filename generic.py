@@ -1,3 +1,8 @@
+'''
+Author: Rosina Savisaar and Liam Abrahams.
+Module that contains generic utility functions that make life a bit easier.
+'''
+
 import argparse
 import csv
 import ftplib
@@ -410,6 +415,9 @@ def remove_file(file_name):
         pass
 
 def reverse_complement(base):
+    '''
+    Reverse complement a base.
+    '''
     reverse_comps = {
         "A": "T",
         "C": "G",

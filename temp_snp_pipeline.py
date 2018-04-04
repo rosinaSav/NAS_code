@@ -1,3 +1,7 @@
+'''
+Author: Liam Abrahams
+'''
+
 import bed_ops as bed
 import bam_ops as bam
 import SNP_ops as snp
