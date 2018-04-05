@@ -81,10 +81,8 @@ def generate_pesudo_monomorphic_ptcs(ptc_file, index_fastas, output_file, seed=N
     '''
 
     file = index_fastas["A"]
-    with open(file, "r") as i:
-        lines = i.readlines()
-        for line in lines:
-            print(line)
+    i, j = gen.read_fasta(file)
+    print(i)
 
     nts = ["A", "C", "G", "T"]
     index_files = {}
