@@ -92,7 +92,7 @@ def ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file
     #setup up simulation output folder
     if simulation_output_folder == "None":
         simulation_output_folder = "{0}_simulate_ptc_monomorphic_sites".format(out_prefix)
-    if not use_old_sims:
+    if not use_old_sims and generate_indices:
         #if the simulation folder we are specifying already exists, delete and start again
         gen.create_strict_directory(simulation_output_folder)
     else:
