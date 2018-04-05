@@ -109,10 +109,10 @@ def ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file
     simulation_bam_analysis_output_folder = "{0}_simulate_ptc_monomorphic_sites_bam_analysis".format(out_prefix)
 
     nt_indices_files = {
-        "A": "{0}/{1}_nt_indices_no_mutations_A.fasta",
-        "C": "{0}/{1}_nt_indices_no_mutations_C.fasta",
-        "G": "{0}/{1}_nt_indices_no_mutations_G.fasta",
-        "T": "{0}/{1}_nt_indices_no_mutations_T.fasta",
+        "A": "{0}/nt_indices_no_mutations_A.fasta".format(out_prefix),
+        "C": "{0}/nt_indices_no_mutations_C.fasta".format(out_prefix),
+        "G": "{0}/nt_indices_no_mutations_G.fasta".format(out_prefix),
+        "T": "{0}/nt_indices_no_mutations_T.fasta".format(out_prefix),
     }
 
     if generate_indices:
