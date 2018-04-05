@@ -34,7 +34,7 @@ def get_non_mutation_indices(simulation_output_folder, sample_file, coding_exon_
     # change the names in the bed file to correspond to the mutation vcf
     bo.change_bed_names(coding_exon_bed, coding_exon_bed_out, full_names=True, header=False)
     # intersect the bed, leaving only regions that contain no mutations
-    bmo.intersect_bed(coding_exon_bed, sample_file, write_both = False, output_file = coding_exon_bed_out, no_dups = False, subtract=True)
+    bmo.intersect_bed(coding_exon_bed, sample_file, write_both = False, output_file = coding_exon_bed_out, no_dups = False, subtract=True, intersect=True)
     # generate fasta of all the regions
     bo.fasta_from_intervals(coding_exon_bed_out, fasta_no_mutations, genome_fasta, force_strand = True, names = True)
     # extract the indicies of each location a mutation doesnt occur
