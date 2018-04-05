@@ -25,8 +25,6 @@ def get_non_mutation_indices(simulation_output_folder, sample_file, coding_exon_
     # split this so each chr has its own file?
     # bo.extract_nt_indicies(fasta_file, output_file)
 
-    print('coding_exon_bed', coding_exon_bed.split('/')[-1])
-
     # set up the new file to contain the regions without a mutation
     coding_exon_bed_out = "{0}/{1}".format(simulation_output_folder, coding_exon_bed.split('/')[-1])
     # file to contain the fasta output of regions containing no mutation
@@ -91,11 +89,6 @@ def ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file
     if use_old_sims is True, don't pick new simulant SNPs from monomorphic sites.
     '''
 
-    print('\n\n')
-    print('output_prefix', out_prefix)
-    print('simulation_output_folder', simulation_output_folder)
-    print('\n\n')
-
     #setup up simulation output folder
     if simulation_output_folder == "None":
         simulation_output_folder = "{0}_simulate_ptc_monomorphic_sites".format(out_prefix)
@@ -109,10 +102,10 @@ def ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file
     simulation_bam_analysis_output_folder = "{0}_simulate_ptc_monomorphic_sites_bam_analysis".format(out_prefix)
 
     nt_indices_files = {
-        "A": "{0}/nt_indices_no_mutations_A.fasta".format(out_prefix),
-        "C": "{0}/nt_indices_no_mutations_C.fasta".format(out_prefix),
-        "G": "{0}/nt_indices_no_mutations_G.fasta".format(out_prefix),
-        "T": "{0}/nt_indices_no_mutations_T.fasta".format(out_prefix),
+        "A": "{0}/nt_indices_no_mutations_A.fasta".format(simulation_output_folder),
+        "C": "{0}/nt_indices_no_mutations_C.fasta".format(simulation_output_folder),
+        "G": "{0}/nt_indices_no_mutations_G.fasta".format(simulation_output_folder),
+        "T": "{0}/nt_indices_no_mutations_T.fasta".format(simulation_output_folder),
     }
 
     if generate_indices:
