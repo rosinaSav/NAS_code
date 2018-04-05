@@ -30,7 +30,7 @@ def get_non_mutation_indices(simulation_output_folder, sample_file, coding_exon_
     # set up the new file to contain the regions without a mutation
     coding_exon_bed_out = "{0}/{1}".format(simulation_output_folder, coding_exon_bed.split('/')[-1])
     # file to contain the fasta output of regions containing no mutation
-    fasta_no_mutations = "{0}/{1}_exon_regions_no_mutations.fasta".format(simulation_output_folder, out_prefix)
+    fasta_no_mutations = "{0}/exon_regions_no_mutations.fasta".format(simulation_output_folder)
     # change the names in the bed file to correspond to the mutation vcf
     bo.change_bed_names(coding_exon_bed, coding_exon_bed_out, full_names=True, header=False)
     # intersect the bed, leaving only regions that contain no mutations
