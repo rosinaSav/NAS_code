@@ -12,7 +12,7 @@ import SNP_ops as so
 import time
 
 
-def get_non_mutation_indices(simulation_output_folder, vcf_folder, coding_exon_bed, out_prefix, genome_fasta, nt_indices_files):
+def get_non_mutation_indices(simulation_output_folder, sample_file, coding_exon_bed, out_prefix, genome_fasta, nt_indices_files):
 
     # to do:
     # 1. need to convert bed to not have chr name
