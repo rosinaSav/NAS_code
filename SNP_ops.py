@@ -1,3 +1,8 @@
+'''
+Authors: Rosina Savisaar and Liam Abrahams
+Module containing functions for processing SNP data and SNP-related operations.
+'''
+
 import bam_ops as bmo
 from cython_func import calc_density_for_concat_several_c
 import generic as gen
@@ -459,6 +464,10 @@ def get_snp_relative_exon_position(intersect_file):
     return(relative_positions)
 
 def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_file, others_output_file, out_of_frame = False):
+    '''
+    For a set of SNPs, determine the effect of the PTC (nonsense, missense, synonymous).
+    Store the nonsense ones in one file and all the rest in another.
+    '''
 
     snps = gen.read_many_fields(snp_cds_relative_positions, "\t")
     cds_names, cds_seqs = gen.read_fasta(cds_fasta)
@@ -544,7 +553,9 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
 
 def get_snp_type(sequence, variant, shift = False):
     '''
-    If shift is True, the codon that each SNP is in will be shifted 3' by a single base
+    Get the effect of a particular SNP (nonsense/missense/synonymous).
+    If shift is True (when doing an out-of-frame simulation),
+    the codon that each SNP is in will be shifted 3' by a single base
     (for the purposes of determining the type of SNP),
     except if this would move the SNP out of the codon or the codon further than the sequence end, in which case
     the codon is shifted one base 5' instead.

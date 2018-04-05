@@ -1,3 +1,8 @@
+'''
+Author: Rosina Savisaar and Liam Abrahams
+Check whether PTCs are associated with greater rates of exon skipping.
+'''
+
 import bed_ops as bo
 import bam_ops as bmo
 import generic as gen
@@ -209,6 +214,12 @@ def ptc_snp_simulation(out_prefix, simulation_output_folder, ptc_file, syn_nonsy
         run_ptc_simulation_instance([1], out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, nonsynonymous_snps_file, exon_junctions_file, bam_files, False, use_old_sims)
 
 def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_junctions_file, out_folder, PTC_file, syn_nonsyn_file, out_prefix, kw_dict):
+    '''
+    Do all of the processing on an individual bam, from filtering out low quality data to mapping reads to
+    exon-exon junctions.
+    For each exon, return information on how many reads fall at different exon-exon junctions.
+    '''
+
     #parse keyword_dict
     #it's done like this to make it easier to parallelize this process
     if "ptc_snp_simulation" in kw_dict:
@@ -253,6 +264,7 @@ def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_j
         else:
             output_file = "{0}/{1}.txt".format(out_folder, sample_name)
 
+        #folder that will contain all of the intermediate steps in the processing of the bam file
         if ptc_snp_simulation:
             proc_folder = "{0}/bam_proc_files".format(simulation_instance_folder)
 
@@ -302,7 +314,7 @@ def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_j
             #intersect the filtered bam and the ptc exon junctions file
             bmo.intersect_bed(global_intersect_bam, PTC_exon_junctions_file, output_file = intersect_bam, intersect_bam = True)
 
-            #1: count how many reads there are in the sample after filtering to relevant exon-exon junctions but before quality filtering
+            #count how many reads there are in the sample after filtering to relevant exon-exon junctions but before quality filtering
             read_count_junctions_no_filter = int(gen.run_process(["samtools", "view", "-c", intersect_bam]))
             #4. filter .bam alignments by quality.
             #takes both upper and lower bam thresholds
@@ -354,8 +366,8 @@ def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_j
 def main():
 
     description = "Check whether PTCs are associated with greater rates of exon skipping."
-    args = gen.parse_arguments(description, ["gtf", "genome_fasta", "bams_folder", "vcf_folder", "panel_file", "out_prefix", "bam_analysis_folder", "number_of_simulations", "simulation_output_folder", "motif_file", "filter_genome_data", "get_SNPs", "process_bams", "simulate_ptc_snps", "motif_complement", "overwrite_intersect", "use_old_sims", "out_of_frame", "simulate_ptcs_with_monomorphic"], flags = [10, 11, 12, 13, 14, 15, 16, 17, 18], ints = [7])
-    gtf, genome_fasta, bams_folder, vcf_folder, panel_file, out_prefix, bam_analysis_folder, number_of_simulations, simulation_output_folder, motif_file, filter_genome_data, get_SNPs, process_bams, simulate_ptc_snps, motif_complement, overwrite_intersect, use_old_sims, out_of_frame, simulate_ptcs_with_monomorphic = args.gtf, args.genome_fasta, args.bams_folder, args.vcf_folder, args.panel_file, args.out_prefix, args.bam_analysis_folder, args.number_of_simulations, args.simulation_output_folder, args.motif_file, args.filter_genome_data, args.get_SNPs, args.process_bams, args.simulate_ptc_snps, args.motif_complement, args.overwrite_intersect, args.use_old_sims, args.out_of_frame, args.simulate_ptcs_with_monomorphic
+    args = gen.parse_arguments(description, ["gtf", "genome_fasta", "bams_folder", "vcf_folder", "panel_file", "out_prefix", "bam_analysis_folder", "number_of_simulations", "simulation_output_folder", "motif_file", "filter_genome_data", "get_SNPs", "process_bams", "simulate_ptc_snps", "motif_complement", "overwrite_intersect", "use_old_sims", "out_of_frame", "simulate_ptcs_with_monomorphic", "generate_monomorphic_indices"], flags = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19], ints = [7])
+    gtf, genome_fasta, bams_folder, vcf_folder, panel_file, out_prefix, bam_analysis_folder, number_of_simulations, simulation_output_folder, motif_file, filter_genome_data, get_SNPs, process_bams, simulate_ptc_snps, motif_complement, overwrite_intersect, use_old_sims, out_of_frame, simulate_ptcs_with_monomorphic, generate_monomorphic_indices = args.gtf, args.genome_fasta, args.bams_folder, args.vcf_folder, args.panel_file, args.out_prefix, args.bam_analysis_folder, args.number_of_simulations, args.simulation_output_folder, args.motif_file, args.filter_genome_data, args.get_SNPs, args.process_bams, args.simulate_ptc_snps, args.motif_complement, args.overwrite_intersect, args.use_old_sims, args.out_of_frame, args.simulate_ptcs_with_monomorphic, args.generate_monomorphic_indices
 
     start = time.time()
 
@@ -479,7 +491,7 @@ def main():
         if simulate_ptcs_with_monomorphic and not number_of_simulations:
             print("Please specify the number of simulations")
             raise Exception
-        ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file, genome_fasta, PTC_file, coding_exon_bed, exon_junctions_file, bam_files, number_of_simulations, generate_indices = generate_indices, use_old_sims = use_old_sims)
+        ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file, genome_fasta, PTC_file, coding_exon_bed, exon_junctions_file, bam_files, number_of_simulations, generate_indices = generate_monomorphic_indices, use_old_sims = use_old_sims)
 
 if __name__ == "__main__":
     main()

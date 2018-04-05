@@ -1,3 +1,7 @@
+'''
+Author: Liam Abrahams
+'''
+
 import time
 import os
 import re
