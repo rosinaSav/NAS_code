@@ -92,6 +92,7 @@ def generate_pesudo_monomorphic_ptcs(ptc_file, index_fastas, output_file, seed=N
         replace = True
 
     for nt in nts:
+        print(index_fastas[nt])
         names, indices = gen.read_fasta(index_fastas[nt])
         indices = [x.split(',') for x in indices]
         if with_weighting:
