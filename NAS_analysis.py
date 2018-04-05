@@ -83,7 +83,7 @@ def run_ptc_monomorpphic_simulation_instance(simulations, out_prefix, simulation
         final_file = "{0}/final_output_simulation_{1}.txt".format(simulation_bam_analysis_output_folder, simulation_number)
         bmo.compare_PSI(pseudo_monomorphic_ptc_file, simulation_bam_analysis_output_folder, final_file, sim_number = simulation_number)
 
-def ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file, genome_fasta, PTC_file, coding_exon_bed, exon_junctions_file, bam_files, required_simulations, generate_indices = False, use_old_sims = False):
+def ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file, genome_fasta, ptc_file, coding_exon_bed, exon_junctions_file, bam_files, required_simulations, generate_indices = False, use_old_sims = False):
     '''
     Set up the PTC simulations and then run.
     if use_old_sims is True, don't pick new simulant SNPs from monomorphic sites.
