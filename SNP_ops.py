@@ -80,6 +80,10 @@ def generate_pesudo_monomorphic_ptcs(ptc_file, index_fastas, output_file, seed=N
     with_weighting: give each chunk without a mutation a weighting dependingon how many of a particular nt there are in that chunk
     '''
 
+    print('\n\n')
+    print(ptc_file)
+    print('\n\n')
+
     nts = ["A", "C", "G", "T"]
     index_files = {}
     if without_replacement:
