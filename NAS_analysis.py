@@ -25,10 +25,10 @@ def get_non_mutation_indices(simulation_output_folder, vcf_folder, coding_exon_b
     # split this so each chr has its own file?
     # bo.extract_nt_indicies(fasta_file, output_file)
 
-    print('coding_exon_bed', coding_exon_bed)
+    print('coding_exon_bed', coding_exon_beds.split('/')[-1])
 
     # set up the new file to contain the regions without a mutation
-    coding_exon_bed_out = "{0}/{1}".format(simulation_output_folder, coding_exon_bed)
+    coding_exon_bed_out = "{0}/{1}".format(simulation_output_folder, coding_exon_bed.split('/')[-1])
     # file to contain the fasta output of regions containing no mutation
     fasta_no_mutations = "{0}/{1}_exon_regions_no_mutations.fasta".format(simulation_output_folder, out_prefix)
     # change the names in the bed file to correspond to the mutation vcf
