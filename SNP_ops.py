@@ -80,9 +80,11 @@ def generate_pesudo_monomorphic_ptcs(ptc_file, index_fastas, output_file, seed=N
     with_weighting: give each chunk without a mutation a weighting dependingon how many of a particular nt there are in that chunk
     '''
 
-    print('\n\n')
-    print(ptc_file)
-    print('\n\n')
+    file = index_fastas["A"]
+    with open(file, "r") as i:
+        lines = i.readlines()
+        for line in lines:
+            print(line)
 
     nts = ["A", "C", "G", "T"]
     index_files = {}
@@ -92,7 +94,6 @@ def generate_pesudo_monomorphic_ptcs(ptc_file, index_fastas, output_file, seed=N
         replace = True
 
     for nt in nts:
-        print(index_fastas[nt])
         names, indices = gen.read_fasta(index_fastas[nt])
         indices = [x.split(',') for x in indices]
         if with_weighting:
