@@ -60,7 +60,7 @@ def run_ptc_monomorpphic_simulation_instance(simulations, out_prefix, simulation
         #generate pseudo ptc snps
         pseudo_monomorphic_ptc_file = "{0}/{1}_pseudo_monomorphic_ptc_file_{2}.txt".format(simulation_instance_folder, out_prefix, simulation_number)
         if (not use_old_sims) or (not(os.path.isfile(pseudo_monomorphic_ptc_file))):
-            so.generate_pesudo_monomorphic_ptcs(ptc_file, index_fastas, output_file)
+            so.generate_pesudo_monomorphic_ptcs(ptc_file, nt_indices_files, output_file)
 
         #filter the exon junctions file to only leave those junctions that flank exons retained in the previous step when generating pseudo ptcs
         pseudo_monomorphic_ptc_exon_junctions_file = "{0}/filtered_exon_junctions_{1}.bed".format(simulation_instance_folder, simulation_number)
