@@ -368,7 +368,7 @@ def extract_features(gtf_file, out_file, features, full_chr_name=None, clean_chr
 def extract_nt_indices(fasta_file, output_files):
 
     '''
-    Extract the indicies for each nt given a fasta file
+    Extract the indices for each nt given a fasta file
     Output files need to be of format: output_files: "A": "filepath_for_A", "C", "filepath_for_C" etc
     '''
 
@@ -391,7 +391,10 @@ def extract_nt_indices(fasta_file, output_files):
     for id in indices:
         for nt in indices[id]:
             outfiles[nt].write(">{0}\n".format(id))
-            outfiles[nt].write("{0}\n".format(",".join(indices[id][nt])))
+            if len(indices[id][nt]) > 0:
+                outfiles[nt].write("{0}\n".format(",".join(indices[id][nt])))
+            else:
+                outfiles[nt].write("XXX\n".format(",".join(indices[id][nt])))
 
     for nt in nts:
         outfiles[nt].close()
