@@ -89,6 +89,11 @@ def ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file
     if use_old_sims is True, don't pick new simulant SNPs from monomorphic sites.
     '''
 
+    print('\n\n')
+    print('output_prefix', out_prefix)
+    print('simulation_output_folder', simulation_output_folder)
+    print('\n\n')
+
     #setup up simulation output folder
     if simulation_output_folder == "None":
         simulation_output_folder = "{0}_simulate_ptc_monomorphic_sites".format(out_prefix)
