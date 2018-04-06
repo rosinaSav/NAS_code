@@ -10,7 +10,7 @@ import os
 import random
 import SNP_ops as so
 import time
-
+import numpy as np
 
 def get_non_mutation_indices(simulation_output_folder, sample_file, coding_exon_bed, out_prefix, genome_fasta, nt_indices_files):
 
