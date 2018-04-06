@@ -490,9 +490,9 @@ def main():
         so.filter_motif_SNPs(CDS_fasta, PTC_file, motif_file, filtered_ptc, complement = motif_complement)
         PTC_file = filtered_ptc
 
-    # print("Calculating PSI...")
-    # final_file = "{0}_final_output.txt".format(out_prefix)
-    # bmo.compare_PSI(PTC_file, bam_analysis_folder, final_file)
+    print("Calculating PSI...")
+    final_file = "{0}_final_output.txt".format(out_prefix)
+    bmo.compare_PSI(PTC_file, bam_analysis_folder, final_file)
 
     #run the simulation that swaps ptcs for nonsynonymous snps
     if simulate_ptc_snps:
