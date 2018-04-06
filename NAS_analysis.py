@@ -63,6 +63,11 @@ def run_ptc_monomorphic_simulation_instance(simulations, out_prefix, simulation_
         else:
             gen.create_directory(simulation_instance_folder)
 
+        # copy ptc file to directory
+        real_ptcs_for_sim_file = "{0}/{1}".format(simulation_output_folder, ptc_file.split('/')[-1])
+        gen.copy_file(ptc_file, real_ptcs_for_sim_file)
+        ptc_file = real_ptcs_for_sim_file
+
         #generate pseudo ptc snps
         pseudo_monomorphic_ptc_file = "{0}/pseudo_monomorphic_ptc_file_{1}.txt".format(simulation_instance_folder, simulation_number)
         if (not use_old_sims) or (not(os.path.isfile(pseudo_monomorphic_ptc_file))):
@@ -76,7 +81,6 @@ def run_ptc_monomorphic_simulation_instance(simulations, out_prefix, simulation_
         #run the bam analysis for each
         #(don't parallelize if you're doing the simulations in parallel)
         kw_dict = {"ptc_snp_simulation": True, "simulation_instance_folder": simulation_instance_folder, "simulation_number": simulation_number}
-        # create remaining snps placeholder file
         if parallel:
             process_bam_per_individual(bam_files, exon_junctions_file, pseudo_monomorphic_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_monomorphic_ptc_file, syn_nonsyn_file, out_prefix, kw_dict)
         else:
@@ -94,6 +98,8 @@ def ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file
     if use_old_sims is True, don't pick new simulant SNPs from monomorphic sites.
     '''
 
+    print("Running simulation picking monomorphic sites that have the same ancestral allele as a PTC snp...")
+
     #setup up simulation output folder
     if simulation_output_folder == "None":
         simulation_output_folder = "{0}_simulate_ptc_monomorphic_sites".format(out_prefix)
@@ -106,6 +112,7 @@ def ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file
     #setup up simulation bam analysis output folder
     simulation_bam_analysis_output_folder = "{0}_simulate_ptc_monomorphic_sites_bam_analysis".format(out_prefix)
 
+    # create the filepaths to hold to positions of non mutated sites
     nt_indices_files = {
         "A": "{0}/nt_indices_no_mutations_A.fasta".format(simulation_output_folder),
         "C": "{0}/nt_indices_no_mutations_C.fasta".format(simulation_output_folder),
@@ -113,7 +120,7 @@ def ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file
         "T": "{0}/nt_indices_no_mutations_T.fasta".format(simulation_output_folder),
     }
 
-    if generate_indices:
+    if generate_indices and not use_old_sims:
         get_non_mutation_indices(simulation_output_folder, sample_file, coding_exon_bed, out_prefix, genome_fasta, nt_indices_files)
 
     if not use_old_sims:
@@ -483,9 +490,9 @@ def main():
         so.filter_motif_SNPs(CDS_fasta, PTC_file, motif_file, filtered_ptc, complement = motif_complement)
         PTC_file = filtered_ptc
 
-    print("Calculating PSI...")
-    final_file = "{0}_final_output.txt".format(out_prefix)
-    bmo.compare_PSI(PTC_file, bam_analysis_folder, final_file)
+    # print("Calculating PSI...")
+    # final_file = "{0}_final_output.txt".format(out_prefix)
+    # bmo.compare_PSI(PTC_file, bam_analysis_folder, final_file)
 
     #run the simulation that swaps ptcs for nonsynonymous snps
     if simulate_ptc_snps:

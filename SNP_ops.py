@@ -82,6 +82,7 @@ def generate_pesudo_monomorphic_ptcs(ptc_file, index_fastas, output_file, seed=N
 
     nts = ["A", "C", "G", "T"]
     index_files = {}
+    exon_search = re.compile('^.+\.\d')
     if without_replacement:
         replace = False
     else:
@@ -89,6 +90,8 @@ def generate_pesudo_monomorphic_ptcs(ptc_file, index_fastas, output_file, seed=N
 
     for nt in nts:
         names, indices = gen.read_fasta(index_fastas[nt])
+        # clean up the exon name to remove (+) and (-)
+        names = [re.search(exon_search, name).group(0) for name in names]
         indices = [x.split(',') for x in indices]
         if with_weighting:
             # get a ist of all indices
@@ -103,9 +106,6 @@ def generate_pesudo_monomorphic_ptcs(ptc_file, index_fastas, output_file, seed=N
     # set the randomisation seed
     np.random.seed(seed)
 
-    # set the regex to get the exon without (+) or (-)
-    exon_search = re.compile('^.+\.\d')
-
     ptcs = gen.read_many_fields(ptc_file, "\t")
     with open(output_file, "w") as output:
         head = ptcs[0]
@@ -118,17 +118,12 @@ def generate_pesudo_monomorphic_ptcs(ptc_file, index_fastas, output_file, seed=N
         for ptc in ptcs[1:]:
             aa = ptc[9]
             pseudo_ptc = ptc
-
             # choose a random exon chunk
-            random_exon = np.random.choice(list(range(len(index_files[aa][1]))), 1, p=index_files[nt][2])[0]
+            random_exon = np.random.choice(list(range(len(index_files[aa][0]))), 1, p=index_files[aa][2])[0]
             # choose a random position within that chunk
             random_pos = np.random.choice([p for p in index_files[aa][1][random_exon]], 1, replace=replace)[0]
-
-            # output to file, keeping same allele frequencies
-            chosen_exon = index_files[aa][0][int(random_exon)]
-            clean_chosen_exon = re.search(exon_search, chosen_exon)
-            pseudo_ptc[3] = clean_chosen_exon.group(0)
-
+            # outputs to file, keeping same allele frequencies
+            pseudo_ptc[3] = index_files[aa][0][int(random_exon)]
             pseudo_ptc[11] = random_pos
             pseudo_ptc[12] = "pseudo_ptc_snp"
             output.write('{0}\n'.format("\t".join(pseudo_ptc)))

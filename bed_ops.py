@@ -390,11 +390,9 @@ def extract_nt_indices(fasta_file, output_files):
 
     for id in indices:
         for nt in indices[id]:
-            outfiles[nt].write(">{0}\n".format(id))
             if len(indices[id][nt]) > 0:
+                outfiles[nt].write(">{0}\n".format(id))
                 outfiles[nt].write("{0}\n".format(",".join(indices[id][nt])))
-            else:
-                outfiles[nt].write("XXX\n".format(",".join(indices[id][nt])))
 
     for nt in nts:
         outfiles[nt].close()
