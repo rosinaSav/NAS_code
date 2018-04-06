@@ -103,6 +103,9 @@ def generate_pesudo_monomorphic_ptcs(ptc_file, index_fastas, output_file, seed=N
     # set the randomisation seed
     np.random.seed(seed)
 
+    # set the regex to get the exon without (+) or (-)
+    exon_search = re.compile('^.+\.\d')
+
     ptcs = gen.read_many_fields(ptc_file, "\t")
     with open(output_file, "w") as output:
         head = ptcs[0]
@@ -122,7 +125,10 @@ def generate_pesudo_monomorphic_ptcs(ptc_file, index_fastas, output_file, seed=N
             random_pos = np.random.choice([p for p in index_files[aa][1][random_exon]], 1, replace=replace)[0]
 
             # output to file, keeping same allele frequencies
-            pseudo_ptc[3] = index_files[aa][0][int(random_exon)]
+            chosen_exon = index_files[aa][0][int(random_exon)]
+            clean_chosen_exon = re.search(exon_search, chosen_exon)
+            pseudo_ptc[3] = clean_chosen_exon.group(0)
+
             pseudo_ptc[11] = random_pos
             pseudo_ptc[12] = "pseudo_ptc_snp"
             output.write('{0}\n'.format("\t".join(pseudo_ptc)))
