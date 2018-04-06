@@ -351,7 +351,7 @@ def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_j
 
             #5. scale down the initial count of reads in the sample by the proportion lost during quality filtering
             read_count_junctions_filter = int(gen.run_process(["samtools", "view", "-c", mapq_flag_xt_nm_filtered_bam]))
-            prop_kept = read_count_junctions_filter / read_count_junctions_no_filter
+            prop_kept = np.divide(read_count_junctions_filter, read_count_junctions_no_filter)
             read_count = prop_kept * read_count
 
             #convert to sam format and phase reads
