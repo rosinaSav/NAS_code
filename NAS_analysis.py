@@ -396,32 +396,32 @@ def main():
         bo.extract_cds(gtf, CDS_bed, CDS_fasta, genome_fasta, all_checks = True, uniquify = True, clean_chrom_only = True, full_chr_name = True)
         gen.get_time(start)
 
-    #     #group the CDS sequences into families based on sequence similarity
-    #     print("Grouping sequences into families...")
-    #     names = gen.read_fasta(CDS_fasta)[0]
-    #     gen.find_families_ensembl("../source_data/GRCh37_ensembl_protein_families.txt", names, "{0}_families.txt".format(out_prefix))
-    #     gen.get_time(start)
-    #
-    #     print("Extracting and filtering exons...")
-    #     #extract exon coordinates
-    #     bo.extract_exons(gtf, exon_bed)
-    #     #only leave exons from transcripts that passed quality control in the extract_cds step above.
-    #     #also only leave a single gene per family
-    #     bo.filter_bed_from_fasta(exon_bed, CDS_fasta, filtered_exon_bed, families_file = "{0}_families.txt".format(out_prefix))
-    #     gen.get_time(start)
-    #
-    #     #extract exon-exon junction coordinates
-    #     print("Extracting exon-exon junctions...")
-    #     bo.extract_exon_junctions(exon_bed, exon_junctions_file, window_of_interest = 2)
-    #     gen.get_time(start)
-    #
-    #     #make another exons bed that only contains fully coding exons.
-    #     #This is because in the final analysis, we should only consider fully protein-coding exons.
-    #     #However, for getting the exon junctions we need the full exons file because fully protein-coding exons might
-    #     #be flanked by exons that are not. This is why we couldn't do this filtering step earlier.
-    #     print("Filtering out overlapping, non-coding and partially coding, as well as terminal exons...")
-    #     bo.check_coding(filtered_exon_bed, CDS_bed, coding_exon_bed, remove_overlapping = True)
-    #     gen.get_time(start)
+        #group the CDS sequences into families based on sequence similarity
+        print("Grouping sequences into families...")
+        names = gen.read_fasta(CDS_fasta)[0]
+        gen.find_families_ensembl("../source_data/GRCh37_ensembl_protein_families.txt", names, "{0}_families.txt".format(out_prefix))
+        gen.get_time(start)
+
+        print("Extracting and filtering exons...")
+        #extract exon coordinates
+        bo.extract_exons(gtf, exon_bed)
+        #only leave exons from transcripts that passed quality control in the extract_cds step above.
+        #also only leave a single gene per family
+        bo.filter_bed_from_fasta(exon_bed, CDS_fasta, filtered_exon_bed, families_file = "{0}_families.txt".format(out_prefix))
+        gen.get_time(start)
+
+        #extract exon-exon junction coordinates
+        print("Extracting exon-exon junctions...")
+        bo.extract_exon_junctions(exon_bed, exon_junctions_file, window_of_interest = 2)
+        gen.get_time(start)
+
+        #make another exons bed that only contains fully coding exons.
+        #This is because in the final analysis, we should only consider fully protein-coding exons.
+        #However, for getting the exon junctions we need the full exons file because fully protein-coding exons might
+        #be flanked by exons that are not. This is why we couldn't do this filtering step earlier.
+        print("Filtering out overlapping, non-coding and partially coding, as well as terminal exons...")
+        bo.check_coding(filtered_exon_bed, CDS_bed, coding_exon_bed, remove_overlapping = True)
+        gen.get_time(start)
     #
     # SNP_file = "{0}_SNP_file.txt".format(out_prefix)
     # PTC_file = "{0}_ptc_file.txt".format(out_prefix)

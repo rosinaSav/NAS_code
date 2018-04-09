@@ -162,7 +162,6 @@ def extract_cds(gtf, bed_output, output_fasta, genome_fasta, full_chr_name=None,
     filter_fasta_intervals_from_fasta(fasta_intervals_file_not_filtered, output_fasta, fasta_intervals_file)
 
 
-
 def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, fasta_interval_file, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None, all_checks=None, uniquify = False):
         '''
         Extract the CDS to fasta file
@@ -445,7 +444,6 @@ def fasta_from_intervals(bed_file, fasta_file, genome_fasta, force_strand = True
         del bedtools_args[2]
     if names:
         bedtools_args.append("-name")
-    print(" ".join(bedtools_args))
     gen.run_process(bedtools_args)
     names, seqs = gen.read_fasta(fasta_file)
     seqs = [i.upper() for i in seqs]
