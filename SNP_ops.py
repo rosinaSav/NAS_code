@@ -428,7 +428,7 @@ def get_snp_relative_cds_position(snp_exon_relative_positions, snp_cds_position_
                     error_count = error_count + 1
     print("Errors: {0}.".format(error_count))
 
-def get_snp_relative_exon_position(intersect_file):
+def get_snp_relative_exon_position(intersect_file, snp_relative_exon_position_file):
     '''
     Get the relative position of a snp within the exon it is found. Used as an intermediate step
     before calculating the snp position in the cds using get_snp_cds_relative_position.
@@ -462,6 +462,12 @@ def get_snp_relative_exon_position(intersect_file):
         #replace . field with relative position
         intersect[11] = str(relative_position)
         relative_positions.append(intersect)
+
+    # write relative snp positions to output file
+    with open(snp_relative_exon_position_file, "w") as outfile:
+        for snp in relative_positions:
+            outfile.write("{0}\n".format("\t".join(snp)))
+
     return(relative_positions)
 
 def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_file, others_output_file, out_of_frame = False):
@@ -624,9 +630,9 @@ def get_snps_in_cds(bed, full_bed, vcf_folder, panel_file, names, sample_file, o
     #however, this way we have a proper vcf as a result of tabix_samples that we can query using tabix
     #and we have intersect_bed, which has both the SNP and the exon information in a nice format
     intersect_file = "{0}_CDS_SNP_intersect.bed".format(out_prefix)
+    snp_relative_exon_position_file = "{0}_SNP_relative_exon_position.bed".format(out_prefix)
     bmo.intersect_bed(bed, sample_file, write_both = True, output_file = intersect_file, no_dups = False)
-    exon_pos = get_snp_relative_exon_position(intersect_file)
-    get_snp_relative_cds_position(exon_pos, output_file, full_bed)
+    exon_pos = get_snp_relative_exon_position(intersect_file, snp_relative_exon_position_file)
     #this last bit is just to add a header to the final output file
     #so you'd know which sample is which
     header_line = "echrom\testart\teend\teID\tfeature\tstrand\t#schr\tspos\tsID\taa\tma\trel_pos\tstatus\tinfo\tformat"
