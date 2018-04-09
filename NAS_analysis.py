@@ -449,64 +449,64 @@ def main():
         so.get_snps_in_cds(coding_exon_bed, CDS_bed, vcf_folder, panel_file, sample_names, sample_file, SNP_file, out_prefix)
         gen.get_time(start)
 
-    if ignore_determine_snp_type:
-        pass
-    else:
-        print("Determining SNP type...")
-        so.get_snp_change_status(SNP_file, CDS_fasta, PTC_file, syn_nonsyn_file, out_of_frame = out_of_frame)
-        gen.get_time(start)
-
-    #filter the exon junctions file to only leave those junctions that flank exons retained in the previous step.
-    print("Filtering exon-exon junctions to only leave those that flank exons with a PTC variant...")
-    PTC_exon_junctions_file = "{0}_filtered_exon_junctions.bed".format(out_prefix)
-    bo.filter_exon_junctions(exon_junctions_file, PTC_file, PTC_exon_junctions_file)
-
-    #make a list of all the .bam files and modify them to have the full path rather than just the file name
-    bam_files = ["{0}/{1}".format(bams_folder, i) for i in full_sample_names if (i.split("."))[0] in sample_names]
-
-    #in parallel, do the processing on individual .bam files
-    if bam_analysis_folder == "None":
-        bam_analysis_folder = "{0}_bam_analysis".format(out_prefix)
-    gen.create_directory(bam_analysis_folder)
-    if process_bams:
-        print("Processing RNA-seq data...")
-        #we have to do it like this because you can't pass flags into run_in_parallel
-        keyword_dict = {"overwrite_intersect": overwrite_intersect}
-        processes = gen.run_in_parallel(bam_files, ["foo", exon_junctions_file, PTC_exon_junctions_file, bam_analysis_folder, PTC_file, syn_nonsyn_file, out_prefix, keyword_dict], process_bam_per_individual, workers = 36)
-        for process in processes:
-            process.get()
-        gen.get_time(start)
-
-    #if required, filter PTCs to only leave ones that overlap motifs from a specified set
-    motif_filtering = False
-    if motif_file != "None":
-        print("Filtering SNPs based on whether or not they overlap a motif from the specified set...")
-        motif_suffix = ((motif_file.split("/"))[-1]).split(".")[0]
-        if motif_complement:
-            out_prefix = "{0}_{1}_complement".format(out_prefix, motif_suffix)
-        else:
-            out_prefix = "{0}_{1}".format(out_prefix, motif_suffix)
-        filtered_ptc = "{0}_ptc_file.txt".format(out_prefix)
-        so.filter_motif_SNPs(CDS_fasta, PTC_file, motif_file, filtered_ptc, complement = motif_complement)
-        PTC_file = filtered_ptc
-
-    print("Calculating PSI...")
-    final_file = "{0}_final_output.txt".format(out_prefix)
-    bmo.compare_PSI(PTC_file, bam_analysis_folder, final_file)
-
-    #run the simulation that swaps ptcs for nonsynonymous snps
-    if simulate_ptc_snps:
-        if simulate_ptc_snps and not number_of_simulations:
-            print("Please specify the number of simulations")
-            raise Exception
-        ptc_snp_simulation(out_prefix, simulation_output_folder, PTC_file, syn_nonsyn_file, exon_junctions_file, bam_files, number_of_simulations, use_old_sims = use_old_sims)
-
-    # run the simulation that picks monomorphic sites
-    if simulate_ptcs_with_monomorphic:
-        if simulate_ptcs_with_monomorphic and not number_of_simulations:
-            print("Please specify the number of simulations")
-            raise Exception
-        ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file, genome_fasta, PTC_file, syn_nonsyn_file, coding_exon_bed, exon_junctions_file, bam_files, number_of_simulations, generate_indices = generate_monomorphic_indices, use_old_sims = use_old_sims)
+    # if ignore_determine_snp_type:
+    #     pass
+    # else:
+    #     print("Determining SNP type...")
+    #     so.get_snp_change_status(SNP_file, CDS_fasta, PTC_file, syn_nonsyn_file, out_of_frame = out_of_frame)
+    #     gen.get_time(start)
+    #
+    # #filter the exon junctions file to only leave those junctions that flank exons retained in the previous step.
+    # print("Filtering exon-exon junctions to only leave those that flank exons with a PTC variant...")
+    # PTC_exon_junctions_file = "{0}_filtered_exon_junctions.bed".format(out_prefix)
+    # bo.filter_exon_junctions(exon_junctions_file, PTC_file, PTC_exon_junctions_file)
+    #
+    # #make a list of all the .bam files and modify them to have the full path rather than just the file name
+    # bam_files = ["{0}/{1}".format(bams_folder, i) for i in full_sample_names if (i.split("."))[0] in sample_names]
+    #
+    # #in parallel, do the processing on individual .bam files
+    # if bam_analysis_folder == "None":
+    #     bam_analysis_folder = "{0}_bam_analysis".format(out_prefix)
+    # gen.create_directory(bam_analysis_folder)
+    # if process_bams:
+    #     print("Processing RNA-seq data...")
+    #     #we have to do it like this because you can't pass flags into run_in_parallel
+    #     keyword_dict = {"overwrite_intersect": overwrite_intersect}
+    #     processes = gen.run_in_parallel(bam_files, ["foo", exon_junctions_file, PTC_exon_junctions_file, bam_analysis_folder, PTC_file, syn_nonsyn_file, out_prefix, keyword_dict], process_bam_per_individual, workers = 36)
+    #     for process in processes:
+    #         process.get()
+    #     gen.get_time(start)
+    #
+    # #if required, filter PTCs to only leave ones that overlap motifs from a specified set
+    # motif_filtering = False
+    # if motif_file != "None":
+    #     print("Filtering SNPs based on whether or not they overlap a motif from the specified set...")
+    #     motif_suffix = ((motif_file.split("/"))[-1]).split(".")[0]
+    #     if motif_complement:
+    #         out_prefix = "{0}_{1}_complement".format(out_prefix, motif_suffix)
+    #     else:
+    #         out_prefix = "{0}_{1}".format(out_prefix, motif_suffix)
+    #     filtered_ptc = "{0}_ptc_file.txt".format(out_prefix)
+    #     so.filter_motif_SNPs(CDS_fasta, PTC_file, motif_file, filtered_ptc, complement = motif_complement)
+    #     PTC_file = filtered_ptc
+    #
+    # print("Calculating PSI...")
+    # final_file = "{0}_final_output.txt".format(out_prefix)
+    # bmo.compare_PSI(PTC_file, bam_analysis_folder, final_file)
+    #
+    # #run the simulation that swaps ptcs for nonsynonymous snps
+    # if simulate_ptc_snps:
+    #     if simulate_ptc_snps and not number_of_simulations:
+    #         print("Please specify the number of simulations")
+    #         raise Exception
+    #     ptc_snp_simulation(out_prefix, simulation_output_folder, PTC_file, syn_nonsyn_file, exon_junctions_file, bam_files, number_of_simulations, use_old_sims = use_old_sims)
+    #
+    # # run the simulation that picks monomorphic sites
+    # if simulate_ptcs_with_monomorphic:
+    #     if simulate_ptcs_with_monomorphic and not number_of_simulations:
+    #         print("Please specify the number of simulations")
+    #         raise Exception
+    #     ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file, genome_fasta, PTC_file, syn_nonsyn_file, coding_exon_bed, exon_junctions_file, bam_files, number_of_simulations, generate_indices = generate_monomorphic_indices, use_old_sims = use_old_sims)
 
 if __name__ == "__main__":
     main()
