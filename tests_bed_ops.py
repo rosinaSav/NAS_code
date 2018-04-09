@@ -158,7 +158,7 @@ class Test_bed_ops(unittest.TestCase):
             "G": observed_g,
             "T": observed_t,
         }
-        extract_nt_indicies(fasta_file, observed_files)
+        extract_nt_indices(fasta_file, observed_files)
         expected_a = gen.read_fasta(expected_a)
         expected_c = gen.read_fasta(expected_c)
         expected_g = gen.read_fasta(expected_g)
@@ -177,7 +177,7 @@ class Test_bed_ops(unittest.TestCase):
         gen.remove_file(observed)
         bed_file = "test_data/bed_ops/test_fasta_from_intervals/test_bed_for_fasta_conversion.bed"
         expected = gen.read_fasta("test_data/bed_ops/test_fasta_from_intervals/expected_converted_fasta.fasta")
-        fasta_from_intervals(bed_file, observed, "../source_data/Genomes/test_genome/test_genome.fa")
+        fasta_from_intervals(bed_file, observed, "test_data/bed_ops/test_fasta_from_intervals/test_genome.fa")
         observed = gen.read_fasta(observed)
         self.assertEqual(observed,expected)
 

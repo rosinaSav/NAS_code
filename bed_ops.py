@@ -145,14 +145,23 @@ def extract_cds(gtf, bed_output, output_fasta, genome_fasta, full_chr_name=None,
     clean_chrom_only: do not include CDSs from contigs that haven't been assigned to a particular chromosome.
     EX.: extract_exons("../source_data/Homo_sapiens.GRCh37.87.gtf", "../output_data/Homo_sapiens.GRCh37.87_cds.fasta", "../source_data/Genomes/Homo_sapiens.GRCh37.dna.primary_assembly.fa")
     '''
-    #extract required cds features
-    extract_features(gtf, bed_output, ['CDS', 'stop_codon'], full_chr_name, clean_chrom_only = clean_chrom_only)
-    #extract to fasta
-    fasta_interval_file = "{0}_intervals{1}".format(os.path.splitext(output_fasta)[0], os.path.splitext(output_fasta)[1])
-    extract_cds_from_bed(bed_output, output_fasta, genome_fasta, fasta_interval_file, check_acgt, check_start, check_length, check_stop, check_inframe_stop, all_checks, uniquify)
-    #filter the previous files to only include those that passed the filters
-    filter_bed_from_fasta(bed_output, output_fasta, bed_output)
-    filter_fasta_intervals_from_fasta(fasta_interval_file, output_fasta, fasta_interval_file)
+    # extract required cds features to bed file
+    bed_output_not_filtered = "{0}_not_filtered{1}".format(os.path.splitext(bed_output)[0], os.path.splitext(bed_output)[1])
+    extract_features(gtf, bed_output_not_filtered, ['CDS', 'stop_codon'], full_chr_name, clean_chrom_only = clean_chrom_only)
+
+    # extract features to fasta
+    # args: bed file of features, fasta output file for cds, genome fasta, file that contains the parts that make up the cdss
+    fasta_intervals_file_not_filtered = "{0}_intervals_not_filtered{1}".format(os.path.splitext(output_fasta)[0], os.path.splitext(output_fasta)[1])
+    extract_cds_from_bed(bed_output_not_filtered, output_fasta, genome_fasta, fasta_intervals_file_not_filtered, check_acgt, check_start, check_length, check_stop, check_inframe_stop, all_checks, uniquify)
+
+    # filter the previous bed file to only include those that passed the filters
+    filter_bed_from_fasta(bed_output_not_filtered, output_fasta, bed_output)
+
+    # filter the fasta intervals to only keep those that passed filtering
+    fasta_intervals_file = "{0}_intervals{1}".format(os.path.splitext(output_fasta)[0], os.path.splitext(output_fasta)[1])
+    filter_fasta_intervals_from_fasta(fasta_intervals_file_not_filtered, output_fasta, fasta_intervals_file)
+
+
 
 def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, fasta_interval_file, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None, all_checks=None, uniquify = False):
         '''
@@ -436,6 +445,7 @@ def fasta_from_intervals(bed_file, fasta_file, genome_fasta, force_strand = True
         del bedtools_args[2]
     if names:
         bedtools_args.append("-name")
+    print(" ".join(bedtools_args))
     gen.run_process(bedtools_args)
     names, seqs = gen.read_fasta(fasta_file)
     seqs = [i.upper() for i in seqs]
@@ -473,6 +483,9 @@ def filter_bed_from_fasta(bed, fasta, out_bed, families_file = None):
             temp_file_name = "{0}.{1}{2}".format(os.path.splitext(out_bed)[0], random.random(), os.path.splitext(out_bed)[1])
         else:
             temp_file_name = out_bed
+
+        print(temp_file_name)
+
 
         fasta_names, fasta_seqs = gen.read_fasta(fasta)
 
