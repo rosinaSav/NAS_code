@@ -1,3 +1,9 @@
+'''
+Check whether the ancestral alleles of all SNPS match.
+Check how many SNPs could potentially be called a PTC.
+'''
+
+
 import bed_ops as bo
 import generic as gen
 import bam_ops as ba

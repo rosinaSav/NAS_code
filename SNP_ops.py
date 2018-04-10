@@ -504,6 +504,8 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
             var_base = [i for i in var_base if i in ["A", "C", "G", "T"]]
             ancestral_allele = re.search(ancestral_reg, snp[13])
 
+            snp_id = snp[8]
+
             #get the feature type
             var_type = re.search(var_type_reg, snp[13])
             if var_type:
@@ -540,8 +542,14 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
 ##                            print("\n")
                             pass
                         else:
-                            cds_codon, snp_codon, mutation_type = get_snp_type(cds_seqs[cds_names.index(cds_id)], [snp_index, var_base], shift = out_of_frame)
-                            snp[13] = "CDS_CODON={0}$SNP_CODON={1}$AA={2}".format(cds_codon, snp_codon, ancestral_allele.group(1))
+                            cds_codon, snp_codon, mutation_type = get_snp_type(cds_seqs[cds_names.index(cds_id)], [snp_index, var_base], snp_id, shift = out_of_frame)
+
+                            if ancestral_allele:
+                                aa = ancestral_allele.group(1)
+                            else:
+                                aa = "UNDEFINED"
+
+                            snp[13] = "CDS_CODON={0}$SNP_CODON={1}$AA={2}".format(cds_codon, snp_codon, aa)
                             snp[12] = mutation_type
                             if(mutation_type == "ptc"):
                                 snp[14] = str(ptc_id_counter)
@@ -558,7 +566,7 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
         print("No SNPs were extracted!")
         raise Exception
 
-def get_snp_type(sequence, variant, shift = False):
+def get_snp_type(sequence, variant, snp_id, shift = False):
     '''
     Get the effect of a particular SNP (nonsense/missense/synonymous).
     If shift is True (when doing an out-of-frame simulation),
@@ -587,6 +595,8 @@ def get_snp_type(sequence, variant, shift = False):
         "GGT":"G", "GGC":"G", "GGA":"G", "GGG":"G",
     }
 
+
+
     shift_amount = 0
 
     #get the sequence with the snp in position
@@ -594,8 +604,11 @@ def get_snp_type(sequence, variant, shift = False):
     #extract the SNP codon both with the reference and the SNP allele
     codon_start = get_codon_start(int(variant[0]), len(sequence), shift = shift)
     if codon_start != "error":
+        if snp_id == "rs74315366":
+            print(sequence[:int(variant[0])], variant[1], sequence[int(variant[0])+1:])
         cds_codon = sequence[codon_start:codon_start + 3]
         snp_codon = snp_sequence[codon_start:codon_start + 3]
+
         if cds_codon != snp_codon:
             #determine the type of snp
             #if the snp generated an in frame stop

@@ -2,7 +2,6 @@ temp_files/
 temp_data/
 __pycache__/
 source_data/
-testfile.py
 _test_*
 .DS_Store
 observed*.*
