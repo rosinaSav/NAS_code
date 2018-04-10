@@ -383,6 +383,12 @@ def main():
 
     start = time.time()
 
+    # create any necessary output diretories
+    directory_splits = out_prefix.split('/')
+    directory_paths = "/".join(directory_splits[:-1])
+    gen.create_output_directories(directory_paths)
+    gen.create_directory('temp_data/')
+
     CDS_fasta = "{0}_CDS.fasta".format(out_prefix)
     CDS_bed = "{0}_CDS.bed".format(out_prefix)
     exon_bed = "{0}_exons.bed".format(out_prefix)
@@ -443,18 +449,23 @@ def main():
     sample_names = [i for i in sample_names if i in samples_in_vcf]
     sample_file = "{0}_sample_file.txt".format(out_prefix)
 
+    # create a fasta containing all sequences for exons with snp
+    coding_exons_fasta = "{0}_coding_exons.fasta".format(out_prefix)
+    bo.fasta_from_intervals(coding_exon_bed, coding_exons_fasta, genome_fasta, names=True)
+
     if get_SNPs:
         #get SNPs for the sample
         print("Getting SNP data...")
-        so.get_snps_in_cds(coding_exon_bed, CDS_bed, vcf_folder, panel_file, sample_names, sample_file, SNP_file, out_prefix)
+        # so.get_snps_in_cds(coding_exon_bed, CDS_bed, vcf_folder, panel_file, sample_names, sample_file, SNP_file, out_prefix)
+        so.get_snp_positions(sample_file, SNP_file, out_prefix)
         gen.get_time(start)
 
-    # if ignore_determine_snp_type:
-    #     pass
-    # else:
-    #     print("Determining SNP type...")
-    #     so.get_snp_change_status(SNP_file, CDS_fasta, PTC_file, syn_nonsyn_file, out_of_frame = out_of_frame)
-    #     gen.get_time(start)
+    if ignore_determine_snp_type:
+        pass
+    else:
+        print("Determining SNP type...")
+        so.get_snp_change_status(SNP_file, CDS_fasta, PTC_file, syn_nonsyn_file, out_of_frame = out_of_frame)
+        gen.get_time(start)
     #
     # #filter the exon junctions file to only leave those junctions that flank exons retained in the previous step.
     # print("Filtering exon-exon junctions to only leave those that flank exons with a PTC variant...")

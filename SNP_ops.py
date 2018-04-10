@@ -630,8 +630,12 @@ def get_snps_in_cds(bed, full_bed, vcf_folder, panel_file, names, sample_file, o
     #however, this way we have a proper vcf as a result of tabix_samples that we can query using tabix
     #and we have intersect_bed, which has both the SNP and the exon information in a nice format
     intersect_file = "{0}_CDS_SNP_intersect.bed".format(out_prefix)
-    snp_relative_exon_position_file = "{0}_SNP_relative_exon_position.bed".format(out_prefix)
     bmo.intersect_bed(bed, sample_file, write_both = True, output_file = intersect_file, no_dups = False)
+
+
+def get_snp_positions(sample_file, output_file, out_prefix):
+    intersect_file = "{0}_CDS_SNP_intersect.bed".format(out_prefix)
+    snp_relative_exon_position_file = "{0}_SNP_relative_exon_position.bed".format(out_prefix)
     exon_pos = get_snp_relative_exon_position(intersect_file, snp_relative_exon_position_file)
     #this last bit is just to add a header to the final output file
     #so you'd know which sample is which
@@ -822,7 +826,7 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
         #loop over lines in bed file
         for line in file:
             #print out every 100th line number
-            counter = gen.update_counter(counter, 500)
+            counter = gen.update_counter(counter, 500, "Bed lines processed: ")
             #parse line in bed file
             line = line.split("\t")
             chrom = line[0].lstrip("chr")
@@ -848,7 +852,7 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
                 #get ALL SNPs (that is to say, for all samples) for current interval
                 gen.run_process(["tabix", "-h", current_vcf, "{0}:{1}-{2}".format(chrom, start, end)], file_for_output = temp_output_file)
                 #uncomment the following line for debug
-                gen.run_process(["cp", temp_output_file, "temp_data/{0}:{1}-{2}_tabix_slice.txt".format(chrom, start, end)])
+                # gen.run_process(["cp", temp_output_file, "temp_data/{0}:{1}-{2}_tabix_slice.txt".format(chrom, start, end)])
                 #generate temporary output file for SNPs from your seleceted samples
                 sample_output_file = "temp_data/temp_sample_tabix{0}.txt".format(random.random())
                 sample_files.append(sample_output_file)
@@ -856,55 +860,61 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
                 gen.run_process(["vcf-subset", "-c", samples, temp_output_file], file_for_output = sample_output_file)
                 gen.remove_file(temp_output_file)
 
+    # sample_files = []
+    # for file in os.listdir('temp_data/'):
+    #     if file.startswith('temp_sample_tabix'):
+    #         sample_files.append("temp_data/{0}".format(file))
+    # # print(sample_files)
+
     #you want to concatenate the sample files you made (one file per bed interval) but you can't in one go cause there's too many
     #therefore, you take the 10 last files, concatenate those
     #then concatenate the next 10 files (moving from the end of the list towards the beginning) to each-other and to the file you got in the previous step
     #etc.
     #you juggle the two temp concat file names just so you would be overwriting files rather than creating new ones
-    concat_files = ["temp_data/temp_concat_file{0}.vcf".format(random.random()), "temp_data/temp_concat_file{0}.vcf".format(random.random())]
-    current_sample_files = sample_files[-10:]
-    del sample_files[-10:]
-    gen.run_process(["vcf-concat"] + current_sample_files, file_for_output = concat_files[0])
-    local_counter = 0
-    files_left = True
-    while files_left:
-        local_counter = local_counter + 1
-        current_sample_files = sample_files[-10:]
-        del sample_files[-10:]
-        if len(sample_files) == 0:
-            files_left = False
-        if local_counter%2 == 0:
-            current_concat_file = concat_files[0]
-            previous_concat_file = concat_files[1]
-        else:
-            current_concat_file = concat_files[1]
-            previous_concat_file = concat_files[0]
-        gen.run_process(["vcf-concat"] + current_sample_files + [previous_concat_file], file_for_output = current_concat_file)
-    sort_file = "{0}_uncompressed.txt".format(output_file_name)
-    #once everything is concatenated, sort the SNPs, prefix "chr" if needed, make a compressed version of the file and make an index for tabix
-    gen.run_process(["vcf-sort", current_concat_file], file_for_output = sort_file)
-    if chr_prefix or remove_empty:
-        allele_regex = re.compile("[0-9]+\|[0-9]+")
-        temp_file = "temp_data/temp{0}.txt".format(random.random())
-        with open(sort_file) as infile, open(temp_file, "w") as outfile:
-            for line in infile:
-                dont_write = False
-                if line[0] != "#":
-                    if chr_prefix:
-                        line = "chr" + line
-                    if remove_empty:
-                        alleles = "".join(re.findall(allele_regex, line))
-                        alleles_ones = [i for i in alleles if i != "0" and i != "|"]
-                        alleles_zeroes = [i for i in alleles if i != "1" and i != "|"]
-                        if not alleles_ones or not alleles_zeroes:
-                            dont_write = True
-                if not dont_write:
-                    outfile.write(line)
-        gen.run_process(["mv", temp_file, sort_file])
-    gen.run_process(["bgzip", "-c", sort_file], file_for_output = output_file_name)
-    gen.run_process(["tabix", "-f", "-p", "vcf", output_file_name])
-    #clean up
-    for sample_file in sample_files:
-        gen.remove_file(sample_file)
-    for concat_file in concat_files:
-        gen.remove_file(concat_file)
+    # concat_files = ["temp_data/temp_concat_file{0}.vcf".format(random.random()), "temp_data/temp_concat_file{0}.vcf".format(random.random())]
+    # current_sample_files = sample_files[-10:]
+    # del sample_files[-10:]
+    # gen.run_process(["vcf-concat"] + current_sample_files, file_for_output = concat_files[0])
+    # local_counter = 0
+    # files_left = True
+    # while files_left:
+    #     local_counter = local_counter + 1
+    #     current_sample_files = sample_files[-10:]
+    #     del sample_files[-10:]
+    #     if len(sample_files) == 0:
+    #         files_left = False
+    #     if local_counter%2 == 0:
+    #         current_concat_file = concat_files[0]
+    #         previous_concat_file = concat_files[1]
+    #     else:
+    #         current_concat_file = concat_files[1]
+    #         previous_concat_file = concat_files[0]
+    #     gen.run_process(["vcf-concat"] + current_sample_files + [previous_concat_file], file_for_output = current_concat_file)
+    # sort_file = "{0}_uncompressed.txt".format(output_file_name)
+    # #once everything is concatenated, sort the SNPs, prefix "chr" if needed, make a compressed version of the file and make an index for tabix
+    # gen.run_process(["vcf-sort", current_concat_file], file_for_output = sort_file)
+    # if chr_prefix or remove_empty:
+    #     allele_regex = re.compile("[0-9]+\|[0-9]+")
+    #     temp_file = "temp_data/temp{0}.txt".format(random.random())
+    #     with open(sort_file) as infile, open(temp_file, "w") as outfile:
+    #         for line in infile:
+    #             dont_write = False
+    #             if line[0] != "#":
+    #                 if chr_prefix:
+    #                     line = "chr" + line
+    #                 if remove_empty:
+    #                     alleles = "".join(re.findall(allele_regex, line))
+    #                     alleles_ones = [i for i in alleles if i != "0" and i != "|"]
+    #                     alleles_zeroes = [i for i in alleles if i != "1" and i != "|"]
+    #                     if not alleles_ones or not alleles_zeroes:
+    #                         dont_write = True
+    #             if not dont_write:
+    #                 outfile.write(line)
+    #     gen.run_process(["mv", temp_file, sort_file])
+    # gen.run_process(["bgzip", "-c", sort_file], file_for_output = output_file_name)
+    # gen.run_process(["tabix", "-f", "-p", "vcf", output_file_name])
+    # #clean up
+    # for sample_file in sample_files:
+    #     gen.remove_file(sample_file)
+    # for concat_file in concat_files:
+    #     gen.remove_file(concat_file)
