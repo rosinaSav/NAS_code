@@ -71,7 +71,8 @@ def print_entry(ptc, ptc_entry, exon_seq, cds_seq):
     print(mut_exon_parts)
     print('\n')
     print('CDS seq')
-    print(cds_seq[exon_index:], '**', cds_seq[exon_index:exon_index + len(exon_seq) + 1], '**', cds_seq[exon_index + len(exon_seq) + 1:])
+    print(cds_seq[:exon_index], '**', cds_seq[exon_index:exon_index + len(exon_seq) + 1], '**', cds_seq[exon_index + len(exon_seq) + 1:])
+    print(len(cds_seq))
     print('\n')
     print('SNP relative to CDS index: ', ptc_entry.snp_rel_pos)
     print('AA: ', ptc_entry.snp_aa)
@@ -121,7 +122,7 @@ for i, ptc in enumerate(ptc_list[1:10]):
         ptc_entry = ptc_cds_positions[ptc.snp_id]
         ptc_entry = info(ptc_entry)
 
-        if ptc.snp_id == "rs142458192":
+        if ptc.snp_id == "rs12751100":
             print_entry(ptc, ptc_entry, exon_seq, cds_seq)
 
 print(fail_list)
