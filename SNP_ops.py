@@ -875,17 +875,12 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
                 gen.run_process(["vcf-subset", "-c", samples, temp_output_file], file_for_output = sample_output_file)
                 gen.remove_file(temp_output_file)
 
-    sample_files = []
-    for file in os.listdir('temp_data/'):
-        if file.startswith('temp_sample_tabix'):
-            sample_files.append("temp_data/{0}".format(file))
-    # print(sample_files)
 
-    you want to concatenate the sample files you made (one file per bed interval) but you can't in one go cause there's too many
-    therefore, you take the 10 last files, concatenate those
-    then concatenate the next 10 files (moving from the end of the list towards the beginning) to each-other and to the file you got in the previous step
-    etc.
-    you juggle the two temp concat file names just so you would be overwriting files rather than creating new ones
+    # you want to concatenate the sample files you made (one file per bed interval) but you can't in one go cause there's too many
+    # therefore, you take the 10 last files, concatenate those
+    # then concatenate the next 10 files (moving from the end of the list towards the beginning) to each-other and to the file you got in the previous step
+    # etc.
+    # you juggle the two temp concat file names just so you would be overwriting files rather than creating new ones
     concat_files = ["temp_data/temp_concat_file{0}.vcf".format(random.random()), "temp_data/temp_concat_file{0}.vcf".format(random.random())]
     current_sample_files = sample_files[-10:]
     del sample_files[-10:]
