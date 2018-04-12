@@ -169,48 +169,47 @@ def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, fasta_interval_fi
         '''
         #create dictionaries to hold cds parts
         cds_list = collections.defaultdict(lambda: collections.defaultdict())
-        stop_list = {}
+        # stop_list = {}
         concat_list = collections.defaultdict(lambda: collections.UserList())
         #create fasta file with extracted parts
         fasta_from_intervals(bed_file, fasta_interval_file, genome_fasta, names = True)
         #read the fasta interval file
-        entries = gen.read_fasta(fasta_interval_file)
-        # get the entry names and seqs
-        sample_names = entries[0]
-        seqs = entries[1]
-        #set up the regex to get entry meta needed
-        entry_regex = re.compile("(\w+)\.(\d+)(\..*)*")
+        sample_names, sample_seqs = gen.read_fasta(fasta_interval_file)
+        #label the stop codons
+        for i, name in enumerate(sample_names):
+            if len(sample_seqs[i]) == 3 and sample_seqs[i] in ['TAA', 'TAG', 'TGA']:
+                sample_names[i] = name + '.stop_codon'
         #iterate through the samples
         for i, sample in enumerate(sample_names):
-                entry_meta = re.search(entry_regex, sample)
-                #set the sample name: sample(.exon)
-                sample_name = entry_meta.group(1)
-                #if stop, set sample stop or send sample name to dict, with each part and its seq
-                if seqs[i] in ['TAA', 'TAG', 'TGA']:
-                        stop_list[sample_name] = seqs[i]
-                else:
-                        cds_list[sample_name][entry_meta.group(2)] = seqs[i]
-        #get sorted list of seq parts
+            entry_meta_splits = sample.split('.')
+            #set the sample name: sample(.exon)
+            sample_id = entry_meta_splits[0]
+            # check if labelled as stop codon, and set to high number so when
+            # sorted this is the last thing to be appended
+            if entry_meta_splits[-1] == "stop_codon":
+                exon_id = 9999999
+            else:
+                exon_id = int(entry_meta_splits[1])
+            cds_list[sample_id][exon_id] = sample_seqs[i]
+        #get sorted list of cds exons to build cds
         for sample in sorted(cds_list):
-                for part in sorted(cds_list[sample]):
-                        concat_list[sample].append(cds_list[sample][part])
-                #append the stop codon if it exists
-                if sample in stop_list:
-                        concat_list[sample].append(stop_list[sample])
+            for part in sorted(cds_list[sample]):
+                concat_list[sample].append(cds_list[sample][part])
         #concatenate and write to output
         names = []
         seqs = []
         for sample in sorted(concat_list):
-                names.append(sample)
-                seqs.append("".join(concat_list[sample]))
+            names.append(sample)
+            seqs.append("".join(concat_list[sample]))
         #perform sequence quality control checks
         if check_acgt or check_stop or check_start or check_length or check_inframe_stop or all_checks:
-                names, seqs = check_sequence_quality(names, seqs, check_acgt, check_stop, check_start, check_length, check_inframe_stop, all_checks)
+            names, seqs = check_sequence_quality(names, seqs, check_acgt, check_stop, check_start, check_length, check_inframe_stop, all_checks)
+
         if uniquify:
-                #leave only one transcript per gene
-                gene_to_trans = link_genes_and_transcripts(bed_file)
-                names, seqs = uniquify_trans(names, seqs, gene_to_trans)
-                print("After leaving only one transcript per gene, {0} sequences remain.".format(len(seqs)))
+            #leave only one transcript per gene
+            gene_to_trans = link_genes_and_transcripts(bed_file)
+            names, seqs = uniquify_trans(names, seqs, gene_to_trans)
+            print("After leaving only one transcript per gene, {0} sequences remain.".format(len(seqs)))
         #write to output fasta file
         gen.write_to_fasta(names, seqs, output_fasta)
 
@@ -482,7 +481,7 @@ def filter_bed_from_fasta(bed, fasta, out_bed, families_file = None):
         else:
             temp_file_name = out_bed
 
-        print(temp_file_name)
+        # print(temp_file_name)
 
 
         fasta_names, fasta_seqs = gen.read_fasta(fasta)
