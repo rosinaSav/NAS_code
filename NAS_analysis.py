@@ -447,6 +447,8 @@ def main():
         samples_in_vcf = file.readlines()
     samples_in_vcf = [i.rstrip("\n") for i in samples_in_vcf]
     sample_names = [i for i in sample_names if i in samples_in_vcf]
+    # uncommment for debug
+    sample_names = [samples_names[0]]
     sample_file = "{0}_sample_file.txt".format(out_prefix)
 
     # create a fasta containing all sequences for exons with snp
