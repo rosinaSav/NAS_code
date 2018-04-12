@@ -41,6 +41,9 @@ def create_strict_directory(path):
         shutil.rmtree(path)
     os.mkdir(path)
 
+def copy_file(src, dest):
+    shutil.copyfile(src, dest)
+
 def extend_family(blast_results, families, query):
     '''
     Given a gene identifier (query), find all genes that are connected to it
@@ -97,7 +100,7 @@ def find_families(fasta_file_name, output_prefix, blast_db_path, descriptions_fi
     print(len(list(set(flatten(to_delete)))))
     for i in list(reversed(to_delete)):
         blast_results.remove(i)
-            
+
     print("Number of results without self-matches:")
     print(len(blast_results))
     queries = [i for i,j in blast_results]
@@ -149,7 +152,7 @@ def find_families(fasta_file_name, output_prefix, blast_db_path, descriptions_fi
             if(len(families[-1])) == length_before:
                 added_something == False
                 break
-        
+
     families_file_name = "{0}_families.txt".format(output_prefix)
     families_descriptions_file_name = "{0}_families_descriptions.txt".format(output_prefix)
     descriptions = read_many_fields(descriptions_file, "\t")
@@ -198,7 +201,7 @@ def find_families_ensembl(ensembl_file, transcript_IDs, out_file):
             o_file.write(",".join(family_data[family]))
             o_file.write("\n")
             d_file.write(",".join(family_data_desc[family]))
-            d_file.write("\n")            
+            d_file.write("\n")
 
 def flatten(structured_list):
     '''

@@ -9,3 +9,4 @@ ese_stops_simulations_output/
 build/
 *.so
 outputs/
+results/
