@@ -1,3 +1,7 @@
+'''
+Check the way CDS are being made
+'''
+
 import bed_ops as bo
 import generic as gen
 import bam_ops as ba

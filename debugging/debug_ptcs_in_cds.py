@@ -1,3 +1,7 @@
+'''
+Check PTCs in CDSs
+'''
+
 import bed_ops as bo
 import generic as gen
 import bam_ops as ba

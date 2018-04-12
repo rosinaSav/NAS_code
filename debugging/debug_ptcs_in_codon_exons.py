@@ -1,3 +1,8 @@
+'''
+Compare positions of PTCs in CDS generated and coding exons
+'''
+
+
 import bed_ops as bo
 import generic as gen
 import bam_ops as ba

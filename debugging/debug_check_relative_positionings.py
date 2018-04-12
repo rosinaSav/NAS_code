@@ -1,3 +1,7 @@
+'''
+Check whether the relative positions are being calculated correctly
+'''
+
 import bed_ops as bo
 import generic as gen
 import bam_ops as ba
