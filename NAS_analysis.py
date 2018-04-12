@@ -11,8 +11,7 @@ import random
 import SNP_ops as so
 import time
 
-
-def get_non_mutation_indicies(simulation_output_folder, vcf_folder, coding_exon_bed, out_prefix, genome_fasta, nt_indices_files):
+def get_non_mutation_indices(simulation_output_folder, vcf_folder, coding_exon_bed, out_prefix, genome_fasta, nt_indices_files):
 
     # to do:
     # 1. need to convert bed to not have chr name
@@ -21,9 +20,9 @@ def get_non_mutation_indicies(simulation_output_folder, vcf_folder, coding_exon_
     # bmo.intersect_bed(file1, file2, output_file, subtract=True)
     # 2. using that, extract all sequence pieces using fasta_from_intervals, need to decide if names=true or names=false
     # fasta_from_intervals(intersect_bed_file, fasta_file, genome_fasta, force_strand = True, names = False)
-    # 3. from this fasta file, create a file that contains for each exon, the indicies at which each nt resides
+    # 3. from this fasta file, create a file that contains for each exon, the indices at which each nt resides
     # split this so each chr has its own file?
-    # bo.extract_nt_indicies(fasta_file, output_file)
+    # bo.extract_nt_indices(fasta_file, output_file)
 
     # set up the new file to contain the regions without a mutation
     coding_exon_bed_out = "{0}/{1}".format(simulation_output_folder, coding_exon_bed)
@@ -35,183 +34,8 @@ def get_non_mutation_indicies(simulation_output_folder, vcf_folder, coding_exon_
     bmo.intersect_bed(coding_exon_bed, sample_file, write_both = False, output_file = coding_exon_bed_out, no_dups = False, subtract=True)
     # generate fasta of all the regions
     bo.fasta_from_intervals(coding_exon_bed_out, fasta_no_mutations, genome_fasta, force_strand = True, names = True)
-    # extract the indicies of each location a mutation doesnt occur
+    # extract the indices of each location a mutation doesnt occur
     bo.extract_nt_indices(fasta_no_mutations, nt_indices_files)
-
-#
-def run_ptc_monomorpphic_simulation_instance(simulations, out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, exon_junctions_file, bam_files, nt_indices_files, parallel = False, use_old_sims = False):
-    '''
-    Run the ptc simulations for the required number.
-    '''
-
-    #iterate over simulations
-    counter = 0
-    for simulation_number in simulations:
-
-        counter = gen.update_counter(counter, 10, "SIMULATION ")
-
-        #setup a folder to contain the individual simulation inside the simulations output
-        simulation_instance_folder = "{0}/ptc_monomorphic_simulation_run_{1}".format(simulation_output_folder, simulation_number)
-        if not use_old_sims:
-            gen.create_strict_directory(simulation_instance_folder)
-        else:
-            gen.create_directory(simulation_instance_folder)
-
-        #generate pseudo ptc snps
-        pseudo_monomorphic_ptc_file = "{0}/{1}_pseudo_monomorphic_ptc_file_{2}.txt".format(simulation_instance_folder, out_prefix, simulation_number)
-        if (not use_old_sims) or (not(os.path.isfile(pseudo_monomorphic_ptc_file))):
-            so.generate_pesudo_monomorphic_ptcs(ptc_file, index_fastas, output_file)
-
-        #filter the exon junctions file to only leave those junctions that flank exons retained in the previous step when generating pseudo ptcs
-        pseudo_monomorphic_ptc_exon_junctions_file = "{0}/filtered_exon_junctions_{1}.bed".format(simulation_instance_folder, simulation_number)
-        if (not use_old_sims) or (not(os.path.isfile(pseudo_monomorphic_ptc_file))):
-            bo.filter_exon_junctions(exon_junctions_file, pseudo_monomorphic_ptc_file, pseudo_monomorphic_ptc_exon_junctions_file)
-
-        #run the bam analysis for each
-        #(don't parallelize if you're doing the simulations in parallel)
-        kw_dict = {"ptc_snp_simulation": True, "simulation_instance_folder": simulation_instance_folder, "simulation_number": simulation_number}
-        # create remaining snps placeholder file
-        remaining_snps_file = None
-        if parallel:
-            process_bam_per_individual(bam_files, exon_junctions_file, pseudo_monomorphic_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_monomorphic_ptc_file, remaining_snps_file, out_prefix, kw_dict)
-        else:
-            processes = gen.run_in_parallel(bam_files, ["foo", exon_junctions_file, pseudo_monomorphic_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_monomorphic_ptc_file, remaining_snps_file, out_prefix, kw_dict], process_bam_per_individual)
-            for process in processes:
-                process.get()
-
-        #process final psi for simulation
-        final_file = "{0}/final_output_simulation_{1}.txt".format(simulation_bam_analysis_output_folder, simulation_number)
-        bmo.compare_PSI(pseudo_monomorphic_ptc_file, simulation_bam_analysis_output_folder, final_file, sim_number = simulation_number)
-
-def ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file, genome_fasta, PTC_file, coding_exon_bed, exon_junctions_file, bam_files, number_of_simulations, generate_indices = False, use_old_sims = False):
-    '''
-    Set up the PTC simulations and then run.
-    if use_old_sims is True, don't pick new simulant SNPs from monomorphic sites.
-    '''
-
-    #setup up simulation output folder
-    if simulation_output_folder == "None":
-        simulation_output_folder = "{0}_simulate_ptc_monomorphic_sites".format(out_prefix)
-    if not use_old_sims:
-        #if the simulation folder we are specifying already exists, delete and start again
-        gen.create_strict_directory(simulation_output_folder)
-    else:
-        gen.create_directory(simulation_output_folder)
-
-    #setup up simulation bam analysis output folder
-    simulation_bam_analysis_output_folder = "{0}_simulate_ptc_monomorphic_sites_bam_analysis".format(out_prefix)
-
-    nt_indices_files = {
-        "A": "{0}/{1}_nt_indices_no_mutations_A.fasta",
-        "C": "{0}/{1}_nt_indices_no_mutations_C.fasta",
-        "G": "{0}/{1}_nt_indices_no_mutations_G.fasta",
-        "T": "{0}/{1}_nt_indices_no_mutations_T.fasta",
-    }
-
-    if generate_indices:
-        get_non_mutation_indices(simulation_output_folder, sample_file, coding_exon_bed, out_prefix, genome_fasta, nt_indices_files)
-
-    if not use_old_sims:
-        #if the simulation folder we are specifying already exists, delete and start again
-        gen.create_strict_directory(simulation_bam_analysis_output_folder)
-    else:
-        gen.create_directory(simulation_bam_analysis_output_folder)
-
-    # #create a list of simulations to iterate over
-    simulations = list(range(1, required_simulations+1))
-    # #if you're only doing one simulation, don't parallelize the simulations
-    # #parallelize the processing of bams like for true data
-    if required_simulations > 1:
-        processes = gen.run_in_parallel(simulations, ["foo", out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, exon_junctions_file, bam_files, nt_indices_files, True, use_old_sims], run_ptc_monomorpphic_simulation_instance)
-        for process in processes:
-            process.get()
-    else:
-        run_ptc_monomorpphic_simulation_instance([1], out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, exon_junctions_file, bam_files, nt_indices_files, False, use_old_sims)
-
-
-def run_ptc_simulation_instance(simulations, out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, nonsynonymous_snps_file, exon_junctions_file, bam_files, parallel = False, use_old_sims = False):
-    '''
-    Run the ptc simulations for the required number.
-    '''
-
-    #iterate over simulations
-    counter = 0
-    for simulation_number in simulations:
-
-        counter = gen.update_counter(counter, 10, "SIMULATION ")
-
-        #setup a folder to contain the individual simulation inside the simulations output
-        simulation_instance_folder = "{0}/ptc_simulation_run_{1}".format(simulation_output_folder, simulation_number)
-        if not use_old_sims:
-            gen.create_strict_directory(simulation_instance_folder)
-        else:
-            gen.create_directory(simulation_instance_folder)
-
-        #generate pseudo ptc snps
-        #also need to remove these snps from the file they started in so create a new remaining snps file
-        #we can tweak these if we start running out of snps
-        pseudo_ptc_file = "{0}/pseudo_ptc_file_{1}.txt".format(simulation_instance_folder, simulation_number)
-        remaining_snps_file = "{0}/remaining_snps_file_{1}.txt".format(simulation_instance_folder, simulation_number)
-        if (not use_old_sims) or (not(os.path.isfile(pseudo_ptc_file))):
-            so.generate_pseudo_ptc_snps(ptc_file, nonsynonymous_snps_file, pseudo_ptc_file, remaining_snps_file, group_by_gene=False, without_replacement=True, match_allele_frequency=True, match_allele_frequency_window=0.05)
-
-        #filter the exon junctions file to only leave those junctions that flank exons retained in the previous step when generating pseudo ptcs
-        pseudo_ptc_exon_junctions_file = "{0}/filtered_exon_junctions_{1}.bed".format(simulation_instance_folder, simulation_number)
-        if (not use_old_sims) or (not(os.path.isfile(pseudo_ptc_file))):
-            bo.filter_exon_junctions(exon_junctions_file, pseudo_ptc_file, pseudo_ptc_exon_junctions_file)
-
-        #run the bam analysis for each
-        #(don't parallelize if you're doing the simulations in parallel)
-        kw_dict = {"ptc_snp_simulation": True, "simulation_instance_folder": simulation_instance_folder, "simulation_number": simulation_number}
-        if parallel:
-            process_bam_per_individual(bam_files, exon_junctions_file, pseudo_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_ptc_file, remaining_snps_file, out_prefix, kw_dict)
-        else:
-            processes = gen.run_in_parallel(bam_files, ["foo", exon_junctions_file, pseudo_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_ptc_file, remaining_snps_file, out_prefix, kw_dict], process_bam_per_individual)
-            for process in processes:
-                process.get()
-
-        #process final psi for simulation
-        final_file = "{0}/final_output_simulation_{1}.txt".format(simulation_bam_analysis_output_folder, simulation_number)
-        bmo.compare_PSI(pseudo_ptc_file, simulation_bam_analysis_output_folder, final_file, sim_number = simulation_number)
-
-
-def ptc_snp_simulation(out_prefix, simulation_output_folder, ptc_file, syn_nonsyn_file, exon_junctions_file, bam_files, required_simulations, use_old_sims = False):
-    '''
-    Set up the PTC simulations and then run.
-    if use_old_sims is True, don't pick new simulant SNPs.
-    '''
-
-    #setup up simulation output folder
-    if simulation_output_folder == "None":
-        simulation_output_folder = "{0}_simulate_ptc_snps".format(out_prefix)
-    if not use_old_sims:
-        #if the simulation folder we are specifying already exists, delete and start again
-        gen.create_strict_directory(simulation_output_folder)
-    else:
-        gen.create_directory(simulation_output_folder)
-
-    #setup up simulation bam analysis output folder
-    simulation_bam_analysis_output_folder = "{0}_simulate_ptc_snps_bam_analysis".format(out_prefix)
-    if not use_old_sims:
-        #if the simulation folder we are specifying already exists, delete and start again
-        gen.create_strict_directory(simulation_bam_analysis_output_folder)
-    else:
-        gen.create_directory(simulation_bam_analysis_output_folder)
-
-    #get all nonsynonymous snps and put them in the simulation output folder
-    nonsynonymous_snps_file = "{0}/nonsynonymous_snps.txt".format(simulation_output_folder)
-    so.filter_by_snp_type(syn_nonsyn_file, nonsynonymous_snps_file, "non")
-
-    #create a list of simulations to iterate over
-    simulations = list(range(1, required_simulations+1))
-    #if you're only doing one simulation, don't parallelize the simulations
-    #parallelize the processing of bams like for true data
-    if required_simulations > 1:
-        processes = gen.run_in_parallel(simulations, ["foo", out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, nonsynonymous_snps_file, exon_junctions_file, bam_files, True, use_old_sims], run_ptc_simulation_instance)
-        for process in processes:
-            process.get()
-    else:
-        run_ptc_simulation_instance([1], out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, nonsynonymous_snps_file, exon_junctions_file, bam_files, False, use_old_sims)
 
 def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_junctions_file, out_folder, PTC_file, syn_nonsyn_file, out_prefix, kw_dict):
     '''
@@ -362,6 +186,180 @@ def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_j
             #6. count the number of reads supporting either the skipping or the inclusion of each exon
             junctions = bmo.read_exon_junctions(PTC_exon_junctions_file)
             bmo.count_junction_reads(intersect_sam, junctions, output_file, read_count)
+
+def ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file, genome_fasta, PTC_file, coding_exon_bed, exon_junctions_file, bam_files, number_of_simulations, generate_indices = False, use_old_sims = False):
+    '''
+    Set up the PTC simulations and then run.
+    if use_old_sims is True, don't pick new simulant SNPs from monomorphic sites.
+    '''
+
+    #setup up simulation output folder
+    if simulation_output_folder == "None":
+        simulation_output_folder = "{0}_simulate_ptc_monomorphic_sites".format(out_prefix)
+    if not use_old_sims:
+        #if the simulation folder we are specifying already exists, delete and start again
+        gen.create_strict_directory(simulation_output_folder)
+    else:
+        gen.create_directory(simulation_output_folder)
+
+    #setup up simulation bam analysis output folder
+    simulation_bam_analysis_output_folder = "{0}_simulate_ptc_monomorphic_sites_bam_analysis".format(out_prefix)
+
+    nt_indices_files = {
+        "A": "{0}/{1}_nt_indices_no_mutations_A.fasta",
+        "C": "{0}/{1}_nt_indices_no_mutations_C.fasta",
+        "G": "{0}/{1}_nt_indices_no_mutations_G.fasta",
+        "T": "{0}/{1}_nt_indices_no_mutations_T.fasta",
+    }
+
+    if generate_indices:
+        get_non_mutation_indices(simulation_output_folder, sample_file, coding_exon_bed, out_prefix, genome_fasta, nt_indices_files)
+
+    if not use_old_sims:
+        #if the simulation folder we are specifying already exists, delete and start again
+        gen.create_strict_directory(simulation_bam_analysis_output_folder)
+    else:
+        gen.create_directory(simulation_bam_analysis_output_folder)
+
+    # #create a list of simulations to iterate over
+    simulations = list(range(1, required_simulations+1))
+    # #if you're only doing one simulation, don't parallelize the simulations
+    # #parallelize the processing of bams like for true data
+    if required_simulations > 1:
+        processes = gen.run_in_parallel(simulations, ["foo", out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, exon_junctions_file, bam_files, nt_indices_files, True, use_old_sims], run_ptc_monomorphic_simulation_instance)
+        for process in processes:
+            process.get()
+    else:
+        run_ptc_monomorphic_simulation_instance([1], out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, exon_junctions_file, bam_files, nt_indices_files, False, use_old_sims)
+
+
+def ptc_snp_simulation(out_prefix, simulation_output_folder, ptc_file, syn_nonsyn_file, exon_junctions_file, bam_files, required_simulations, use_old_sims = False):
+    '''
+    Set up the PTC simulations and then run.
+    if use_old_sims is True, don't pick new simulant SNPs.
+    '''
+
+    #setup up simulation output folder
+    if simulation_output_folder == "None":
+        simulation_output_folder = "{0}_simulate_ptc_snps".format(out_prefix)
+    if not use_old_sims:
+        #if the simulation folder we are specifying already exists, delete and start again
+        gen.create_strict_directory(simulation_output_folder)
+    else:
+        gen.create_directory(simulation_output_folder)
+
+    #setup up simulation bam analysis output folder
+    simulation_bam_analysis_output_folder = "{0}_simulate_ptc_snps_bam_analysis".format(out_prefix)
+    if not use_old_sims:
+        #if the simulation folder we are specifying already exists, delete and start again
+        gen.create_strict_directory(simulation_bam_analysis_output_folder)
+    else:
+        gen.create_directory(simulation_bam_analysis_output_folder)
+
+    #get all nonsynonymous snps and put them in the simulation output folder
+    nonsynonymous_snps_file = "{0}/nonsynonymous_snps.txt".format(simulation_output_folder)
+    so.filter_by_snp_type(syn_nonsyn_file, nonsynonymous_snps_file, "non")
+
+    #create a list of simulations to iterate over
+    simulations = list(range(1, required_simulations+1))
+    #if you're only doing one simulation, don't parallelize the simulations
+    #parallelize the processing of bams like for true data
+    if required_simulations > 1:
+        processes = gen.run_in_parallel(simulations, ["foo", out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, nonsynonymous_snps_file, exon_junctions_file, bam_files, True, use_old_sims], run_ptc_simulation_instance)
+        for process in processes:
+            process.get()
+    else:
+        run_ptc_simulation_instance([1], out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, nonsynonymous_snps_file, exon_junctions_file, bam_files, False, use_old_sims)
+
+def run_ptc_monomorphic_simulation_instance(simulations, out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, exon_junctions_file, bam_files, nt_indices_files, parallel = False, use_old_sims = False):
+    '''
+    Run the ptc simulations for the required number.
+    '''
+
+    #iterate over simulations
+    counter = 0
+    for simulation_number in simulations:
+
+        counter = gen.update_counter(counter, 10, "SIMULATION ")
+
+        #setup a folder to contain the individual simulation inside the simulations output
+        simulation_instance_folder = "{0}/ptc_monomorphic_simulation_run_{1}".format(simulation_output_folder, simulation_number)
+        if not use_old_sims:
+            gen.create_strict_directory(simulation_instance_folder)
+        else:
+            gen.create_directory(simulation_instance_folder)
+
+        #generate pseudo ptc snps
+        pseudo_monomorphic_ptc_file = "{0}/{1}_pseudo_monomorphic_ptc_file_{2}.txt".format(simulation_instance_folder, out_prefix, simulation_number)
+        if (not use_old_sims) or (not(os.path.isfile(pseudo_monomorphic_ptc_file))):
+            so.generate_pesudo_monomorphic_ptcs(ptc_file, index_fastas, output_file)
+
+        #filter the exon junctions file to only leave those junctions that flank exons retained in the previous step when generating pseudo ptcs
+        pseudo_monomorphic_ptc_exon_junctions_file = "{0}/filtered_exon_junctions_{1}.bed".format(simulation_instance_folder, simulation_number)
+        if (not use_old_sims) or (not(os.path.isfile(pseudo_monomorphic_ptc_file))):
+            bo.filter_exon_junctions(exon_junctions_file, pseudo_monomorphic_ptc_file, pseudo_monomorphic_ptc_exon_junctions_file)
+
+        #run the bam analysis for each
+        #(don't parallelize if you're doing the simulations in parallel)
+        kw_dict = {"ptc_snp_simulation": True, "simulation_instance_folder": simulation_instance_folder, "simulation_number": simulation_number}
+        # create remaining snps placeholder file
+        remaining_snps_file = None
+        if parallel:
+            process_bam_per_individual(bam_files, exon_junctions_file, pseudo_monomorphic_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_monomorphic_ptc_file, remaining_snps_file, out_prefix, kw_dict)
+        else:
+            processes = gen.run_in_parallel(bam_files, ["foo", exon_junctions_file, pseudo_monomorphic_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_monomorphic_ptc_file, remaining_snps_file, out_prefix, kw_dict], process_bam_per_individual)
+            for process in processes:
+                process.get()
+
+        #process final psi for simulation
+        final_file = "{0}/final_output_simulation_{1}.txt".format(simulation_bam_analysis_output_folder, simulation_number)
+        bmo.compare_PSI(pseudo_monomorphic_ptc_file, simulation_bam_analysis_output_folder, final_file, sim_number = simulation_number)
+
+def run_ptc_simulation_instance(simulations, out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, nonsynonymous_snps_file, exon_junctions_file, bam_files, parallel = False, use_old_sims = False):
+    '''
+    Run the ptc simulations for the required number.
+    '''
+
+    #iterate over simulations
+    counter = 0
+    for simulation_number in simulations:
+
+        counter = gen.update_counter(counter, 10, "SIMULATION ")
+
+        #setup a folder to contain the individual simulation inside the simulations output
+        simulation_instance_folder = "{0}/ptc_simulation_run_{1}".format(simulation_output_folder, simulation_number)
+        if not use_old_sims:
+            gen.create_strict_directory(simulation_instance_folder)
+        else:
+            gen.create_directory(simulation_instance_folder)
+
+        #generate pseudo ptc snps
+        #also need to remove these snps from the file they started in so create a new remaining snps file
+        #we can tweak these if we start running out of snps
+        pseudo_ptc_file = "{0}/pseudo_ptc_file_{1}.txt".format(simulation_instance_folder, simulation_number)
+        remaining_snps_file = "{0}/remaining_snps_file_{1}.txt".format(simulation_instance_folder, simulation_number)
+        if (not use_old_sims) or (not(os.path.isfile(pseudo_ptc_file))):
+            so.generate_pseudo_ptc_snps(ptc_file, nonsynonymous_snps_file, pseudo_ptc_file, remaining_snps_file, group_by_gene=False, without_replacement=True, match_allele_frequency=True, match_allele_frequency_window=0.05)
+
+        #filter the exon junctions file to only leave those junctions that flank exons retained in the previous step when generating pseudo ptcs
+        pseudo_ptc_exon_junctions_file = "{0}/filtered_exon_junctions_{1}.bed".format(simulation_instance_folder, simulation_number)
+        if (not use_old_sims) or (not(os.path.isfile(pseudo_ptc_file))):
+            bo.filter_exon_junctions(exon_junctions_file, pseudo_ptc_file, pseudo_ptc_exon_junctions_file)
+
+        #run the bam analysis for each
+        #(don't parallelize if you're doing the simulations in parallel)
+        kw_dict = {"ptc_snp_simulation": True, "simulation_instance_folder": simulation_instance_folder, "simulation_number": simulation_number}
+        if parallel:
+            process_bam_per_individual(bam_files, exon_junctions_file, pseudo_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_ptc_file, remaining_snps_file, out_prefix, kw_dict)
+        else:
+            processes = gen.run_in_parallel(bam_files, ["foo", exon_junctions_file, pseudo_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_ptc_file, remaining_snps_file, out_prefix, kw_dict], process_bam_per_individual)
+            for process in processes:
+                process.get()
+
+        #process final psi for simulation
+        final_file = "{0}/final_output_simulation_{1}.txt".format(simulation_bam_analysis_output_folder, simulation_number)
+        bmo.compare_PSI(pseudo_ptc_file, simulation_bam_analysis_output_folder, final_file, sim_number = simulation_number)
+
 
 def main():
 
