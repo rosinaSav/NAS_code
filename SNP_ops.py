@@ -492,6 +492,7 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
         ptc_outputs.write(header)
         other_outputs.write(header)
         for snp in snps[1:]:
+            print(snp)
             cds_id = re.search(entry_regex, snp[3]).group(1)
             snp_index = int(snp[11])
             #get the strand
