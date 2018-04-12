@@ -740,7 +740,7 @@ def tabix_core(bed_files, vcf):
                 end = line[2]
                 trans = line[3]
                 #get the SNPs within the current bed file coords
-                output = gen.run_process(["tabix", vcf, "{0}:{1}-{2}".format(chrom, start, end)])
+                output = gen.run_process(["tabix", "-f", vcf, "{0}:{1}-{2}".format(chrom, start, end)])
                 if output:
                     #parse output
                     output = output.rstrip("\n")
