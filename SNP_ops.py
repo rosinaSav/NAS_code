@@ -887,6 +887,7 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
     # then concatenate the next 10 files (moving from the end of the list towards the beginning) to each-other and to the file you got in the previous step
     # etc.
     # you juggle the two temp concat file names just so you would be overwriting files rather than creating new ones
+    print('Concatenating files...')
     concat_files = ["temp_data/temp_concat_file{0}.vcf".format(random.random()), "temp_data/temp_concat_file{0}.vcf".format(random.random())]
     current_sample_files = sample_files[-10:]
     del sample_files[-10:]
@@ -908,6 +909,7 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
         gen.run_process(["vcf-concat"] + current_sample_files + [previous_concat_file], file_for_output = current_concat_file)
     sort_file = "{0}_uncompressed.txt".format(output_file_name)
     #once everything is concatenated, sort the SNPs, prefix "chr" if needed, make a compressed version of the file and make an index for tabix
+    print('Sort SNPs, prefix and compress for tabix...')
     gen.run_process(["vcf-sort", current_concat_file], file_for_output = sort_file)
     if chr_prefix or remove_empty:
         allele_regex = re.compile("[0-9]+\|[0-9]+")
@@ -928,6 +930,7 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
                     outfile.write(line)
         gen.run_process(["mv", temp_file, sort_file])
     gen.run_process(["bgzip", "-c", sort_file], file_for_output = output_file_name)
+    print('Run tabix...')
     gen.run_process(["tabix", "-f", "-p", "vcf", output_file_name])
     # #clean up
     # for sample_file in sample_files:
