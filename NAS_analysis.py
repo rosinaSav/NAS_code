@@ -449,7 +449,7 @@ def main():
     sample_names = [i for i in sample_names if i in samples_in_vcf]
     # uncommment for debug
     print(sample_names)
-    sample_names = [samples_names[0], sample_names[-1]]
+    sample_names = [sample_names[0], sample_names[-1]]
     print(sample_names)
     sample_file = "{0}_sample_file.txt".format(out_prefix)
 
