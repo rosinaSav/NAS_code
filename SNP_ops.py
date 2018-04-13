@@ -836,7 +836,8 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
     vcf_files = [i for i in vcf_files if "vcf" in i]
 
     # # use for debugging
-    vcf_files = [vcf_files[0], vcf_files[-1]]
+    print(vcf_files)
+    # vcf_files = [vcf_files[0], vcf_files[-1]]
 
     with open(bed_file) as file:
         sample_files = []
