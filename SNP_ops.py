@@ -13,6 +13,7 @@ import string
 import collections
 import re
 import itertools
+import copy
 
 def filter_by_snp_type(input_file, output_file, snp_type, set_seed=None):
     '''
@@ -492,7 +493,6 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
         ptc_outputs.write(header)
         other_outputs.write(header)
 
-        print(snps[1:5])
         for snp in snps[1:]:
             cds_id = re.search(entry_regex, snp[3]).group(1)
             snp_index = int(snp[11])
@@ -632,26 +632,28 @@ def get_snp_type(sequence, variant, snp_id, shift = False):
 
     return cds_codon, snp_codon, mutation_type
 
-def get_snps_in_cds(bed, full_bed, vcf_folder, panel_file, names, sample_file, output_file, out_prefix):
+def get_snps_in_cds(bed, full_bed, vcf_folder, panel_file, names, sample_file, intersect_file, out_prefix):
     '''
     Given a bed file of CDS regions (with the corresponding interval fasta), a .vcf file, a panel file and a set of sample identifiers from 1000Genomes,
-    pick out SNPs that overlap with any of the bed intervals in any of the selected samples and calculate their relative
-    position in the full ORF. full_bed is a bed_file that has all of the exons from the relevant transcripts,
+    pick out SNPs that overlap with any of the bed intervals in any of the selected samples. full_bed is a bed_file that has all of the exons from the relevant transcripts,
     whereas the bed might only have some exons. Also write a filtered vcf to sample_file.
     '''
-    #get the relevant SNPs
+    # #get the relevant SNPs
     tabix_samples(bed, sample_file, panel_file, vcf_folder, samples = names, chr_prefix = True, remove_empty = True, exclude_xy = True)
-    #the tabix_samples and the intersec-bed are kind of redundant
-    #however, this way we have a proper vcf as a result of tabix_samples that we can query using tabix
-    #and we have intersect_bed, which has both the SNP and the exon information in a nice format
-    intersect_file = "{0}_CDS_SNP_intersect.bed".format(out_prefix)
+    # #the tabix_samples and the intersec-bed are kind of redundant
+    # #however, this way we have a proper vcf as a result of tabix_samples that we can query using tabix
+    # #and we have intersect_bed, which has both the SNP and the exon information in a nice format
     bmo.intersect_bed(bed, sample_file, write_both = True, output_file = intersect_file, no_dups = False)
 
 
-def get_snp_positions(sample_file, output_file, out_prefix):
-    intersect_file = "{0}_CDS_SNP_intersect.bed".format(out_prefix)
+def get_snp_positions(sample_file, output_file, full_bed, intersect_file, out_prefix):
+    '''
+    Calculate relative SNP position in the full ORF. full_bed is a bed_file that has all of the exons from the relevant transcripts,
+    whereas the bed might only have some exons. Also write a filtered vcf to sample_file.
+    '''
     snp_relative_exon_position_file = "{0}_SNP_relative_exon_position.bed".format(out_prefix)
     exon_pos = get_snp_relative_exon_position(intersect_file, snp_relative_exon_position_file)
+    get_snp_relative_cds_position(exon_pos, output_file, full_bed)
     #this last bit is just to add a header to the final output file
     #so you'd know which sample is which
     header_line = "echrom\testart\teend\teID\tfeature\tstrand\t#schr\tspos\tsID\taa\tma\trel_pos\tstatus\tinfo\tformat"
@@ -852,52 +854,49 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
     #just in case there is nonsense in the directory
     vcf_files = [i for i in vcf_files if "vcf" in i]
 
-    # with open(bed_file) as file:
-    #     sample_files = []
-    #     counter = 0
-    #     #loop over lines in bed file
-    #     for line in file:
-    #         #print out every 100th line number
-    #         counter = gen.update_counter(counter, 500, "Bed lines processed: ")
-    #         #parse line in bed file
-    #         line = line.split("\t")
-    #         chrom = line[0].lstrip("chr")
-    #         if chrom in sex_chromosomes and exclude_xy:
-    #             pass
-    #         else:
-    #             #add 1 to start coordinate because bed files are 0-based, whereas the vcf files are 1-based
-    #             start = int(line[1]) + 1
-    #             end = line[2]
-    #             trans = line[3]
-    #             #get the vcf file for the right chromosome, making sure not to get the index file instead
-    #             current_vcf = ["{0}/{1}".format(vcf_folder, i) for i in vcf_files if "chr{0}.".format(chrom) in i and ".tbi" not in i]
-    #             #check that you only got a single file
-    #             if len(current_vcf) != 1:
-    #                 print("Ambiguous or missing files in VCF folder!")
-    #                 print(current_vcf)
-    #                 print(chrom)
-    #                 raise Exception
-    #             else:
-    #                 current_vcf = current_vcf[0]
-    #             #generate temporary output file for all SNPs in interval
-    #             temp_output_file = "temp_data/temp_vcf{0}.vcf".format(random.random())
-    #             #get ALL SNPs (that is to say, for all samples) for current interval
-    #             gen.run_process(["tabix", "-h", current_vcf, "{0}:{1}-{2}".format(chrom, start, end)], file_for_output = temp_output_file)
-    #             #uncomment the following line for debug
-    #             # gen.run_process(["cp", temp_output_file, "temp_data/{0}:{1}-{2}_tabix_slice.txt".format(chrom, start, end)])
-    #             #generate temporary output file for SNPs from your seleceted samples
-    #             sample_output_file = "temp_data/temp_sample_tabix{0}.txt".format(random.random())
-    #             sample_files.append(sample_output_file)
-    #             #filter the file you made with all the SNPs to only leave the SNPs that appear in your samples
-    #             gen.run_process(["vcf-subset", "-c", samples, temp_output_file], file_for_output = sample_output_file)
-    #             gen.remove_file(temp_output_file)
+    with open(bed_file) as file:
+        sample_files = []
+        counter = 0
+        #loop over lines in bed file
+        for line_no, line in enumerate(file):
 
-    sample_files = []
-    for file in os.listdir('temp_data/'):
-        if file.startswith('temp_sample_tabix'):
-            path = 'temp_data/{0}'.format(file)
-            sample_files.append(path)
-
+            # use for debugging
+            if line_no:
+            # if line_no < 2000:
+                #print out every 100th line number
+                counter = gen.update_counter(counter, 500, "Bed lines processed: ")
+                #parse line in bed file
+                line = line.split("\t")
+                chrom = line[0].lstrip("chr")
+                if chrom in sex_chromosomes and exclude_xy:
+                    pass
+                else:
+                    #add 1 to start coordinate because bed files are 0-based, whereas the vcf files are 1-based
+                    start = int(line[1]) + 1
+                    end = line[2]
+                    trans = line[3]
+                    #get the vcf file for the right chromosome, making sure not to get the index file instead
+                    current_vcf = ["{0}/{1}".format(vcf_folder, i) for i in vcf_files if "chr{0}.".format(chrom) in i and ".tbi" not in i]
+                    #check that you only got a single file
+                    if len(current_vcf) != 1:
+                        print("Ambiguous or missing files in VCF folder!")
+                        print(current_vcf)
+                        print(chrom)
+                        raise Exception
+                    else:
+                        current_vcf = current_vcf[0]
+                    #generate temporary output file for all SNPs in interval
+                    temp_output_file = "temp_data/temp_vcf{0}.vcf".format(random.random())
+                    #get ALL SNPs (that is to say, for all samples) for current interval
+                    gen.run_process(["tabix", "-h", current_vcf, "{0}:{1}-{2}".format(chrom, start, end)], file_for_output = temp_output_file)
+                    #uncomment the following line for debug
+                    # gen.run_process(["cp", temp_output_file, "temp_data/{0}:{1}-{2}_tabix_slice.txt".format(chrom, start, end)])
+                    #generate temporary output file for SNPs from your seleceted samples
+                    sample_output_file = "temp_data/temp_sample_tabix{0}.txt".format(random.random())
+                    sample_files.append(sample_output_file)
+                    #filter the file you made with all the SNPs to only leave the SNPs that appear in your samples
+                    gen.run_process(["vcf-subset", "-c", samples, temp_output_file], file_for_output = sample_output_file)
+                    gen.remove_file(temp_output_file)
 
     # you want to concatenate the sample files you made (one file per bed interval) but you can't in one go cause there's too many
     # therefore, you take the 10 last files, concatenate those
@@ -905,6 +904,7 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
     # etc.
     # you juggle the two temp concat file names just so you would be overwriting files rather than creating new ones
     print('Concatenating files...')
+    sample_file_list = copy.deepcopy(sample_files)
     concat_files = ["temp_data/temp_concat_file{0}.vcf".format(random.random()), "temp_data/temp_concat_file{0}.vcf".format(random.random())]
     current_sample_files = sample_files[-10:]
     del sample_files[-10:]
@@ -949,8 +949,8 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
     gen.run_process(["bgzip", "-c", sort_file], file_for_output = output_file_name)
     print('Run tabix...')
     gen.run_process(["tabix", "-f", "-p", "vcf", output_file_name])
-    # #clean up
-    # for sample_file in sample_files:
-    #     gen.remove_file(sample_file)
-    # for concat_file in concat_files:
-    #     gen.remove_file(concat_file)
+    #clean up
+    for sample_file in sample_file_list:
+        gen.remove_file(sample_file)
+    for concat_file in concat_files:
+        gen.remove_file(concat_file)

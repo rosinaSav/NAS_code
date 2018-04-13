@@ -447,9 +447,9 @@ def main():
         samples_in_vcf = file.readlines()
     samples_in_vcf = [i.rstrip("\n") for i in samples_in_vcf]
     sample_names = [i for i in sample_names if i in samples_in_vcf]
-    # # uncommment for debug
+    # uncommment for debug
     # print(sample_names)
-    # sample_names = [samples_names[0]]
+    # sample_names = [sample_names[0], sample_names[-1]]
     # print(sample_names)
     sample_file = "{0}_sample_file.txt".format(out_prefix)
 
@@ -459,9 +459,11 @@ def main():
 
     if get_SNPs:
         #get SNPs for the sample
+        intersect_file = "{0}_SNP_CDS_intersect.bed".format(out_prefix)
         print("Getting SNP data...")
-        so.get_snps_in_cds(coding_exon_bed, CDS_bed, vcf_folder, panel_file, sample_names, sample_file, SNP_file, out_prefix)
-        so.get_snp_positions(sample_file, SNP_file, out_prefix)
+        so.get_snps_in_cds(coding_exon_bed, CDS_bed, vcf_folder, panel_file, sample_names, sample_file, intersect_file, out_prefix)
+        print("Calculating SNP positions...")
+        so.get_snp_positions(sample_file, SNP_file, CDS_bed, intersect_file, out_prefix)
         gen.get_time(start)
 
     if ignore_determine_snp_type:
