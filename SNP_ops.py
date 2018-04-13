@@ -682,6 +682,23 @@ def merge_and_header(file1, file2, out_file):
     gen.remove_file(temp1)
     gen.remove_file(temp2)
 
+
+def ptc_locations(PTC_file, snp_relative_exon_position_file, coding_exons_fasta, analysis_outputs, ptc_location_analysis_output_file):
+    '''
+    Get the information regarding PTC positions in the exons
+    '''
+    # need to map ptc to snp in the snp file
+    # need to get the position relative to the exon
+    # ptc locations on the - strand need to be thought about because these were converted for CDS position
+    # then need to match to the PSI etc calculations
+
+    ptcs = gen.read_many_fields(PTC_file, "\t")
+    # get a list of the ptc ids to use to map to the snp file
+    ptc_ids = []
+    for ptc in ptcs[1:]:
+        ptc_ids.append(ptc[7])
+    pass
+
 def tabix(bed_file, output_file, vcf, process_number = None):
     '''
     Given a bed file, use tabix to get overlapping 1000Genomes SNPs.
