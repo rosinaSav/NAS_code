@@ -839,7 +839,8 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
         sample_files = []
         counter = 0
         #loop over lines in bed file
-        for line in file:
+        for line_no, line in enumerate(file):
+            print(line_no)
             #print out every 100th line number
             counter = gen.update_counter(counter, 500, "Bed lines processed: ")
             #parse line in bed file
