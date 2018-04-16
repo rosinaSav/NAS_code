@@ -447,7 +447,7 @@ def main():
     print(sample_names)
     print(len(sample_names), " sample names")
     with open("../source_data/samples_in_vcf.txt") as file:
-        samples_in_vcf = file.readlines())
+        samples_in_vcf = file.readlines()
     samples_in_vcf = [i.rstrip("\n") for i in samples_in_vcf]
 
     print(samples_in_vcf)
