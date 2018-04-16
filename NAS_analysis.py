@@ -443,9 +443,15 @@ def main():
     #for some reason, 17 of the samples from Geuvadis don't appear in the 1000genomes vcf
     #I'm gonna have to get to the bottom of this at some point
     #but at the moment I'm just gonna filter them out
+
+    print(sample_names)
+    print(len(sample_names), " sample names")
     with open("../source_data/samples_in_vcf.txt") as file:
-        samples_in_vcf = file.readlines()
+        samples_in_vcf = file.readlines())
     samples_in_vcf = [i.rstrip("\n") for i in samples_in_vcf]
+
+    print(samples_in_vcf)
+    print(len(samples_in_vcf), " samples in vcf")
     sample_names = [i for i in sample_names if i in samples_in_vcf]
     sample_file = "{0}_sample_file.txt".format(out_prefix)
 
