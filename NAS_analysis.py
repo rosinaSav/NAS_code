@@ -529,15 +529,13 @@ def main():
     # get the locations of the ptcs
     if ptc_location_analysis:
         print("PTC locations analysis...")
-        coding_exons_fasta = "{0}_coding_exons.fasta"
         snp_relative_exon_position_file = "{0}_SNP_relative_exon_position.bed"
         ptc_location_analysis_output_file ="{0}_ptc_location_analysis.txt"
         if not os.path.exists(coding_exons_fasta) or not os.path.exists(snp_relative_exon_position_file) or not os.path.exists(PTC_file):
             print("Please run --filter_genome_data and --get_SNPs first...")
             raise Exception
         # need to work out where and what the analysis outputs need to do
-        analysis_outputs = None
-        so.ptc_locations(PTC_file, snp_relative_exon_position_file, coding_exons_fasta, analysis_outputs, ptc_location_analysis_output_file)
+        so.ptc_locations(PTC_file, snp_relative_exon_position_file, final_file, ptc_location_analysis_output_file)
 
 
 if __name__ == "__main__":
