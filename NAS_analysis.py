@@ -440,18 +440,19 @@ def main():
     full_sample_names = [i for i in full_sample_names if i[-4:] == ".bam" and "proc" not in i]
     sample_names = [(i.split("."))[0] for i in full_sample_names]
     sample_names = [i for i in sample_names if len(i) > 0]
+    print('{0} samples included in Geuvadis...'.format(len(sample_names)))
     #for some reason, 17 of the samples from Geuvadis don't appear in the 1000genomes vcf
     #I'm gonna have to get to the bottom of this at some point
     #but at the moment I'm just gonna filter them out
+
+
     with open("../source_data/samples_in_vcf.txt") as file:
         samples_in_vcf = file.readlines()
     samples_in_vcf = [i.rstrip("\n") for i in samples_in_vcf]
     sample_names = [i for i in sample_names if i in samples_in_vcf]
-    # uncommment for debug
-    # print(sample_names)
-    # sample_names = [sample_names[0], sample_names[-1]]
-    # print(sample_names)
+    print('{0} samples also in vcf...'.format(len(sample_names)))
     sample_file = "{0}_sample_file.txt".format(out_prefix)
+
 
     # create a fasta containing all sequences for exons with snp
     coding_exons_fasta = "{0}_coding_exons.fasta".format(out_prefix)
