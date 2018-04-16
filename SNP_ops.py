@@ -694,12 +694,37 @@ def ptc_locations(PTC_file, snp_relative_exon_position_file, coding_exons_fasta,
     # ptc locations on the - strand need to be thought about because these were converted for CDS position
     # then need to match to the PSI etc calculations
 
+    class SNP_object(object):
+        def __init__(self, snp):
+            self.info = snp[:11]
+            self.exon_start = int(snp[1])
+            self.exon_end = int(snp[2])
+            self.exon_id = snp[3]
+            self.strand = snp[5]
+            self.location = snp[7]
+            self.id = snp[8]
+            self.rel_pos = int(snp[11])
+
     ptcs = gen.read_many_fields(PTC_file, "\t")
     # get a list of the ptc ids to use to map to the snp file
     ptc_ids = []
     for ptc in ptcs[1:]:
         ptc_ids.append(ptc[7])
-    pass
+
+    snps = gen.read_many_fields(snp_relative_exon_position_file, "\t")
+    for snp in snps:
+        snp = SNP_object(snp)
+        if snp.id in ptc_ids:
+            # get the length of the exon
+            exon_length = snp.exon_end - snp.exon_start
+            # get the position of the PTC relative to exon ends
+            if snp.strand == "-":
+                five_prime_dist = snp.rel_pos
+                three_prime_dist = exon_length - snp.rel_pos
+            else:
+                five_prime_dist = snp.rel_pos + 1
+                three_prime_dist = exon_length - snp.rel_pos
+
 
 def tabix(bed_file, output_file, vcf, process_number = None):
     '''
