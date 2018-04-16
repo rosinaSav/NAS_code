@@ -685,7 +685,7 @@ def merge_and_header(file1, file2, out_file):
     gen.remove_file(temp2)
 
 
-def ptc_locations(PTC_file, snp_relative_exon_position_file, coding_exons_fasta, analysis_outputs, ptc_location_analysis_output_file):
+def ptc_locations(PTC_file, snp_relative_exon_position_file, bam_analysis_output_file, output_file):
     '''
     Get the information regarding PTC positions in the exons
     '''
@@ -696,7 +696,7 @@ def ptc_locations(PTC_file, snp_relative_exon_position_file, coding_exons_fasta,
 
     class SNP_object(object):
         def __init__(self, snp):
-            self.info = snp[:11]
+            self.info = snp[:12]
             self.exon_start = int(snp[1])
             self.exon_end = int(snp[2])
             self.exon_id = snp[3]
@@ -706,24 +706,35 @@ def ptc_locations(PTC_file, snp_relative_exon_position_file, coding_exons_fasta,
             self.rel_pos = int(snp[11])
 
     ptcs = gen.read_many_fields(PTC_file, "\t")
-    # get a list of the ptc ids to use to map to the snp file
-    ptc_ids = []
+    # get a dictionary of the ptc ids to use to map to the snp file, equalling the ptc ref
+    ptc_ids = {}
     for ptc in ptcs[1:]:
-        ptc_ids.append(ptc[7])
+        ptc_ids[ptc[8]] = ptc[14]
+
+    bam_outputs = gen.read_many_fields(bam_analysis_output_file, "\t")
+    # create a dictionary of the bam output with the ref of the ptc
+    bam_output_list = {}
+    for bam_output in bam_outputs[1:]:
+        bam_output_list[bam_output[-1]] = bam_output
 
     snps = gen.read_many_fields(snp_relative_exon_position_file, "\t")
-    for snp in snps:
-        snp = SNP_object(snp)
-        if snp.id in ptc_ids:
-            # get the length of the exon
-            exon_length = snp.exon_end - snp.exon_start
-            # get the position of the PTC relative to exon ends
-            if snp.strand == "-":
+
+    with open(output_file, "w") as outfile:
+        outfile.write("{0}\trel_exon_pos\texon_length\t5prime_dist\t3prime_dist\t{1}\tptc_ref_id\n".format("\t".join(ptcs[0][:11]), "\t".join(bam_outputs[0][1:-1])))
+        for snp in snps[1:]:
+            snp = SNP_object(snp)
+            if snp.id in ptc_ids:
+                # get the ptc id
+                ptc_id = ptc_ids[snp.id]
+                # get the length of the exon
+                exon_length = snp.exon_end - snp.exon_start
+                # get the position of the PTC relative to exon ends
                 five_prime_dist = snp.rel_pos
                 three_prime_dist = exon_length - snp.rel_pos
-            else:
-                five_prime_dist = snp.rel_pos + 1
-                three_prime_dist = exon_length - snp.rel_pos
+                # get the bam output line
+                bam_output = bam_output_list[ptc_id]
+                # write output to file
+                outfile.write("{0}\t{1}\t{2}\t{3}\t{4}\n".format("\t".join(snp.info), exon_length, five_prime_dist, three_prime_dist, "\t".join(bam_output[1:])))
 
 
 def tabix(bed_file, output_file, vcf, process_number = None):
