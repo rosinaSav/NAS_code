@@ -606,8 +606,8 @@ def get_snp_type(sequence, variant, snp_id, shift = False):
     #extract the SNP codon both with the reference and the SNP allele
     codon_start = get_codon_start(int(variant[0]), len(sequence), shift = shift)
     if codon_start != "error":
-        if snp_id == "rs74315366":
-            print(sequence[:int(variant[0])], variant[1], sequence[int(variant[0])+1:])
+        # if snp_id == "rs74315366":
+        #     print(sequence[:int(variant[0])], variant[1], sequence[int(variant[0])+1:])
         cds_codon = sequence[codon_start:codon_start + 3]
         snp_codon = snp_sequence[codon_start:codon_start + 3]
 

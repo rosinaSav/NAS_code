@@ -11,4 +11,4 @@ build/
 outputs/
 results/
 .Rhistory
-testfile.py
+testfile*.py
