@@ -318,7 +318,7 @@ def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_j
             global_intersect_bam = "{0}/{1}_exon_junctions.bam".format(exon_junctions_bam_output_folder, bam_file_parts[1][:-4])
             if not os.path.isfile(global_intersect_bam) or overwrite_intersect:
                 #intersect the filtered bam and the global exon junctions file
-                print(global_intersect_bam)
+                # print(global_intersect_bam)
                 bmo.intersect_bed(bam_file, global_exon_junctions_file, output_file = global_intersect_bam, intersect_bam = True)
 
             #3: filter to relevant exon-exon junctions
