@@ -255,6 +255,7 @@ def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_j
     else:
         phase = False
 
+    print('Creating exon junctions bam directory...')
     gen.create_directory("{0}__analysis_exon_junction_bams".format(out_prefix))
 
     bam_file_number = len(bam_files)
@@ -282,6 +283,8 @@ def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_j
 
         else:
             proc_folder = "{0}__analysis_bam_proc_files".format(out_prefix)
+
+        print('Creating processed bams directory...')
         gen.create_directory(proc_folder)
 
         bam_file_parts = os.path.split(bam_file)
