@@ -255,7 +255,7 @@ def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_j
     else:
         phase = False
 
-    gen.create_directory("{0}_exon_junction_bams".format(out_prefix))
+    gen.create_directory("{0}__analysis_exon_junction_bams".format(out_prefix))
 
     bam_file_number = len(bam_files)
     for pos, bam_file in enumerate(bam_files):
@@ -281,7 +281,7 @@ def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_j
             proc_folder = "{0}/bam_proc_files".format(simulation_instance_folder)
 
         else:
-            proc_folder = "{0}_bam_proc_files".format(out_prefix)
+            proc_folder = "{0}__analysis_bam_proc_files".format(out_prefix)
         gen.create_directory(proc_folder)
 
         bam_file_parts = os.path.split(bam_file)
@@ -296,7 +296,7 @@ def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_j
             #I'm initializing it to None for safety. That way, if the process fails,
             #it won't just silently go with whatever the value was at the end of the previous loop.
             #also, writing it down cause this bit takes forever, don't want to do it again every time.
-            read_count_file_name = "{0}_exon_junction_bams/read_count_sample_name.txt".format(out_prefix)
+            read_count_file_name = "{0}__analysis_exon_junction_bams/read_count_sample_name.txt".format(out_prefix)
             read_count = None
             if os.path.isfile(read_count_file_name):
                 with open(read_count_file_name) as file:
@@ -312,7 +312,7 @@ def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_j
             global_out_prefix = out_prefix
             if "out_of_frame" in global_out_prefix:
                 global_out_prefix = global_out_prefix[:6]
-            global_intersect_bam = "{0}_exon_junction_bams/{1}_exon_junctions.bam".format(global_out_prefix, bam_file_parts[1][:-4])
+            global_intersect_bam = "{0}__analysis_exon_junction_bams/{1}_exon_junctions.bam".format(global_out_prefix, bam_file_parts[1][:-4])
             if not os.path.isfile(global_intersect_bam) or overwrite_intersect:
                 #intersect the filtered bam and the global exon junctions file
                 print(global_intersect_bam)
@@ -484,7 +484,7 @@ def main():
 
     #in parallel, do the processing on individual .bam files
     if bam_analysis_folder == "None":
-        bam_analysis_folder = "{0}_bam_analysis".format(out_prefix)
+        bam_analysis_folder = "{0}__analysis_bam_analysis".format(out_prefix)
     gen.create_directory(bam_analysis_folder)
     if process_bams:
         print("Processing RNA-seq data...")
@@ -509,7 +509,7 @@ def main():
         PTC_file = filtered_ptc
 
     print("Calculating PSI...")
-    final_file = "{0}_final_output.txt".format(out_prefix)
+    final_file = "{0}__analysis_final_output.txt".format(out_prefix)
     bmo.compare_PSI(PTC_file, bam_analysis_folder, final_file)
 
     #run the simulation that swaps ptcs for nonsynonymous snps
