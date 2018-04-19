@@ -169,8 +169,8 @@ def main():
     gen.create_directory("./temp_data")
 
     ptc_snps_file = "{0}_ptc_SNP_relative_exon_position.txt".format(out_prefix)
-    if not os.path.exists(ptc_snps_file):
-        get_ptc_snps(ptc_file, snp_rel_pos_file, ptc_snps_file)
+    # if not os.path.exists(ptc_snps_file):
+    get_ptc_snps(ptc_file, snp_rel_pos_file, ptc_snps_file)
 
     ese_list = [ese[0] for ese in gen.read_many_fields(ese_file, "\t") if "#" not in ese[0]]
     cds_interval_list = get_cds_interval_list(cds_intervals_fasta)
