@@ -205,7 +205,7 @@ ese_overlap_simulation_plot <- function(snp_file, monomorphic_file) {
   hist(sims_snp$snps_overlapping_eses, breaks=30, add=T, col="orange")
   abline(v = real$snps_overlapping_eses, lty=2, lwd=2)
   legend(50, 140,
-         legend=c("Allele frequency/ancestral allele matched SNPs", "Ancestral allele matched monomorphic sites", "Real PTC causing SNPs"),
+         legend=c(paste("Allele frequency/ancestral allele matched SNPs (n=", nrow(sims_snp), ")", sep=""), paste("Ancestral allele matched monomorphic sites (n=", nrow(sims_mono), ")", sep=""), "Real PTC causing SNPs"),
          col=c("orange", "RoyalBlue", "black"),
          # fill=c("orange", "RoyalBlue", NA),
          lty=c(NA,NA,2),
