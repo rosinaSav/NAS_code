@@ -138,7 +138,7 @@ def ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file
     # #if you're only doing one simulation, don't parallelize the simulations
     # #parallelize the processing of bams like for true data
     if required_simulations > 1:
-        processes = gen.run_in_parallel(simulations, ["foo", out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, syn_nonsyn_file, exon_junctions_file, bam_files, nt_indices_files, coding_exon_list True, use_old_sims], run_ptc_monomorphic_simulation_instance)
+        processes = gen.run_in_parallel(simulations, ["foo", out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, syn_nonsyn_file, exon_junctions_file, bam_files, nt_indices_files, coding_exon_list, True, use_old_sims], run_ptc_monomorphic_simulation_instance)
         for process in processes:
             process.get()
     else:
