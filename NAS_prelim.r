@@ -26,9 +26,9 @@ get_n_t =  function(feature1, feature2, neg_control, NAS_data, title, swap = FAL
       sim_diffs = sim_diffs[!is.na(sim_diffs)]
       n = sum((true_diff > sim_diffs) & (true_diff != sim_diffs))
       t = length(sim_diffs[true_diff != sim_diffs])
-      n_t[index] = n/t      
+      n_t[index] = n/t
     }
-  }  
+  }
   hist(n_t, col = "RoyalBlue", breaks = 20, main = title, xlab = "Proportion of simulants that show an effect smaller or equal to true effect.")
   abline(v = 0.5, lty = 2, lwd = 2)
   p = binom.test(sum((n_t > 0.5) & (!is.na(n_t))), sum(!is.na(n_t)), alternative = "g")$p.value
@@ -62,7 +62,7 @@ perform_tests = function(NAS_data) {
   print("H: PTC+ homozygotes have lower PSI than PTC- homozygotes")
   print(wilcox.test(NAS_data$PSI_w_PTC, NAS_data$PSI_no_PTC, alternative = "l", paired = TRUE)$p.value)
   #TBA: a repeated measures ANOVA type test
-  
+
   print("H: Heterozygotes have higher normalized read count than PTC- homozygotes")
   print(wilcox.test(NAS_data$norm_count_het_PTC, NAS_data$norm_count_no_PTC, alternative = "g", paired = TRUE)$p.value)
   print("H: PTC+ homozygotes have higher normalized read count than heterozygotes")
@@ -101,7 +101,7 @@ plot_individual_change = function(NAS_data, w_PTC_name, het_PTC_name, no_PTC_nam
   plot.window(c(0,2), c(0, max_value))
   axis(1, at = c(0, 1, 2), labels = c("PTC-/-", "PTC-/+", "PTC+/+"))
   axis(2, at = seq(0, max_value, by = max_value/10), labels = seq(0, max_value, by = max_value/10))
-  title(main = title, xlab = "genotype", ylab = ylab) 
+  title(main = title, xlab = "genotype", ylab = ylab)
   counter = 1
   coin_toss_total = 0
   coin_toss_greater = 0
@@ -193,6 +193,44 @@ read_in_simulations = function(simulant_prefix, simulant_number, ids, column_nam
   return(out_list)
 }
 
+ese_overlap_simulation_plot <- function(snp_file, monomorphic_file) {
+  real <- snp_file[snp_file$id == "real",]
+  sims_snp <- snp_file[snp_file$id != "real",]
+  sims_mono <- monomorphic_file[monomorphic_file$id != "real",]
+
+  max_overlaps <- max(real$snps_overlapping_eses, sims_mono$snps_overlapping_eses, sims_snp$snps_overlapping_eses)
+  min_overlaps <- min(real$snps_overlapping_eses, sims_mono$snps_overlapping_eses, sims_snp$snps_overlapping_eses)
+
+  hist(sims_mono$snps_overlapping_eses, breaks=30, xlim=c(min_overlaps, max_overlaps), col="RoyalBlue", xlab="Number of cases overlapping at least 1 ESE", main="")
+  hist(sims_snp$snps_overlapping_eses, breaks=30, add=T, col="orange")
+  abline(v = real$snps_overlapping_eses, lty=2, lwd=2)
+  legend(50, 140,
+         legend=c("Allele frequency/ancestral allele matched SNPs", "Ancestral allele matched monomorphic sites", "Real PTC causing SNPs"),
+         col=c("orange", "RoyalBlue", "black"),
+         # fill=c("orange", "RoyalBlue", NA),
+         lty=c(NA,NA,2),
+         cex=0.8,
+         box.lty=0,
+         pch=c(15,15,NA)
+  )
+}
+
+ese_overlap_simulation_tests <- function(snp_file, monomorphic_file) {
+  real <- snp_file[snp_file$id == "real",]
+  sims_snp <- snp_file[snp_file$id != "real",]
+  sims_mono <- monomorphic_file[monomorphic_file$id != "real",]
+
+  p_snp_sim <- nrow(sims_snp[sims_snp$snps_overlapping_eses > real$snps_overlapping_eses,]) / nrow(sims_snp)
+  p_mono_sim <- nrow(sims_mono[sims_mono$snps_overlapping_eses < real$snps_overlapping_eses,]) / nrow(sims_mono)
+
+  print("H: PTCs overlap ESEs significantly more than randomly selected non-PTC SNPs.")
+  print(p_snp_sim)
+  print("H: PTCs overlap ESEs significantly less than randomly selected non-SNP sites.")
+  print(p_mono_sim)
+}
+
+
+
 chosen_colour = "RoyalBlue"
 
 #PSI
@@ -273,7 +311,7 @@ dev.off()
 plot_individual_change(NAS_data, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "Exons with >0.05 change between any two categories", "RPMskip", 0.05, 6, reverse = TRUE)
 plot_individual_change(neg_control, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "Exons with >0.02 change between any two categories (negative control)", "RPMskip", 0.02, 1.12, reverse = TRUE)
 
-#ESE analysis 
+#ESE analysis
 NAS_ESEs_data = prepare_dataset("results/clean_run/clean_run_CaceresHurstESEs_INT3_final_output.txt")
 perform_tests(NAS_ESEs_data)
 NAS_no_ESEs_data = prepare_dataset("results/clean_run/clean_run_CaceresHurstESEs_INT3_complement_final_output.txt")
@@ -297,3 +335,12 @@ plot_individual_change(NAS_no_ESEs_data, "norm_count_w_PTC", "norm_count_het_PTC
 par(mfrow = c(1,1))
 hist(NAS_data$norm_count_no_PTC_incl - NAS_data$norm_count_het_PTC_incl, breaks = 100, col = chosen_colour, main = "Is RPM(incl) higher for PTC-/PTC- than for PTC-/PTC+?", xlab = "RPMincl(-/-) - RPMincl(-/+)")
 wilcox.test(NAS_data$norm_count_no_PTC_incl, NAS_data$norm_count_het_PTC_incl, alternative = "greater", paired = TRUE)
+
+# ESE overlap simulations
+snp_sim_file <- read.csv('results/clean_run_2/ese_overlap_simulation/snp_simulation/ese_overlap_snp_simulation.csv', head=T)
+mono_sim_file <- read.csv('results/clean_run_2/ese_overlap_simulation/monomorphic_sim/ese_overlap_monomorphic_simulation.csv', head=T)
+jpeg('results/clean_run_2/plots/ese_overlap_simulation.jpg', width=20, height = 15, units="cm", res=300)
+ese_overlap_simulation_plot(snp_sim_file, mono_sim_file)
+dev.off()
+
+ese_overlap_simulation_tests(snp_sim_file, mono_sim_file)
