@@ -15,6 +15,20 @@ from pathlib import Path
 import random
 import shutil
 
+def get_fasta_exon_intervals(intervals_fasta):
+    stops = ["TAA", "TAG", "TGA"]
+    exon_interval_names, exon_interval_seqs = gen.read_fasta(intervals_fasta)
+    exon_interval_list = collections.defaultdict(lambda: collections.defaultdict())
+    for i, name in enumerate(exon_interval_names):
+        transcript_id = name.split('.')[0]
+        exon = int(name.split('(')[0].split('.')[1])
+        seq = exon_interval_seqs[i]
+        if seq in stops:
+            exon_id = 99999
+        else:
+            exon_id = exon
+        exon_interval_list[transcript_id][exon_id] = seq
+    return exon_interval_list
 
 def change_bed_names(input_bed, output_bed, full_names, header):
     '''

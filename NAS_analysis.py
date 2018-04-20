@@ -45,7 +45,7 @@ def get_non_mutation_indices(simulation_output_folder, sample_file, coding_exon_
     bo.extract_nt_indices(fasta_no_mutations, nt_indices_files)
 
 #
-def run_ptc_monomorphic_simulation_instance(simulations, out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, syn_nonsyn_file, exon_junctions_file, bam_files, nt_indices_files, parallel = False, use_old_sims = False):
+def run_ptc_monomorphic_simulation_instance(simulations, out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, syn_nonsyn_file, exon_junctions_file, bam_files, nt_indices_files, exon_list, parallel = False, use_old_sims = False):
     '''
     Run the ptc simulations for the required number.
     '''
@@ -71,7 +71,7 @@ def run_ptc_monomorphic_simulation_instance(simulations, out_prefix, simulation_
         #generate pseudo ptc snps
         pseudo_monomorphic_ptc_file = "{0}/pseudo_monomorphic_ptc_file_{1}.txt".format(simulation_instance_folder, simulation_number)
         if (not use_old_sims) or (not(os.path.isfile(pseudo_monomorphic_ptc_file))):
-            so.generate_pesudo_monomorphic_ptcs(ptc_file, nt_indices_files, pseudo_monomorphic_ptc_file)
+            so.generate_pseudo_monomorphic_ptcs(ptc_file, nt_indices_files, exon_list, pseudo_monomorphic_ptc_file)
 
         #filter the exon junctions file to only leave those junctions that flank exons retained in the previous step when generating pseudo ptcs
         pseudo_monomorphic_ptc_exon_junctions_file = "{0}/filtered_exon_junctions_{1}.bed".format(simulation_instance_folder, simulation_number)
@@ -94,7 +94,7 @@ def run_ptc_monomorphic_simulation_instance(simulations, out_prefix, simulation_
         final_file = "{0}/final_output_simulation_{1}.txt".format(simulation_bam_analysis_output_folder, simulation_number)
         bmo.compare_PSI(pseudo_monomorphic_ptc_file, simulation_bam_analysis_output_folder, final_file, sim_number = simulation_number)
 
-def ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file, genome_fasta, ptc_file, syn_nonsyn_file, coding_exon_bed, exon_junctions_file, bam_files, required_simulations, generate_indices = False, use_old_sims = False):
+def ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file, genome_fasta, ptc_file, syn_nonsyn_file, coding_exon_bed, coding_exon_fasta, exon_junctions_file, bam_files, required_simulations, generate_indices = False, use_old_sims = False):
     '''
     Set up the PTC simulations and then run.
     if use_old_sims is True, don't pick new simulant SNPs from monomorphic sites.
@@ -125,6 +125,8 @@ def ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file
     if generate_indices and not use_old_sims:
         get_non_mutation_indices(simulation_output_folder, sample_file, coding_exon_bed, out_prefix, genome_fasta, nt_indices_files)
 
+    coding_exon_list = bo.get_fasta_exon_intervals(coding_exon_fasta)
+
     if not use_old_sims:
         #if the simulation folder we are specifying already exists, delete and start again
         gen.create_strict_directory(simulation_bam_analysis_output_folder)
@@ -136,11 +138,11 @@ def ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file
     # #if you're only doing one simulation, don't parallelize the simulations
     # #parallelize the processing of bams like for true data
     if required_simulations > 1:
-        processes = gen.run_in_parallel(simulations, ["foo", out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, syn_nonsyn_file, exon_junctions_file, bam_files, nt_indices_files, True, use_old_sims], run_ptc_monomorphic_simulation_instance)
+        processes = gen.run_in_parallel(simulations, ["foo", out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, syn_nonsyn_file, exon_junctions_file, bam_files, nt_indices_files, coding_exon_list True, use_old_sims], run_ptc_monomorphic_simulation_instance)
         for process in processes:
             process.get()
     else:
-        run_ptc_monomorphic_simulation_instance([1], out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, syn_nonsyn_file, exon_junctions_file, bam_files, nt_indices_files, False, use_old_sims)
+        run_ptc_monomorphic_simulation_instance([1], out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, syn_nonsyn_file, exon_junctions_file, bam_files, nt_indices_files, codin_exon_list, False, use_old_sims)
 
 
 def run_ptc_simulation_instance(simulations, out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, nonsynonymous_snps_file, exon_junctions_file, bam_files, parallel = False, use_old_sims = False):
@@ -532,7 +534,12 @@ def main():
         if simulate_ptcs_with_monomorphic and not number_of_simulations:
             print("Please specify the number of simulations")
             raise Exception
-        ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file, genome_fasta, PTC_file, syn_nonsyn_file, coding_exon_bed, exon_junctions_file, bam_files, number_of_simulations, generate_indices = generate_monomorphic_indices, use_old_sims = use_old_sims)
+
+        coding_exon_fasta = "{0}_coding_exons.fasta".format(out_prefix)
+        if not os.path.exists(coding_exon_fasta):
+            print('Coding exon fasta is required...')
+            raise Exception
+        ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file, genome_fasta, PTC_file, syn_nonsyn_file, coding_exon_bed, coding_exon_fasta, exon_junctions_file, bam_files, number_of_simulations, generate_indices = generate_monomorphic_indices, use_old_sims = use_old_sims)
 
     # get the locations of the ptcs
     if ptc_location_analysis:

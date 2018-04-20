@@ -73,7 +73,7 @@ def get_allele_frequency(snp):
     return(np.divide(sum(alleles), len(alleles)))
 
 
-def generate_pesudo_monomorphic_ptcs(ptc_file, index_fastas, output_file, seed=None, without_replacement=None, with_weighting=None):
+def generate_pseudo_monomorphic_ptcs(ptc_file, index_fastas, exon_list, output_file, seed=None, without_replacement=None, with_weighting=None):
 
     '''
     Generate a file of pseudo PTC mutations where infact the site is a monomorphic site.
@@ -116,11 +116,19 @@ def generate_pesudo_monomorphic_ptcs(ptc_file, index_fastas, output_file, seed=N
         output.write("{0}\n".format("\t".join(head)))
 
         # for each ptc
-        for ptc in ptcs[1:]:
+        for i, ptc in enumerate(ptcs[1:]):
             aa = ptc[9]
             pseudo_ptc = ptc
-            # choose a random exon chunk
-            random_exon = np.random.choice(list(range(len(index_files[aa][0]))), 1, p=index_files[aa][2])[0]
+
+            chosen_exists = False
+            while not chosen_exists:
+                # choose a random exon chunk
+                random_exon = np.random.choice(list(range(len(index_files[aa][0]))), 1, p=index_files[aa][2])[0]
+                chosen_name = index_files[aa][0][random_exon]
+                transcript_id = chosen_name.split('.')[0]
+                exon_id = int(chosen_name.split('.')[1])
+                if exon_id in exon_list[transcript_id]:
+                    chosen_exists = True
             # choose a random position within that chunk
             random_pos = np.random.choice([p for p in index_files[aa][1][random_exon]], 1, replace=replace)[0]
             # outputs to file, keeping same allele frequencies
