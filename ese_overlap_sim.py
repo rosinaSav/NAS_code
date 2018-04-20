@@ -129,8 +129,6 @@ def run_monomorphic_simulations(simulation_list, ptc_file, nt_indices_files, ese
     overlap_counters = []
 
     interval_list = bo.get_fasta_exon_intervals(intervals_fasta)
-    # for transcript in sorted(interval_list):
-    #     print(transcript, sorted(interval_list[transcript].keys()))
 
     simulation_count = len(simulation_list)
     for i, simulation in enumerate(simulation_list):
@@ -138,7 +136,7 @@ def run_monomorphic_simulations(simulation_list, ptc_file, nt_indices_files, ese
         monomorphic_ptc_file = "{0}/monomorphic_ptcs_{1}.txt".format(output_folder, simulation)
         if not os.path.exists(monomorphic_ptc_file) or overwrite_generated_simulations:
             print('{0}/{1} generating monomorphic site file...'.format(i+1, simulation_count))
-            so.generate_pesudo_monomorphic_ptcs(ptc_file, nt_indices_files, interval_list, monomorphic_ptc_file, seed=None, without_replacement=None, with_weighting=True)
+            so.generate_pseudo_monomorphic_ptcs(ptc_file, nt_indices_files, interval_list, monomorphic_ptc_file, seed=None, without_replacement=None, with_weighting=True)
         overlap_count, overlap_counter = ese_overlap(monomorphic_ptc_file, ese_list, intervals_fasta)
         overlap_counts.append(overlap_count)
         overlap_counters.append(overlap_counter)
