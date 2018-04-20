@@ -101,7 +101,7 @@ def ese_overlap(ptc_file, ese_list, coding_exons_fasta):
             ese_overlap_counter[ese] += 1
     return(ese_overlap_count, ese_overlap_counter)
 
-def run_snp_simulations(simulation_list, ptc_file, syn_nonsyn_file, ese_list, coding_exons_fasta):
+def run_snp_simulations(simulation_list, ptc_file, syn_nonsyn_file, ese_list, coding_exons_fasta, output_folder, overwrite_generated_simulations = None):
 
     overlap_counts = []
     overlap_counters = []
@@ -110,16 +110,15 @@ def run_snp_simulations(simulation_list, ptc_file, syn_nonsyn_file, ese_list, co
 
     for i, simulation in enumerate(simulation_list):
         print("{0}/{1} simulation running...".format(i+1, simulation_count))
-        np.random.seed()
-        random_choice = np.random.random(1)[0]
-        pseudo_ptcs = "./temp_data/pseudo_ptcs.{0}.txt".format(random_choice)
-        pseudo_other = "./temp_data/other.{0}.txt".format(random_choice)
-        so.generate_pseudo_ptc_snps(ptc_file, syn_nonsyn_file, pseudo_ptcs, pseudo_other, group_by_gene=False, without_replacement=True, match_allele_frequency=True, match_allele_frequency_window=0.05)
+        pseudo_ptcs = "{0}/pseudo_ptcs.{1}.txt".format(output_folder, simulation)
+        pseudo_other = "{0}/other.{1}.txt".format(output_folder, simulation)
+        if not os.path.exists(pseudo_ptcs) or overwrite_generated_simulations:
+            so.generate_pseudo_ptc_snps(ptc_file, syn_nonsyn_file, pseudo_ptcs, pseudo_other, group_by_gene=False, without_replacement=True, match_allele_frequency=True, match_allele_frequency_window=0.05)
+            gen.remove_file(pseudo_other)
         overlap_count, overlap_counter = ese_overlap(pseudo_ptcs, ese_list, coding_exons_fasta)
         overlap_counts.append(overlap_count)
         overlap_counters.append(overlap_counter)
-        gen.remove_file(pseudo_ptcs)
-        gen.remove_file(pseudo_other)
+
 
     return(overlap_counts, overlap_counters)
 
@@ -135,7 +134,6 @@ def run_monomorphic_simulations(simulation_list, ptc_file, nt_indices_files, ese
         print("{0}/{1} simulation running...".format(i+1, simulation_count))
         monomorphic_ptc_file = "{0}/monomorphic_ptcs_{1}.txt".format(output_folder, simulation)
         if not os.path.exists(monomorphic_ptc_file) or overwrite_generated_simulations:
-            print('{0}/{1} generating monomorphic site file...'.format(i+1, simulation_count))
             so.generate_pseudo_monomorphic_ptcs(ptc_file, nt_indices_files, interval_list, monomorphic_ptc_file, seed=None, without_replacement=None, with_weighting=True)
         overlap_count, overlap_counter = ese_overlap(monomorphic_ptc_file, ese_list, intervals_fasta)
         overlap_counts.append(overlap_count)
@@ -143,9 +141,9 @@ def run_monomorphic_simulations(simulation_list, ptc_file, nt_indices_files, ese
     return(overlap_counts, overlap_counters)
 
 
-def snp_simulations(required_simulations, ptc_file, syn_nonsyn_file, ese_list, coding_exons_fasta):
+def snp_simulations(required_simulations, ptc_file, syn_nonsyn_file, ese_list, coding_exons_fasta, output_folder, overwrite_generated_simulations = None):
     simulation_list = list(range(1,1+required_simulations))
-    processes = gen.run_in_parallel(simulation_list, ["foo", ptc_file, syn_nonsyn_file, ese_list, coding_exons_fasta], run_snp_simulations)
+    processes = gen.run_in_parallel(simulation_list, ["foo", ptc_file, syn_nonsyn_file, ese_list, coding_exons_fasta, output_folder, overwrite_generated_simulations], run_snp_simulations)
     overlap_count_list = []
     overlap_counter_list = []
     for process in processes:
@@ -202,7 +200,7 @@ def main():
     real_overlap_count, real_ese_overlap_counter = ese_overlap(ptc_snps_file, ese_list, coding_exons_fasta)
 
     if snp_sim:
-        simulation_overlap_counts, simulation_overlap_counters = snp_simulations(int(required_simulations), ptc_file, other_snps_file, ese_list, coding_exons_fasta)
+        simulation_overlap_counts, simulation_overlap_counters = snp_simulations(int(required_simulations), ptc_file, other_snps_file, ese_list, coding_exons_fasta, output_folder, overwrite_generated_simulations)
         output_file = "{0}/ese_overlap_snp_simulation.csv".format(output_folder)
         write_to_file(output_file, ese_list, real_overlap_count, real_ese_overlap_counter, simulation_overlap_counts, simulation_overlap_counters)
 
@@ -216,7 +214,6 @@ def main():
         }
         sample_file = "{0}_sample_file.txt".format(out_prefix)
         coding_exon_bed = "{0}_coding_exons.bed".format(out_prefix)
-        coding_exon_fasta = "{0}_coding_exons.fasta".format(out_prefix)
 
         if not os.path.exists(sample_file) or not os.path.exists(coding_exon_bed):
             print("Please check all input files are present...")
