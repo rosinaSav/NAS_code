@@ -197,23 +197,28 @@ ese_overlap_simulation_plot <- function(snp_file, monomorphic_file) {
   real <- snp_file[snp_file$id == "real",]
   sims_snp <- snp_file[snp_file$id != "real",]
   sims_mono <- monomorphic_file[monomorphic_file$id != "real",]
+  
+  real$snps_overlapping_eses <- real$snps_overlapping_eses/1179
+  sims_snp$snps_overlapping_eses <- sims_snp$snps_overlapping_eses/1179
+  sims_mono$snps_overlapping_eses <- sims_mono$snps_overlapping_eses/1179
 
   max_overlaps <- max(real$snps_overlapping_eses, sims_mono$snps_overlapping_eses, sims_snp$snps_overlapping_eses)
   min_overlaps <- min(real$snps_overlapping_eses, sims_mono$snps_overlapping_eses, sims_snp$snps_overlapping_eses)
 
-  hist(sims_mono$snps_overlapping_eses, breaks=30, xlim=c(min_overlaps, max_overlaps), col="RoyalBlue", xlab="Number of cases overlapping at least 1 ESE", main="")
-  hist(sims_snp$snps_overlapping_eses, breaks=30, add=T, col="orange")
+  hist(sims_mono$snps_overlapping_eses, freq=FALSE, breaks=seq(0, 0.25, 0.0025), xlim=c(0,0.21), ylim=c(0,120), col="RoyalBlue", xlab="Proportion of cases overlapping > 1 ESE motif", main="")
+  # hist(sims_snp$snps_overlapping_eses, breaks=seq(0, 1, 0.0025), add=T, col="orange", freq=FALSE)
   abline(v = real$snps_overlapping_eses, lty=2, lwd=2)
-  legend(50, 140,
+  legend(0.04,120,
          legend=c(paste("Allele frequency/ancestral allele matched SNPs (n=", nrow(sims_snp), ")", sep=""), paste("Ancestral allele matched monomorphic sites (n=", nrow(sims_mono), ")", sep=""), "Real PTC causing SNPs"),
          col=c("orange", "RoyalBlue", "black"),
-         # fill=c("orange", "RoyalBlue", NA),
          lty=c(NA,NA,2),
+         lwd=c(NA,NA,2),
          cex=0.8,
          box.lty=0,
          pch=c(15,15,NA)
   )
 }
+ese_overlap_simulation_plot(snp_sim_file, mono_sim_file)
 
 ese_overlap_simulation_tests <- function(snp_file, monomorphic_file) {
   real <- snp_file[snp_file$id == "real",]
@@ -339,7 +344,7 @@ wilcox.test(NAS_data$norm_count_no_PTC_incl, NAS_data$norm_count_het_PTC_incl, a
 # ESE overlap simulations
 snp_sim_file <- read.csv('results/clean_run_2/ese_overlap_simulation/snp_simulation/ese_overlap_snp_simulation.csv', head=T)
 mono_sim_file <- read.csv('results/clean_run_2/ese_overlap_simulation/monomorphic_sim/ese_overlap_monomorphic_simulation.csv', head=T)
-jpeg('results/clean_run_2/plots/ese_overlap_simulation.jpg', width=20, height = 15, units="cm", res=300)
+jpeg('results/clean_run_2/plots/ese_overlap_simulation.jpg', width=25, height = 15, units="cm", res=300)
 ese_overlap_simulation_plot(snp_sim_file, mono_sim_file)
 dev.off()
 
