@@ -143,7 +143,7 @@ def run_monomorphic_simulations(simulation_list, ptc_file, nt_indices_files, ese
 
 def snp_simulations(required_simulations, ptc_file, syn_nonsyn_file, ese_list, coding_exons_fasta, output_folder, overwrite_generated_simulations = None):
     simulation_list = list(range(1,1+required_simulations))
-    processes = gen.run_in_parallel(simulation_list, ["foo", ptc_file, syn_nonsyn_file, ese_list, coding_exons_fasta, output_folder, overwrite_generated_simulations], run_snp_simulations)
+    processes = gen.run_in_parallel(simulation_list, ["foo", ptc_file, syn_nonsyn_file, ese_list, coding_exons_fasta, output_folder, overwrite_generated_simulations], run_snp_simulations, workers=36)
     overlap_count_list = []
     overlap_counter_list = []
     for process in processes:
@@ -154,7 +154,7 @@ def snp_simulations(required_simulations, ptc_file, syn_nonsyn_file, ese_list, c
 
 def monomorphic_simulations(required_simulations, ptc_file, nt_indices_files, ese_list, coding_exons_fasta, output_folder, overwrite_generated_simulations = None):
     simulation_list = list(range(1,1+required_simulations))
-    processes = gen.run_in_parallel(simulation_list, ["foo", ptc_file, nt_indices_files, ese_list, coding_exons_fasta, output_folder, overwrite_generated_simulations], run_monomorphic_simulations)
+    processes = gen.run_in_parallel(simulation_list, ["foo", ptc_file, nt_indices_files, ese_list, coding_exons_fasta, output_folder, overwrite_generated_simulations], run_monomorphic_simulations, workers=36)
     overlap_count_list = []
     overlap_counter_list = []
     for process in processes:
