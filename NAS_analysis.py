@@ -211,7 +211,7 @@ def ptc_snp_simulation(out_prefix, simulation_output_folder, ptc_file, syn_nonsy
 
 
     #setup up simulation bam analysis output folder
-    simulation_bam_analysis_output_folder = "{0}_simulate_ptc_snps_bam_analysis".format(out_prefix)
+    simulation_bam_analysis_output_folder = "{0}__analysis_simulation_ptc_snps_bam_analysis".format(out_prefix)
     if not use_old_sims:
         #if the simulation folder we are specifying already exists, delete and start again
         gen.create_strict_directory(simulation_bam_analysis_output_folder)
