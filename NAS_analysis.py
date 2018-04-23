@@ -173,7 +173,7 @@ def run_ptc_simulation_instance(simulations, out_prefix, simulation_output_folde
 
         #filter the exon junctions file to only leave those junctions that flank exons retained in the previous step when generating pseudo ptcs
         pseudo_ptc_exon_junctions_file = "{0}/filtered_exon_junctions_{1}.bed".format(simulation_instance_folder, simulation_number)
-        if (not use_old_sims) or (not(os.path.isfile(pseudo_ptc_file))):
+        if (not use_old_sims) or (not(os.path.isfile(pseudo_ptc_exon_junctions_file))):
             bo.filter_exon_junctions(exon_junctions_file, pseudo_ptc_file, pseudo_ptc_exon_junctions_file)
 
         exon_junctions_bam_output_folder = "{0}__analysis_exon_junction_bams".format(out_prefix)
@@ -207,6 +207,8 @@ def ptc_snp_simulation(out_prefix, simulation_output_folder, ptc_file, syn_nonsy
         gen.create_strict_directory(simulation_output_folder)
     else:
         gen.create_directory(simulation_output_folder)
+
+
 
     #setup up simulation bam analysis output folder
     simulation_bam_analysis_output_folder = "{0}_simulate_ptc_snps_bam_analysis".format(out_prefix)
