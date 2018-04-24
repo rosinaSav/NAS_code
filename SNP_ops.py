@@ -723,26 +723,29 @@ def ptc_locations(PTC_file, snp_relative_exon_position_file, bam_analysis_output
     # create a dictionary of the bam output with the ref of the ptc
     bam_output_list = {}
     for bam_output in bam_outputs[1:]:
-        bam_output_list[bam_output[-1]] = bam_output
+        bam_output_list[int(bam_output[-1])] = bam_output
 
     snps = gen.read_many_fields(snp_relative_exon_position_file, "\t")
 
     with open(output_file, "w") as outfile:
-        outfile.write("{0}\trel_exon_pos\texon_length\t5prime_dist\t3prime_dist\t{1}\tptc_ref_id\n".format("\t".join(ptcs[0][:11]), "\t".join(bam_outputs[0][1:-1])))
+        outfile.write("{0},rel_exon_pos,exon_length,5prime_dist,3prime_dist,max_dist,min_dist,{1},ptc_ref_id\n".format(",".join(ptcs[0][:11]), ",".join(bam_outputs[0][1:-1])))
         for snp in snps[1:]:
             snp = SNP_object(snp)
             if snp.id in ptc_ids:
                 # get the ptc id
-                ptc_id = ptc_ids[snp.id]
-                # get the length of the exon
-                exon_length = snp.exon_end - snp.exon_start
-                # get the position of the PTC relative to exon ends
-                five_prime_dist = snp.rel_pos
-                three_prime_dist = exon_length - snp.rel_pos
-                # get the bam output line
-                bam_output = bam_output_list[ptc_id]
-                # write output to file
-                outfile.write("{0}\t{1}\t{2}\t{3}\t{4}\n".format("\t".join(snp.info), exon_length, five_prime_dist, three_prime_dist, "\t".join(bam_output[1:])))
+                ptc_id = int(ptc_ids[snp.id])
+                if ptc_id in bam_output_list:
+                    # get the length of the exon
+                    exon_length = snp.exon_end - snp.exon_start
+                    # get the position of the PTC relative to exon ends
+                    five_prime_dist = snp.rel_pos
+                    three_prime_dist = exon_length - snp.rel_pos
+                    max_dist = max(five_prime_dist, three_prime_dist)
+                    min_dist = min(five_prime_dist, three_prime_dist)
+                    # get the bam output line
+                    bam_output = bam_output_list[ptc_id]
+                    # write output to file
+                    outfile.write("{0},{1},{2},{3},{4},{5}.{6}\n".format(",".join(snp.info), exon_length, five_prime_dist, three_prime_dist, max_dist, min_dist, ",".join(bam_output[1:])))
 
 
 def tabix(bed_file, output_file, vcf, process_number = None):

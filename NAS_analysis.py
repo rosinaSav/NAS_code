@@ -517,11 +517,11 @@ def main():
         so.filter_motif_SNPs(CDS_fasta, PTC_file, motif_file, filtered_ptc, complement = motif_complement)
         PTC_file = filtered_ptc
 
+    final_file = "{0}__analysis_final_output.txt".format(out_prefix)
     if ignore_psi_calculation:
         pass
     else:
         print("Calculating PSI...")
-        final_file = "{0}__analysis_final_output.txt".format(out_prefix)
         bmo.compare_PSI(PTC_file, bam_analysis_folder, final_file)
 
     #run the simulation that swaps ptcs for nonsynonymous snps
@@ -546,9 +546,10 @@ def main():
     # get the locations of the ptcs
     if ptc_location_analysis:
         print("PTC locations analysis...")
-        snp_relative_exon_position_file = "{0}_SNP_relative_exon_position.bed"
-        ptc_location_analysis_output_file ="{0}_ptc_location_analysis.txt"
-        if not os.path.exists(coding_exons_fasta) or not os.path.exists(snp_relative_exon_position_file) or not os.path.exists(PTC_file):
+        snp_relative_exon_position_file = "{0}_SNP_relative_exon_position.bed".format(out_prefix)
+        ptc_location_analysis_output_file ="{0}_ptc_location_analysis.csv".format(out_prefix)
+        coding_exon_fasta = "{0}_coding_exons.fasta".format(out_prefix)
+        if not os.path.exists(coding_exon_fasta) or not os.path.exists(snp_relative_exon_position_file) or not os.path.exists(PTC_file):
             print("Please run --filter_genome_data and --get_SNPs first...")
             raise Exception
         # need to work out where and what the analysis outputs need to do
