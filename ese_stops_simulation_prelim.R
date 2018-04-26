@@ -29,22 +29,43 @@ if (args[2] == "all_sets") {
   }
 }
 
+get_plot <- function(file_path, out_path) {
+  file <- read.csv(file_path, sep=",", head=T)
+  simulants <- file[file$id != 'real',]
+  real <- file[file$id == 'real',]
+  
+  plot <- ggplot(data=simulants, aes(simulants$stop_count)) +
+    geom_histogram(breaks=seq(min(file$stop_count), max(file$stop_count), by = 2), col="black", fill="white", alpha = .8) +
+    labs(title=paste(sprintf(set), " (", nrow(simulants), " simulations)", sep="")) +
+    labs(x="Stop codon count in all frames", y="Count") +
+    geom_vline(xintercept=file$stop_count[file$id == "real"], lty=2, col="red")
+  
+  # out_path = paste("ese_stops_simulations_output/", set, "/", set, "_", simulations, "_hist.head(id", sep="")
+  ggsave(out_path, plot=plot)
+}
+
 run_plots <- function(simulations) {
   for (set in sets) {
     print(set)
     file_path <- paste("ese_stops_simulations_output/", set, "/", set, "_stop_counts_" , simulations, ".csv", sep="")
-    file <- read.csv(file_path, sep=",", head=T)
-    simulants <- file[file$id != 'real',]
-    real <- file[file$id == 'real',]
-
-    plot <- ggplot(data=simulants, aes(simulants$stop_count)) +
-      geom_histogram(breaks=seq(min(file$stop_count), max(file$stop_count), by = 2), col="black", fill="white", alpha = .8) +
-      labs(title=paste(sprintf(set), " (", nrow(simulants), " simulations)", sep="")) +
-      labs(x="Stop codon count in all frames", y="Count") +
-      geom_vline(xintercept=file$stop_count[file$id == "real"], lty=2, col="red")
-
-    out_path = paste("ese_stops_simulations_output/", set, "/", set, "_", simulations, "_hist.head(id", sep="")
-    ggsave(out_path, plot=plot)
+    out_path <- paste("ese_stops_simulations_output/", set, "/", set, "_hist.jpg", sep="")
+    get_plot(file_path, out_path)
   }
 }
+
 run_plots(simulations)
+
+prepare_data <- function(set) {
+  if (set == "grouped") {
+    sample_file <- read.table('results/ese_stops_simulations_output/RBP_motifs_grouped/motif_samples.txt', head=T)
+  }
+}
+
+sample_file <- read.table('results/ese_stops_simulations_output/RBP_motifs_grouped/motif_samples.txt')
+colnames(sample_file) <- c("sample")
+
+for (set in sample_file$sample) {
+  file_path = paste("results/ese_stops_simulations_output/RBP_motifs_grouped/", set, "/", set, "_stop_counts_1000.csv", sep="")
+  out_path = paste("results/ese_stops_simulations_output/RBP_motifs_grouped/plots/", set, "_hist.jpg", sep="")
+  get_plot(file_path, out_path)
+}

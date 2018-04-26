@@ -51,6 +51,16 @@ def create_output_directories(path):
         new_path.append(split)
         create_directory("/".join(new_path))
 
+def create_strict_output_directories(path):
+    '''
+    Create set of directories for a given path
+    '''
+    path_splits = path.split('/')
+    new_path = []
+    for i, split in enumerate(path_splits):
+        new_path.append(split)
+        create_strict_directory("/".join(new_path))
+
 
 def copy_file(src, dest):
     shutil.copyfile(src, dest)
