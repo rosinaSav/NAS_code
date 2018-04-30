@@ -1,3 +1,40 @@
+prepare_dataset = function(datafile) {
+  NAS_data = read.csv(datafile, stringsAsFactors = FALSE, sep = "\t")
+  max_sample_count = max(NAS_data$sample_count)
+  NAS_data = NAS_data[NAS_data$ptc_count > 0 & NAS_data$sample_count > (0.5 * max_sample_count), ]
+  NAS_data$PSI_w_PTC = NAS_data$PSI_w_PTC * 100
+  NAS_data$PSI_het_PTC = NAS_data$PSI_het_PTC * 100
+  NAS_data$PSI_no_PTC = NAS_data$PSI_no_PTC * 100
+  NAS_data$norm_count_w_PTC = NAS_data$norm_count_w_PTC * 1000000
+  NAS_data$norm_count_het_PTC = NAS_data$norm_count_het_PTC * 1000000
+  NAS_data$norm_count_no_PTC = NAS_data$norm_count_no_PTC * 1000000
+  if ("norm_count_w_PTC_incl" %in% colnames(NAS_data)) {
+    NAS_data$norm_count_w_PTC_incl = NAS_data$norm_count_w_PTC_incl * 1000000
+    NAS_data$norm_count_het_PTC_incl = NAS_data$norm_count_het_PTC_incl * 1000000
+    NAS_data$norm_count_no_PTC_incl = NAS_data$norm_count_no_PTC_incl * 1000000
+  }
+  NAS_data = NAS_data[order(NAS_data$id),]
+  return(NAS_data)
+}
+
+read_in_simulations = function(simulant_prefix, simulant_number, ids, column_names) {
+  sim_mat = matrix(NA, 1, 13)
+  colnames(sim_mat) = column_names
+  out_list = rep(list(sim_mat), length(ids))
+  print("Reading in simulants...")
+  for (sim in 1:simulant_number) {
+    print(sim)
+    current_data = read.csv(paste(simulant_prefix, sim, ".txt", sep = ""), header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+    for (exon in 1:dim(current_data)[1]) {
+      current_id = current_data[exon, "id"]
+      if (current_id %in% ids) {
+        out_list[[match(current_id, ids)]] = rbind(out_list[[match(current_id, ids)]], current_data[exon, ])
+      }
+    }
+  }
+  return(out_list)
+}
+
 compare_the_two_measures = function(NAS_data, title) {
   cor_test = cor.test(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC, NAS_data$norm_count_no_PTC - NAS_data$norm_count_het_PTC, method = "spearman")
   plot(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC, NAS_data$norm_count_no_PTC - NAS_data$norm_count_het_PTC, pch = 19, col = "RoyalBlue", xlab = "PSI(-/-) - PSI(-/+)", ylab = "RPMskip(-/-) - RPMskip(-/+)", main = title)
@@ -20,6 +57,7 @@ get_n_t =  function(feature1, feature2, neg_control, NAS_data, title, swap = FAL
     feature1 = feature2
     feature2 = temp
   }
+  big_n_t = c()
   n_t = rep(NA, length(neg_control))
   for (index in 1:length(neg_control)) {
     true_diff = NAS_data[index, feature1] - NAS_data[index, feature2]
@@ -29,6 +67,9 @@ get_n_t =  function(feature1, feature2, neg_control, NAS_data, title, swap = FAL
       n = sum((true_diff > sim_diffs) & (true_diff != sim_diffs))
       t = length(sim_diffs[true_diff != sim_diffs])
       n_t[index] = n/t
+      if(!is.nan(n/t) & n/t > 0.95) {
+        big_n_t = c(big_n_t, index)
+      }
     }
   }
   hist(n_t, col = "RoyalBlue", breaks = 20, main = title, xlab = "Proportion of simulants that show an effect smaller or equal to true effect.")
@@ -37,6 +78,40 @@ get_n_t =  function(feature1, feature2, neg_control, NAS_data, title, swap = FAL
   text(0.7, y_pos, label = paste("p ~ ", round(p, 3), sep = ""), cex = 2)
   return(p)
 }
+
+get_n_t_indices = function(feature1, feature2, neg_control, NAS_data, title, return_threshold, swap = FALSE) {
+  threshold = 0
+  y_pos = 60
+  if (swap == TRUE) {
+    temp = feature1
+    feature1 = feature2
+    feature2 = temp
+  }
+  big_n_t = c()
+  # set up list of NA's
+  n_t = rep(NA, length(neg_control))
+  # for each index in the negative controls
+  for (index in 1:length(neg_control)) {
+    # get the true difference between the two features
+    true_diff = NAS_data[index, feature1] - NAS_data[index, feature2]
+    if (abs(true_diff) >= threshold) {
+      sim_diffs = neg_control[[index]][feature1] - neg_control[[index]][feature2]
+      sim_diffs = sim_diffs[!is.na(sim_diffs)]
+      n = sum((true_diff > sim_diffs) & (true_diff != sim_diffs))
+      t = length(sim_diffs[true_diff != sim_diffs])
+      n_t[index] = n/t
+      if(!is.nan(n/t) & n/t > return_threshold) {
+        big_n_t = c(big_n_t, index)
+      }
+    }
+  }
+  return(big_n_t)
+}
+
+neg_control = read_in_simulations("results/clean_run/simulation_output/final_output_simulation_", 100, NAS_data$id, colnames(NAS_data))
+p_PSI = get_n_t("PSI_no_PTC", "PSI_het_PTC", neg_control, NAS_data, "PSI-/- - PSI-/+", swap = FALSE)
+indices = get_n_t_indices("PSI_no_PTC", "PSI_het_PTC", neg_control, NAS_data, "PSI-/- - PSI-/+", return_threshold=0.95, swap = FALSE)
+
 
 get_n_t_visual =  function(feature1, feature2, neg_control, NAS_data, swap = FALSE) {
   par(mfrow = c(4, 4))
@@ -159,42 +234,6 @@ plot_individual_change = function(NAS_data, w_PTC_name, het_PTC_name, no_PTC_nam
     alternative = "greater"
   }
   print(binom.test(x = coin_toss_greater, n = coin_toss_total, p = 0.5, alternative = alternative))
-}
-
-prepare_dataset = function(datafile) {
-  NAS_data = read.csv(datafile, stringsAsFactors = FALSE, sep = "\t")
-  max_sample_count = max(NAS_data$sample_count)
-  NAS_data = NAS_data[NAS_data$ptc_count > 0 & NAS_data$sample_count > (0.5 * max_sample_count), ]
-  NAS_data$PSI_w_PTC = NAS_data$PSI_w_PTC * 100
-  NAS_data$PSI_het_PTC = NAS_data$PSI_het_PTC * 100
-  NAS_data$PSI_no_PTC = NAS_data$PSI_no_PTC * 100
-  NAS_data$norm_count_w_PTC = NAS_data$norm_count_w_PTC * 1000000
-  NAS_data$norm_count_het_PTC = NAS_data$norm_count_het_PTC * 1000000
-  NAS_data$norm_count_no_PTC = NAS_data$norm_count_no_PTC * 1000000
-  if ("norm_count_w_PTC_incl" %in% colnames(NAS_data)) {
-    NAS_data$norm_count_w_PTC_incl = NAS_data$norm_count_w_PTC_incl * 1000000
-    NAS_data$norm_count_het_PTC_incl = NAS_data$norm_count_het_PTC_incl * 1000000
-    NAS_data$norm_count_no_PTC_incl = NAS_data$norm_count_no_PTC_incl * 1000000
-  }
-  NAS_data = NAS_data[order(NAS_data$id),]
-  return(NAS_data)
-}
-
-read_in_simulations = function(simulant_prefix, simulant_number, ids, column_names) {
-  sim_mat = matrix(NA, 1, 13)
-  colnames(sim_mat) = column_names
-  out_list = rep(list(sim_mat), length(ids))
-  for (sim in 1:simulant_number) {
-    print(sim)
-    current_data = read.csv(paste(simulant_prefix, sim, ".txt", sep = ""), header = TRUE, stringsAsFactors = FALSE, sep = "\t")
-    for (exon in 1:dim(current_data)[1]) {
-      current_id = current_data[exon, "id"]
-      if (current_id %in% ids) {
-        out_list[[match(current_id, ids)]] = rbind(out_list[[match(current_id, ids)]], current_data[exon, ])
-      }
-    }
-  }
-  return(out_list)
 }
 
 ese_overlap_simulation_plot <- function(snp_file, monomorphic_file) {

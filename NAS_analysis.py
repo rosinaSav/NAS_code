@@ -395,6 +395,7 @@ def main():
     directory_paths = "/".join(directory_splits[:-1])
     gen.create_output_directories(directory_paths)
     gen.create_directory('temp_data/')
+    gen.create_output_directories(simulation_output_folder)
 
     CDS_fasta = "{0}_CDS.fasta".format(out_prefix)
     CDS_bed = "{0}_CDS.bed".format(out_prefix)
@@ -438,9 +439,9 @@ def main():
 
     SNP_file = "{0}_SNP_file.txt".format(out_prefix)
     PTC_file = "{0}_ptc_file.txt".format(out_prefix)
-    if out_of_frame:
-        out_prefix = out_prefix + "out_of_frame"
     syn_nonsyn_file = "{0}_syn_nonsyn_file.txt".format(out_prefix)
+    if out_of_frame:
+        out_prefix = out_prefix + "_out_of_frame"
     CDS_interval_file = "{0}_intervals{1}".format(os.path.splitext(CDS_fasta)[0], os.path.splitext(CDS_fasta)[1])
     #check which individuals were included in Geuvadis
     full_sample_names = os.listdir(bams_folder)
@@ -462,7 +463,10 @@ def main():
 
 
     # create a fasta containing all sequences for exons with snp
-    coding_exons_fasta = "{0}_coding_exons.fasta".format(out_prefix)
+    if out_of_frame:
+        coding_exons_fasta = "{0}/{1}_coding_exons.fasta".format(simulation_output_folder, out_prefix.split('/')[-1])
+    else:
+        coding_exons_fasta = "{0}_coding_exons.fasta".format(out_prefix)
     bo.fasta_from_intervals(coding_exon_bed, coding_exons_fasta, genome_fasta, names=True)
 
     if get_SNPs:
@@ -483,7 +487,10 @@ def main():
 
     #filter the exon junctions file to only leave those junctions that flank exons retained in the previous step.
     print("Filtering exon-exon junctions to only leave those that flank exons with a PTC variant...")
-    PTC_exon_junctions_file = "{0}_filtered_exon_junctions.bed".format(out_prefix)
+    if out_of_frame:
+        PTC_exon_junctions_file = "{0}/{1}_filtered_exon_junctions.bed".format(simulation_output_folder, out_prefix.split('/')[-1])
+    else:
+        PTC_exon_junctions_file = "{0}_filtered_exon_junctions.bed".format(out_prefix)
     bo.filter_exon_junctions(exon_junctions_file, PTC_file, PTC_exon_junctions_file)
 
     #make a list of all the .bam files and modify them to have the full path rather than just the file name
