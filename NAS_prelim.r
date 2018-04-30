@@ -6,6 +6,8 @@ compare_the_two_measures = function(NAS_data, title) {
   text(x = 10, y = 1, labels = paste("rho ~ ", round(cor_test$estimate, 3), "\np ~ ", round(cor_test$p.value, 3), sep = ""), adj = 0, cex = 1.3)
 }
 
+## Ask for each PTC, what proportion of the simulants have an effect smaller or
+## equal to the true effect.
 get_n_t =  function(feature1, feature2, neg_control, NAS_data, title, swap = FALSE, big_only = FALSE) {
   threshold = 0
   y_pos = 60
@@ -54,6 +56,7 @@ get_n_t_visual =  function(feature1, feature2, neg_control, NAS_data, swap = FAL
   }
 }
 
+## Perform tests on the dataset
 perform_tests = function(NAS_data) {
   print("H: Heterozygotes have lower PSI than PTC- homozygotes")
   print(wilcox.test(NAS_data$PSI_het_PTC, NAS_data$PSI_no_PTC, alternative = "l", paired = TRUE)$p.value)
@@ -94,6 +97,7 @@ plot_diff_RPM_hists_homo = function(NAS_data, title) {
     hist(NAS_data$norm_count_het_PTC - NAS_data$norm_count_w_PTC, breaks = 100, col = chosen_colour, main = title, xlab = "RPMskip(-/+) - RPMskip(+/+)")
   }
 }
+
 
 plot_individual_change = function(NAS_data, w_PTC_name, het_PTC_name, no_PTC_name, title, ylab, threshold, max_value, reverse = FALSE) {
   colours = c("#000000", "#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000", "#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
@@ -146,8 +150,8 @@ plot_individual_change = function(NAS_data, w_PTC_name, het_PTC_name, no_PTC_nam
       counter = counter + 1
     }
   }
-  print(coin_toss_greater)
-  print(coin_toss_total)
+  print(paste("Coin toss greater:", coin_toss_greater))
+  print(paste("Coin toss total:", coin_toss_total))
   if (reverse == TRUE) {
     alternative = "less"
   }
@@ -239,8 +243,9 @@ ese_overlap_simulation_tests <- function(snp_file, monomorphic_file) {
 chosen_colour = "RoyalBlue"
 
 #PSI
-NAS_data = prepare_dataset("results/clean_run/clean_run_final_output.txt")
-neg_control = read_in_simulations("results/clean_run/simulation_output/final_output_simulation_", 30, NAS_data$id, colnames(NAS_data))
+NAS_data = prepare_dataset("results/clean_run/clean_run__analysis_final_output.txt")
+nsims <- length(list.files('results/clean_run/simulation_output'))
+neg_control = read_in_simulations("results/clean_run/simulation_output/final_output_simulation_", nsims, NAS_data$id, colnames(NAS_data))
 perform_tests(NAS_data)
 summary(NAS_data)
 
@@ -253,6 +258,7 @@ p_RPMskip_big = get_n_t("norm_count_no_PTC", "norm_count_het_PTC", neg_control, 
 get_n_t_visual("PSI_no_PTC", "PSI_het_PTC", neg_control, NAS_data, swap = FALSE)
 get_n_t_visual("norm_count_no_PTC", "norm_count_het_PTC", neg_control, NAS_data, swap = TRUE)
 
+
 par(mfrow = c(1, 3))
 hist(NAS_data$PSI_no_PTC, main = "PTC-/-", xlab = "PSI", col = chosen_colour, breaks = 20)
 hist(NAS_data$PSI_het_PTC, main = "PTC-/+", xlab = "PSI", col = chosen_colour, breaks = 20)
@@ -262,7 +268,7 @@ jpeg("results/clean_run/minusminus_vs_het.jpeg", width = 23.4, height = 15.4, un
 par(mfrow = c(5, 6))
 par("mar" = c(3.1, 2.1, 2.1, 1))
 plot_diff_hists_het(NAS_data, "PTC-/PTC- - PTC-/PTC+")
-for (sim in 1:30) {
+for (sim in 1:nsims) {
   plot_diff_hists_het(neg_control[[sim]], sim)
 }
 dev.off()
@@ -282,6 +288,8 @@ hist(NAS_data$PSI_het_PTC - NAS_data$PSI_w_PTC, breaks = 100, col = chosen_colou
 
 graphics.off()
 plot_individual_change(NAS_data, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "Exons with >5% change between any two categories", "PSI", 5, 100)
+plot_individual_change(neg_control, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "Exons with >5% change between any two categories", "PSI", 5, 100)
+
 
 #RPMskip
 par(mfrow = c(1, 2))
