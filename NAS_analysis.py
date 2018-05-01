@@ -289,7 +289,7 @@ def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_j
         else:
             proc_folder = "{0}__analysis_bam_proc_files".format(out_prefix)
 
-        gen.create_directory(proc_folder)
+        gen.create_output_directories(proc_folder)
 
         bam_file_parts = os.path.split(bam_file)
         mapq_filtered_bam = "{0}/{1}_filtered_mapq.bam".format(proc_folder, bam_file_parts[1])
@@ -395,7 +395,9 @@ def main():
     directory_paths = "/".join(directory_splits[:-1])
     gen.create_output_directories(directory_paths)
     gen.create_directory('temp_data/')
-    gen.create_output_directories(simulation_output_folder)
+
+    gen.create_output_directories('test_dir/testing/here/now/test')
+
 
     CDS_fasta = "{0}_CDS.fasta".format(out_prefix)
     CDS_bed = "{0}_CDS.bed".format(out_prefix)
@@ -438,10 +440,10 @@ def main():
         gen.get_time(start)
 
     SNP_file = "{0}_SNP_file.txt".format(out_prefix)
-    PTC_file = "{0}_ptc_file.txt".format(out_prefix)
-    syn_nonsyn_file = "{0}_syn_nonsyn_file.txt".format(out_prefix)
     if out_of_frame:
         out_prefix = out_prefix + "_out_of_frame"
+    PTC_file = "{0}_ptc_file.txt".format(out_prefix)
+    syn_nonsyn_file = "{0}_syn_nonsyn_file.txt".format(out_prefix)
     CDS_interval_file = "{0}_intervals{1}".format(os.path.splitext(CDS_fasta)[0], os.path.splitext(CDS_fasta)[1])
     #check which individuals were included in Geuvadis
     full_sample_names = os.listdir(bams_folder)
@@ -463,10 +465,7 @@ def main():
 
 
     # create a fasta containing all sequences for exons with snp
-    if out_of_frame:
-        coding_exons_fasta = "{0}/{1}_coding_exons.fasta".format(simulation_output_folder, out_prefix.split('/')[-1])
-    else:
-        coding_exons_fasta = "{0}_coding_exons.fasta".format(out_prefix)
+    coding_exons_fasta = "{0}_coding_exons.fasta".format(out_prefix)
     bo.fasta_from_intervals(coding_exon_bed, coding_exons_fasta, genome_fasta, names=True)
 
     if get_SNPs:
@@ -487,10 +486,7 @@ def main():
 
     #filter the exon junctions file to only leave those junctions that flank exons retained in the previous step.
     print("Filtering exon-exon junctions to only leave those that flank exons with a PTC variant...")
-    if out_of_frame:
-        PTC_exon_junctions_file = "{0}/{1}_filtered_exon_junctions.bed".format(simulation_output_folder, out_prefix.split('/')[-1])
-    else:
-        PTC_exon_junctions_file = "{0}_filtered_exon_junctions.bed".format(out_prefix)
+    PTC_exon_junctions_file = "{0}_filtered_exon_junctions.bed".format(out_prefix)
     bo.filter_exon_junctions(exon_junctions_file, PTC_file, PTC_exon_junctions_file)
 
     #make a list of all the .bam files and modify them to have the full path rather than just the file name
@@ -503,6 +499,10 @@ def main():
     if process_bams:
         print("Processing RNA-seq data...")
         exon_junctions_bam_output_folder = "{0}__analysis_exon_junction_bams".format(out_prefix)
+        if out_of_frame:
+            splits = exon_junctions_bam_output_folder.split('/')
+            splits[-1] = splits[-1].replace('_out_of_frame', '')
+            exon_junctions_bam_output_folder = "/".join(splits)
         gen.create_directory(exon_junctions_bam_output_folder)
         #we have to do it like this because you can't pass flags into run_in_parallel
         keyword_dict = {"overwrite_intersect": overwrite_intersect}

@@ -31,7 +31,7 @@ def create_directory(path):
     Create new directory if doesn't already exist
     '''
     if not os.path.exists(path):
-        os.mkdir(path)
+        os.makedirs(path, exist_ok=True)
 
 def create_strict_directory(path):
     '''
