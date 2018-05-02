@@ -1,7 +1,37 @@
 from generic import *
+import numpy as np
 import unittest
 
 class Test_generic(unittest.TestCase):
+
+    def test_calc_eff_p(self):
+        true_value = 3
+        sim_values = [7, 4, 1, 1, 1, 3, 2, 4, 5]
+        observed = calc_eff_p(true_value, sim_values)
+        expected = 6/10
+        self.assertAlmostEqual(observed, expected)
+
+    def test_calc_eff_p_None(self):
+        true_value = 3
+        sim_values = [7, 4, np.nan, 1, 1, None, 2, 4, 5]
+        observed = calc_eff_p(true_value, sim_values)
+        expected = 5/8
+        self.assertAlmostEqual(observed, expected)
+
+    def test_calc_eff_p_None2(self):
+        true_value = None
+        sim_values = [7, 4, 1, 1, 1, 3, 2, 4, 5]
+        observed = calc_eff_p(true_value, sim_values)
+        expected = None
+        self.assertEqual(observed, expected)
+
+    def test_calc_eff_p_smaller(self):
+        true_value = 3
+        sim_values = [7, 4, 1, 1, 1, 3, 2, 4, 8, 5]
+        observed = calc_eff_p(true_value, sim_values, greater = False)
+        expected = 6/11
+        self.assertAlmostEqual(observed, expected)
+
 
     def test_find_families_ensembl(self):
         ensembl_file = "test_data/generic/test_find_families/ensembl_file.txt"

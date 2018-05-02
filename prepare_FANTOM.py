@@ -3,7 +3,7 @@ Auhor: Rosina Savisaar.
 Filter an osc file to only contain the samples that you want and format it as a bed file so that you could lift over the coordinates.
 '''
 
-from housekeeping import parse_arguments
+from generic import parse_arguments
 import re
 
 def main():
@@ -62,10 +62,6 @@ def main():
                 output_line = [chrom, start, end, name, ".", strand]
                 output_file.write("\t".join(output_line))
                 output_file.write("\n")
-
-    with open("RBP/FANTOM_tissues.csv", "w") as file:
-        file.write(",".join(full_IDs))
-
 
 if __name__ == "__main__":
     main()

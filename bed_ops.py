@@ -360,7 +360,12 @@ def extract_features(gtf_file, out_file, features, full_chr_name=None, clean_chr
                         meta = line[-1]
                         gene = re.search(gene_regex, meta).group(0)
                         trans = re.search(trans_regex, meta).group(0)
-                        exon_no = re.search(exon_no_regex, meta).group(0)
+                        #I added the try ... except in case you want to extract, say, transcript
+                        #features where the exon number information wouldn't be present.
+                        try:
+                            exon_no = re.search(exon_no_regex, meta).group(0)
+                        except AttributeError:
+                            exon_no = 0
                         chr_no = line[0]
                         add = True
                         if clean_chrom_only:

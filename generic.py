@@ -8,6 +8,7 @@ import csv
 import ftplib
 import itertools as it
 import multiprocessing
+import numpy as np
 import os
 import random
 import re
@@ -25,6 +26,24 @@ def blast_all_against_all(db_name, fasta_file_name, output_file_name, blast_db_p
     run_process(["blastn", "-task", "blastn", "-query", fasta_file_name,
                  "-db", "{0}/{1}".format(blast_db_path, db_name),
                  "-out", output_file_name, "-outfmt", "10", "-evalue", "1e-04", "-num_threads", str(int((os.cpu_count()/2)-1))])
+
+def calc_eff_p(real_value, sim_values, greater = True):
+    '''
+    Given an estimate and a series of simulated estimates, calculate and empirical effective p-value.
+    If greater is True, calculate the porbbaility that a value this great or greater would have been observed by chance,
+    otherwise that a value this low or lower would have been observed.
+    '''
+    if real_value == None or np.isnan(real_value):
+        return(None)
+    sim_values = [i for i in sim_values if i != None and not np.isnan(i)]
+    if greater:
+        more_extreme = [i for i in sim_values if i >= real_value]
+    else:
+        more_extreme = [i for i in sim_values if i <= real_value]
+    n = len(more_extreme)
+    m = len(sim_values)
+    p = (n + 1)/(m + 1)
+    return(p)
 
 def create_directory(path):
     '''
