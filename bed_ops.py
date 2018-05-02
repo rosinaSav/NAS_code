@@ -15,6 +15,20 @@ from pathlib import Path
 import random
 import shutil
 
+def get_fasta_exon_intervals(intervals_fasta):
+    stops = ["TAA", "TAG", "TGA"]
+    exon_interval_names, exon_interval_seqs = gen.read_fasta(intervals_fasta)
+    exon_interval_list = collections.defaultdict(lambda: collections.defaultdict())
+    for i, name in enumerate(exon_interval_names):
+        transcript_id = name.split('.')[0]
+        exon = int(name.split('(')[0].split('.')[1])
+        seq = exon_interval_seqs[i]
+        if seq in stops:
+            exon_id = 99999
+        else:
+            exon_id = exon
+        exon_interval_list[transcript_id][exon_id] = seq
+    return exon_interval_list
 
 def change_bed_names(input_bed, output_bed, full_names, header):
     '''
@@ -145,14 +159,22 @@ def extract_cds(gtf, bed_output, output_fasta, genome_fasta, full_chr_name=None,
     clean_chrom_only: do not include CDSs from contigs that haven't been assigned to a particular chromosome.
     EX.: extract_exons("../source_data/Homo_sapiens.GRCh37.87.gtf", "../output_data/Homo_sapiens.GRCh37.87_cds.fasta", "../source_data/Genomes/Homo_sapiens.GRCh37.dna.primary_assembly.fa")
     '''
-    #extract required cds features
-    extract_features(gtf, bed_output, ['CDS', 'stop_codon'], full_chr_name, clean_chrom_only = clean_chrom_only)
-    #extract to fasta
-    fasta_interval_file = "{0}_intervals{1}".format(os.path.splitext(output_fasta)[0], os.path.splitext(output_fasta)[1])
-    extract_cds_from_bed(bed_output, output_fasta, genome_fasta, fasta_interval_file, check_acgt, check_start, check_length, check_stop, check_inframe_stop, all_checks, uniquify)
-    #filter the previous files to only include those that passed the filters
-    filter_bed_from_fasta(bed_output, output_fasta, bed_output)
-    filter_fasta_intervals_from_fasta(fasta_interval_file, output_fasta, fasta_interval_file)
+    # extract required cds features to bed file
+    bed_output_not_filtered = "{0}_not_filtered{1}".format(os.path.splitext(bed_output)[0], os.path.splitext(bed_output)[1])
+    extract_features(gtf, bed_output_not_filtered, ['CDS', 'stop_codon'], full_chr_name, clean_chrom_only = clean_chrom_only)
+
+    # extract features to fasta
+    # args: bed file of features, fasta output file for cds, genome fasta, file that contains the parts that make up the cdss
+    fasta_intervals_file_not_filtered = "{0}_intervals_not_filtered{1}".format(os.path.splitext(output_fasta)[0], os.path.splitext(output_fasta)[1])
+    extract_cds_from_bed(bed_output_not_filtered, output_fasta, genome_fasta, fasta_intervals_file_not_filtered, check_acgt, check_start, check_length, check_stop, check_inframe_stop, all_checks, uniquify)
+
+    # filter the previous bed file to only include those that passed the filters
+    filter_bed_from_fasta(bed_output_not_filtered, output_fasta, bed_output)
+
+    # filter the fasta intervals to only keep those that passed filtering
+    fasta_intervals_file = "{0}_intervals{1}".format(os.path.splitext(output_fasta)[0], os.path.splitext(output_fasta)[1])
+    filter_fasta_intervals_from_fasta(fasta_intervals_file_not_filtered, output_fasta, fasta_intervals_file)
+
 
 def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, fasta_interval_file, check_acgt=None, check_start=None, check_length=None, check_stop=None, check_inframe_stop=None, all_checks=None, uniquify = False):
         '''
@@ -161,48 +183,47 @@ def extract_cds_from_bed(bed_file, output_fasta, genome_fasta, fasta_interval_fi
         '''
         #create dictionaries to hold cds parts
         cds_list = collections.defaultdict(lambda: collections.defaultdict())
-        stop_list = {}
+        # stop_list = {}
         concat_list = collections.defaultdict(lambda: collections.UserList())
         #create fasta file with extracted parts
         fasta_from_intervals(bed_file, fasta_interval_file, genome_fasta, names = True)
         #read the fasta interval file
-        entries = gen.read_fasta(fasta_interval_file)
-        # get the entry names and seqs
-        sample_names = entries[0]
-        seqs = entries[1]
-        #set up the regex to get entry meta needed
-        entry_regex = re.compile("(\w+)\.(\d+)(\..*)*")
+        sample_names, sample_seqs = gen.read_fasta(fasta_interval_file)
+        #label the stop codons
+        for i, name in enumerate(sample_names):
+            if len(sample_seqs[i]) == 3 and sample_seqs[i] in ['TAA', 'TAG', 'TGA']:
+                sample_names[i] = name + '.stop_codon'
         #iterate through the samples
         for i, sample in enumerate(sample_names):
-                entry_meta = re.search(entry_regex, sample)
-                #set the sample name: sample(.exon)
-                sample_name = entry_meta.group(1)
-                #if stop, set sample stop or send sample name to dict, with each part and its seq
-                if seqs[i] in ['TAA', 'TAG', 'TGA']:
-                        stop_list[sample_name] = seqs[i]
-                else:
-                        cds_list[sample_name][entry_meta.group(2)] = seqs[i]
-        #get sorted list of seq parts
+            entry_meta_splits = sample.split('.')
+            #set the sample name: sample(.exon)
+            sample_id = entry_meta_splits[0]
+            # check if labelled as stop codon, and set to high number so when
+            # sorted this is the last thing to be appended
+            if entry_meta_splits[-1] == "stop_codon":
+                exon_id = 9999999
+            else:
+                exon_id = int(entry_meta_splits[1])
+            cds_list[sample_id][exon_id] = sample_seqs[i]
+        #get sorted list of cds exons to build cds
         for sample in sorted(cds_list):
-                for part in sorted(cds_list[sample]):
-                        concat_list[sample].append(cds_list[sample][part])
-                #append the stop codon if it exists
-                if sample in stop_list:
-                        concat_list[sample].append(stop_list[sample])
+            for part in sorted(cds_list[sample]):
+                concat_list[sample].append(cds_list[sample][part])
         #concatenate and write to output
         names = []
         seqs = []
         for sample in sorted(concat_list):
-                names.append(sample)
-                seqs.append("".join(concat_list[sample]))
+            names.append(sample)
+            seqs.append("".join(concat_list[sample]))
         #perform sequence quality control checks
         if check_acgt or check_stop or check_start or check_length or check_inframe_stop or all_checks:
-                names, seqs = check_sequence_quality(names, seqs, check_acgt, check_stop, check_start, check_length, check_inframe_stop, all_checks)
+            names, seqs = check_sequence_quality(names, seqs, check_acgt, check_stop, check_start, check_length, check_inframe_stop, all_checks)
+
         if uniquify:
-                #leave only one transcript per gene
-                gene_to_trans = link_genes_and_transcripts(bed_file)
-                names, seqs = uniquify_trans(names, seqs, gene_to_trans)
-                print("After leaving only one transcript per gene, {0} sequences remain.".format(len(seqs)))
+            #leave only one transcript per gene
+            gene_to_trans = link_genes_and_transcripts(bed_file)
+            names, seqs = uniquify_trans(names, seqs, gene_to_trans)
+            print("After leaving only one transcript per gene, {0} sequences remain.".format(len(seqs)))
         #write to output fasta file
         gen.write_to_fasta(names, seqs, output_fasta)
 
@@ -473,6 +494,9 @@ def filter_bed_from_fasta(bed, fasta, out_bed, families_file = None):
             temp_file_name = "{0}.{1}{2}".format(os.path.splitext(out_bed)[0], random.random(), os.path.splitext(out_bed)[1])
         else:
             temp_file_name = out_bed
+
+        # print(temp_file_name)
+
 
         fasta_names, fasta_seqs = gen.read_fasta(fasta)
 

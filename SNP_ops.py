@@ -13,6 +13,7 @@ import string
 import collections
 import re
 import itertools
+import copy
 
 def filter_by_snp_type(input_file, output_file, snp_type, set_seed=None):
     '''
@@ -72,7 +73,7 @@ def get_allele_frequency(snp):
     return(np.divide(sum(alleles), len(alleles)))
 
 
-def generate_pesudo_monomorphic_ptcs(ptc_file, index_fastas, output_file, seed=None, without_replacement=None, with_weighting=None):
+def generate_pseudo_monomorphic_ptcs(ptc_file, index_fastas, exon_list, output_file, seed=None, without_replacement=None, with_weighting=None):
 
     '''
     Generate a file of pseudo PTC mutations where infact the site is a monomorphic site.
@@ -115,11 +116,19 @@ def generate_pesudo_monomorphic_ptcs(ptc_file, index_fastas, output_file, seed=N
         output.write("{0}\n".format("\t".join(head)))
 
         # for each ptc
-        for ptc in ptcs[1:]:
+        for i, ptc in enumerate(ptcs[1:]):
             aa = ptc[9]
             pseudo_ptc = ptc
-            # choose a random exon chunk
-            random_exon = np.random.choice(list(range(len(index_files[aa][0]))), 1, p=index_files[aa][2])[0]
+
+            chosen_exists = False
+            while not chosen_exists:
+                # choose a random exon chunk
+                random_exon = np.random.choice(list(range(len(index_files[aa][0]))), 1, p=index_files[aa][2])[0]
+                chosen_name = index_files[aa][0][random_exon]
+                transcript_id = chosen_name.split('.')[0]
+                exon_id = int(chosen_name.split('.')[1])
+                if exon_id in exon_list[transcript_id]:
+                    chosen_exists = True
             # choose a random position within that chunk
             random_pos = np.random.choice([p for p in index_files[aa][1][random_exon]], 1, replace=replace)[0]
             # outputs to file, keeping same allele frequencies
@@ -428,7 +437,7 @@ def get_snp_relative_cds_position(snp_exon_relative_positions, snp_cds_position_
                     error_count = error_count + 1
     print("Errors: {0}.".format(error_count))
 
-def get_snp_relative_exon_position(intersect_file):
+def get_snp_relative_exon_position(intersect_file, snp_relative_exon_position_file):
     '''
     Get the relative position of a snp within the exon it is found. Used as an intermediate step
     before calculating the snp position in the cds using get_snp_cds_relative_position.
@@ -462,6 +471,12 @@ def get_snp_relative_exon_position(intersect_file):
         #replace . field with relative position
         intersect[11] = str(relative_position)
         relative_positions.append(intersect)
+
+    # write relative snp positions to output file
+    with open(snp_relative_exon_position_file, "w") as outfile:
+        for snp in relative_positions:
+            outfile.write("{0}\n".format("\t".join(snp)))
+
     return(relative_positions)
 
 def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_file, others_output_file, out_of_frame = False):
@@ -485,6 +500,7 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
         header = "{0}\n".format("\t".join(snps[0]))
         ptc_outputs.write(header)
         other_outputs.write(header)
+
         for snp in snps[1:]:
             cds_id = re.search(entry_regex, snp[3]).group(1)
             snp_index = int(snp[11])
@@ -497,6 +513,8 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
             var_base_count = len(var_base)
             var_base = [i for i in var_base if i in ["A", "C", "G", "T"]]
             ancestral_allele = re.search(ancestral_reg, snp[13])
+
+            snp_id = snp[8]
 
             #get the feature type
             var_type = re.search(var_type_reg, snp[13])
@@ -534,8 +552,14 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
 ##                            print("\n")
                             pass
                         else:
-                            cds_codon, snp_codon, mutation_type = get_snp_type(cds_seqs[cds_names.index(cds_id)], [snp_index, var_base], shift = out_of_frame)
-                            snp[13] = "CDS_CODON={0}$SNP_CODON={1}$AA={2}".format(cds_codon, snp_codon, ancestral_allele.group(1))
+                            cds_codon, snp_codon, mutation_type = get_snp_type(cds_seqs[cds_names.index(cds_id)], [snp_index, var_base], snp_id, shift = out_of_frame)
+
+                            if ancestral_allele:
+                                aa = ancestral_allele.group(1)
+                            else:
+                                aa = "UNDEFINED"
+
+                            snp[13] = "CDS_CODON={0}$SNP_CODON={1}$AA={2}".format(cds_codon, snp_codon, aa)
                             snp[12] = mutation_type
                             if(mutation_type == "ptc"):
                                 snp[14] = str(ptc_id_counter)
@@ -552,7 +576,7 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
         print("No SNPs were extracted!")
         raise Exception
 
-def get_snp_type(sequence, variant, shift = False):
+def get_snp_type(sequence, variant, snp_id, shift = False):
     '''
     Get the effect of a particular SNP (nonsense/missense/synonymous).
     If shift is True (when doing an out-of-frame simulation),
@@ -581,6 +605,8 @@ def get_snp_type(sequence, variant, shift = False):
         "GGT":"G", "GGC":"G", "GGA":"G", "GGG":"G",
     }
 
+
+
     shift_amount = 0
 
     #get the sequence with the snp in position
@@ -588,8 +614,11 @@ def get_snp_type(sequence, variant, shift = False):
     #extract the SNP codon both with the reference and the SNP allele
     codon_start = get_codon_start(int(variant[0]), len(sequence), shift = shift)
     if codon_start != "error":
+        # if snp_id == "rs74315366":
+        #     print(sequence[:int(variant[0])], variant[1], sequence[int(variant[0])+1:])
         cds_codon = sequence[codon_start:codon_start + 3]
         snp_codon = snp_sequence[codon_start:codon_start + 3]
+
         if cds_codon != snp_codon:
             #determine the type of snp
             #if the snp generated an in frame stop
@@ -611,21 +640,27 @@ def get_snp_type(sequence, variant, shift = False):
 
     return cds_codon, snp_codon, mutation_type
 
-def get_snps_in_cds(bed, full_bed, vcf_folder, panel_file, names, sample_file, output_file, out_prefix):
+def get_snps_in_cds(bed, full_bed, vcf_folder, panel_file, names, sample_file, intersect_file, out_prefix):
     '''
     Given a bed file of CDS regions (with the corresponding interval fasta), a .vcf file, a panel file and a set of sample identifiers from 1000Genomes,
-    pick out SNPs that overlap with any of the bed intervals in any of the selected samples and calculate their relative
-    position in the full ORF. full_bed is a bed_file that has all of the exons from the relevant transcripts,
+    pick out SNPs that overlap with any of the bed intervals in any of the selected samples. full_bed is a bed_file that has all of the exons from the relevant transcripts,
     whereas the bed might only have some exons. Also write a filtered vcf to sample_file.
     '''
-    #get the relevant SNPs
+    # #get the relevant SNPs
     tabix_samples(bed, sample_file, panel_file, vcf_folder, samples = names, chr_prefix = True, remove_empty = True, exclude_xy = True)
-    #the tabix_samples and the intersec-bed are kind of redundant
-    #however, this way we have a proper vcf as a result of tabix_samples that we can query using tabix
-    #and we have intersect_bed, which has both the SNP and the exon information in a nice format
-    intersect_file = "{0}_CDS_SNP_intersect.bed".format(out_prefix)
+    # #the tabix_samples and the intersec-bed are kind of redundant
+    # #however, this way we have a proper vcf as a result of tabix_samples that we can query using tabix
+    # #and we have intersect_bed, which has both the SNP and the exon information in a nice format
     bmo.intersect_bed(bed, sample_file, write_both = True, output_file = intersect_file, no_dups = False)
-    exon_pos = get_snp_relative_exon_position(intersect_file)
+
+
+def get_snp_positions(sample_file, output_file, full_bed, intersect_file, out_prefix):
+    '''
+    Calculate relative SNP position in the full ORF. full_bed is a bed_file that has all of the exons from the relevant transcripts,
+    whereas the bed might only have some exons. Also write a filtered vcf to sample_file.
+    '''
+    snp_relative_exon_position_file = "{0}_SNP_relative_exon_position.bed".format(out_prefix)
+    exon_pos = get_snp_relative_exon_position(intersect_file, snp_relative_exon_position_file)
     get_snp_relative_cds_position(exon_pos, output_file, full_bed)
     #this last bit is just to add a header to the final output file
     #so you'd know which sample is which
@@ -656,6 +691,62 @@ def merge_and_header(file1, file2, out_file):
     gen.run_process(["cat", temp1, file1, temp2], file_for_output = out_file)
     gen.remove_file(temp1)
     gen.remove_file(temp2)
+
+
+def ptc_locations(PTC_file, snp_relative_exon_position_file, bam_analysis_output_file, output_file):
+    '''
+    Get the information regarding PTC positions in the exons
+    '''
+    # need to map ptc to snp in the snp file
+    # need to get the position relative to the exon
+    # ptc locations on the - strand need to be thought about because these were converted for CDS position
+    # then need to match to the PSI etc calculations
+
+    class SNP_object(object):
+        def __init__(self, snp):
+            self.info = snp[:12]
+            self.exon_start = int(snp[1])
+            self.exon_end = int(snp[2])
+            self.exon_id = snp[3]
+            self.strand = snp[5]
+            self.location = snp[7]
+            self.id = snp[8]
+            self.rel_pos = int(snp[11])
+
+    ptcs = gen.read_many_fields(PTC_file, "\t")
+    # get a dictionary of the ptc ids to use to map to the snp file, equalling the ptc ref
+    ptc_ids = {}
+    for ptc in ptcs[1:]:
+        ptc_ids[ptc[8]] = ptc[14]
+
+    bam_outputs = gen.read_many_fields(bam_analysis_output_file, "\t")
+    # create a dictionary of the bam output with the ref of the ptc
+    bam_output_list = {}
+    for bam_output in bam_outputs[1:]:
+        bam_output_list[int(bam_output[-1])] = bam_output
+
+    snps = gen.read_many_fields(snp_relative_exon_position_file, "\t")
+
+    with open(output_file, "w") as outfile:
+        outfile.write("{0},rel_exon_pos,exon_length,5prime_dist,3prime_dist,max_dist,min_dist,{1},ptc_ref_id\n".format(",".join(ptcs[0][:11]), ",".join(bam_outputs[0][1:-1])))
+        for snp in snps[1:]:
+            snp = SNP_object(snp)
+            if snp.id in ptc_ids:
+                # get the ptc id
+                ptc_id = int(ptc_ids[snp.id])
+                if ptc_id in bam_output_list:
+                    # get the length of the exon
+                    exon_length = snp.exon_end - snp.exon_start
+                    # get the position of the PTC relative to exon ends
+                    five_prime_dist = snp.rel_pos
+                    three_prime_dist = exon_length - snp.rel_pos
+                    max_dist = max(five_prime_dist, three_prime_dist)
+                    min_dist = min(five_prime_dist, three_prime_dist)
+                    # get the bam output line
+                    bam_output = bam_output_list[ptc_id]
+                    # write output to file
+                    outfile.write("{0},{1},{2},{3},{4},{5}.{6}\n".format(",".join(snp.info), exon_length, five_prime_dist, three_prime_dist, max_dist, min_dist, ",".join(bam_output[1:])))
+
 
 def tabix(bed_file, output_file, vcf, process_number = None):
     '''
@@ -814,47 +905,53 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
         sample_files = []
         counter = 0
         #loop over lines in bed file
-        for line in file:
-            #print out every 100th line number
-            counter = gen.update_counter(counter, 500)
-            #parse line in bed file
-            line = line.split("\t")
-            chrom = line[0].lstrip("chr")
-            if chrom in sex_chromosomes and exclude_xy:
-                pass
-            else:
-                #add 1 to start coordinate because bed files are 0-based, whereas the vcf files are 1-based
-                start = int(line[1]) + 1
-                end = line[2]
-                trans = line[3]
-                #get the vcf file for the right chromosome, making sure not to get the index file instead
-                current_vcf = ["{0}/{1}".format(vcf_folder, i) for i in vcf_files if "chr{0}.".format(chrom) in i and ".tbi" not in i]
-                #check that you only got a single file
-                if len(current_vcf) != 1:
-                    print("Ambiguous or missing files in VCF folder!")
-                    print(current_vcf)
-                    print(chrom)
-                    raise Exception
-                else:
-                    current_vcf = current_vcf[0]
-                #generate temporary output file for all SNPs in interval
-                temp_output_file = "temp_data/temp_vcf{0}.vcf".format(random.random())
-                #get ALL SNPs (that is to say, for all samples) for current interval
-                gen.run_process(["tabix", "-h", current_vcf, "{0}:{1}-{2}".format(chrom, start, end)], file_for_output = temp_output_file)
-                #uncomment the following line for debug
-                gen.run_process(["cp", temp_output_file, "temp_data/{0}:{1}-{2}_tabix_slice.txt".format(chrom, start, end)])
-                #generate temporary output file for SNPs from your seleceted samples
-                sample_output_file = "temp_data/temp_sample_tabix{0}.txt".format(random.random())
-                sample_files.append(sample_output_file)
-                #filter the file you made with all the SNPs to only leave the SNPs that appear in your samples
-                gen.run_process(["vcf-subset", "-c", samples, temp_output_file], file_for_output = sample_output_file)
-                gen.remove_file(temp_output_file)
+        for line_no, line in enumerate(file):
 
-    #you want to concatenate the sample files you made (one file per bed interval) but you can't in one go cause there's too many
-    #therefore, you take the 10 last files, concatenate those
-    #then concatenate the next 10 files (moving from the end of the list towards the beginning) to each-other and to the file you got in the previous step
-    #etc.
-    #you juggle the two temp concat file names just so you would be overwriting files rather than creating new ones
+            # use for debugging
+            if line_no:
+            # if line_no < 2000:
+                #print out every 100th line number
+                counter = gen.update_counter(counter, 500, "Bed lines processed: ")
+                #parse line in bed file
+                line = line.split("\t")
+                chrom = line[0].lstrip("chr")
+                if chrom in sex_chromosomes and exclude_xy:
+                    pass
+                else:
+                    #add 1 to start coordinate because bed files are 0-based, whereas the vcf files are 1-based
+                    start = int(line[1]) + 1
+                    end = line[2]
+                    trans = line[3]
+                    #get the vcf file for the right chromosome, making sure not to get the index file instead
+                    current_vcf = ["{0}/{1}".format(vcf_folder, i) for i in vcf_files if "chr{0}.".format(chrom) in i and ".tbi" not in i]
+                    #check that you only got a single file
+                    if len(current_vcf) != 1:
+                        print("Ambiguous or missing files in VCF folder!")
+                        print(current_vcf)
+                        print(chrom)
+                        raise Exception
+                    else:
+                        current_vcf = current_vcf[0]
+                    #generate temporary output file for all SNPs in interval
+                    temp_output_file = "temp_data/temp_vcf{0}.vcf".format(random.random())
+                    #get ALL SNPs (that is to say, for all samples) for current interval
+                    gen.run_process(["tabix", "-h", current_vcf, "{0}:{1}-{2}".format(chrom, start, end)], file_for_output = temp_output_file)
+                    #uncomment the following line for debug
+                    # gen.run_process(["cp", temp_output_file, "temp_data/{0}:{1}-{2}_tabix_slice.txt".format(chrom, start, end)])
+                    #generate temporary output file for SNPs from your seleceted samples
+                    sample_output_file = "temp_data/temp_sample_tabix{0}.txt".format(random.random())
+                    sample_files.append(sample_output_file)
+                    #filter the file you made with all the SNPs to only leave the SNPs that appear in your samples
+                    gen.run_process(["vcf-subset", "-c", samples, temp_output_file], file_for_output = sample_output_file)
+                    gen.remove_file(temp_output_file)
+
+    # you want to concatenate the sample files you made (one file per bed interval) but you can't in one go cause there's too many
+    # therefore, you take the 10 last files, concatenate those
+    # then concatenate the next 10 files (moving from the end of the list towards the beginning) to each-other and to the file you got in the previous step
+    # etc.
+    # you juggle the two temp concat file names just so you would be overwriting files rather than creating new ones
+    print('Concatenating files...')
+    sample_file_list = copy.deepcopy(sample_files)
     concat_files = ["temp_data/temp_concat_file{0}.vcf".format(random.random()), "temp_data/temp_concat_file{0}.vcf".format(random.random())]
     current_sample_files = sample_files[-10:]
     del sample_files[-10:]
@@ -876,6 +973,7 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
         gen.run_process(["vcf-concat"] + current_sample_files + [previous_concat_file], file_for_output = current_concat_file)
     sort_file = "{0}_uncompressed.txt".format(output_file_name)
     #once everything is concatenated, sort the SNPs, prefix "chr" if needed, make a compressed version of the file and make an index for tabix
+    print('Sort SNPs, prefix and compress for tabix...')
     gen.run_process(["vcf-sort", current_concat_file], file_for_output = sort_file)
     if chr_prefix or remove_empty:
         allele_regex = re.compile("[0-9]+\|[0-9]+")
@@ -896,9 +994,10 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
                     outfile.write(line)
         gen.run_process(["mv", temp_file, sort_file])
     gen.run_process(["bgzip", "-c", sort_file], file_for_output = output_file_name)
+    print('Run tabix...')
     gen.run_process(["tabix", "-f", "-p", "vcf", output_file_name])
     #clean up
-    for sample_file in sample_files:
+    for sample_file in sample_file_list:
         gen.remove_file(sample_file)
     for concat_file in concat_files:
         gen.remove_file(concat_file)

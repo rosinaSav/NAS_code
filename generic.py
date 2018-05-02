@@ -31,7 +31,7 @@ def create_directory(path):
     Create new directory if doesn't already exist
     '''
     if not os.path.exists(path):
-        os.mkdir(path)
+        os.makedirs(path, exist_ok=True)
 
 def create_strict_directory(path):
     '''
@@ -40,6 +40,27 @@ def create_strict_directory(path):
     if os.path.exists(path):
         shutil.rmtree(path)
     os.mkdir(path)
+
+def create_output_directories(path):
+    '''
+    Create set of directories for a given path
+    '''
+    path_splits = path.split('/')
+    new_path = []
+    for i, split in enumerate(path_splits):
+        new_path.append(split)
+        create_directory("/".join(new_path))
+
+def create_strict_output_directories(path):
+    '''
+    Create set of directories for a given path
+    '''
+    path_splits = path.split('/')
+    new_path = []
+    for i, split in enumerate(path_splits):
+        new_path.append(split)
+        create_strict_directory("/".join(new_path))
+
 
 def copy_file(src, dest):
     shutil.copyfile(src, dest)
@@ -517,7 +538,10 @@ def update_counter(counter, step, string = None):
     Print out and update counter.
     '''
     if counter % step == 0:
-        print("{0}{1}".format(string, counter))
+        if string:
+            print("{0}{1}".format(string, counter))
+        else:
+            print("{0}".format(counter))
     counter = counter + 1
     return(counter)
 

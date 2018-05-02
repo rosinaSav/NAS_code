@@ -2,7 +2,7 @@ temp_files/
 temp_data/
 __pycache__/
 source_data/
-testfile.py
+_test_*
 .DS_Store
 observed*.*
 ese_stops_simulations_output/
@@ -10,3 +10,5 @@ build/
 *.so
 outputs/
 results/
+.Rhistory
+testfile*.py

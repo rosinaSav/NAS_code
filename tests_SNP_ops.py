@@ -270,6 +270,18 @@ class Test_SNP_ops(unittest.TestCase):
         observed = gen.read_many_fields(observed, "\t")
         self.assertEqual(expected, observed)
 
+    def test_ptc_locations(self):
+        ptc_file = "test_data/snp_ops/test_ptc_locations/test_PTC_file.txt"
+        snp_file = "test_data/snp_ops/test_ptc_locations/test_SNP_relative_exon_position.bed"
+        bam_output_file = "test_data/snp_ops/test_ptc_locations/bam_analysis_output.txt"
+        observed = "test_data/snp_ops/test_ptc_locations/observed_ptc_location.txt"
+        expected = "test_data/snp_ops/test_ptc_locations/expected_ptc_location.txt"
+        gen.remove_file(observed)
+        ptc_locations(ptc_file, snp_file, bam_output_file, observed)
+        observed = gen.read_many_fields(observed, "\t")
+        expected = gen.read_many_fields(expected, "\t")
+        self.assertEqual(observed, expected)
+
     def test_tabix(self):
         bed_file = "test_data/snp_ops/test_tabix/test_tabix_bed.txt"
         expected = gen.read_many_fields("test_data/snp_ops/test_tabix/expected_test_tabix.txt", "\t")
