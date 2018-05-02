@@ -78,7 +78,7 @@ def run_ptc_monomorphic_simulation_instance(simulations, out_prefix, simulation_
 
         #filter the exon junctions file to only leave those junctions that flank exons retained in the previous step when generating pseudo ptcs
         pseudo_monomorphic_ptc_exon_junctions_file = "{0}/filtered_exon_junctions_{1}.bed".format(simulation_instance_folder, simulation_number)
-        if (not use_old_sims) or (not(os.path.isfile(pseudo_monomorphic_ptc_file))):
+        if (not use_old_sims) or (not(os.path.isfile(pseudo_monomorphic_ptc_exon_junctions_file))):
             bo.filter_exon_junctions(exon_junctions_file, pseudo_monomorphic_ptc_file, pseudo_monomorphic_ptc_exon_junctions_file)
 
         exon_junctions_bam_output_folder = "{0}__analysis_exon_junction_bams".format(out_prefix)
