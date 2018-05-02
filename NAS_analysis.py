@@ -89,7 +89,7 @@ def run_ptc_monomorphic_simulation_instance(simulations, out_prefix, simulation_
         if parallel:
             process_bam_per_individual(bam_files, exon_junctions_file, pseudo_monomorphic_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_monomorphic_ptc_file, syn_nonsyn_file, out_prefix, exon_junctions_bam_output_folder, kw_dict)
         else:
-            processes = gen.run_in_parallel(bam_files, ["foo", exon_junctions_file, pseudo_monomorphic_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_monomorphic_ptc_file, syn_nonsyn_file, out_prefix, exon_junctions_bam_output_folder, kw_dict], process_bam_per_individual)
+            processes = gen.run_in_parallel(bam_files, ["foo", exon_junctions_file, pseudo_monomorphic_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_monomorphic_ptc_file, syn_nonsyn_file, out_prefix, exon_junctions_bam_output_folder, kw_dict], process_bam_per_individual, workers = 36)
             for process in processes:
                 process.get()
 
@@ -549,7 +549,7 @@ def main():
         if not os.path.exists(coding_exon_fasta):
             print('Coding exon fasta is required...')
             raise Exception
-        ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file, genome_fasta, PTC_file, syn_nonsyn_file, coding_exon_bed, coding_exon_fasta, exon_junctions_file, bam_files, number_of_simulations, generate_indices = generate_monomorphic_indices, use_old_sims = use_old_sims, workers = 36)
+        ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file, genome_fasta, PTC_file, syn_nonsyn_file, coding_exon_bed, coding_exon_fasta, exon_junctions_file, bam_files, number_of_simulations, generate_indices = generate_monomorphic_indices, use_old_sims = use_old_sims)
 
     # get the locations of the ptcs
     if ptc_location_analysis:
