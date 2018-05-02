@@ -336,9 +336,14 @@ big_changes_RPMskip = plot_individual_change(NAS_data, "norm_count_w_PTC", "norm
 overlap = intersect(big_changes_PSI, big_changes_RPMskip)
 overlap_significance(length(overlap), dim(NAS_data)[1], length(big_changes_PSI), length(big_changes_RPMskip), 10000)
 
-#are the ones that show a big change expressed at lower levels than those that don't?
+#are the ones that show a big change expressed at lower levels than those that don't (FANTOM data)?
 expression = read.csv("results/clean_run_2/clean_run_FANTOM_expression_per_transcript.txt", sep = "\t", header = TRUE, stringsAsFactors = FALSE)
 expression_analysis(overlap, NAS_data$exon, expression)
+
+#are the ones that show a big change expressed at lower levels than those that don't (Geuvadis data)?
+all_exons_expression = NAS_data$norm_count_no_PTC_incl[!(NAS_data$exon %in% overlap)] + NAS_data$norm_count_no_PTC[!(NAS_data$exon %in% overlap)]
+overlap_expression = NAS_data$norm_count_no_PTC_incl[NAS_data$exon %in% overlap] + NAS_data$norm_count_no_PTC[NAS_data$exon %in% overlap]
+wilcox.test(all_exons_expression, overlap_expression, alt = "g")
 
 #are the ones that show a big change less affected by NMD?
 NMD_effect = NAS_data$norm_count_no_PTC_incl - NAS_data$norm_count_het_PTC_incl
