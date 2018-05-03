@@ -32,6 +32,14 @@ def get_feature(query_feature, gtf_file, file, fresh_run):
                 out.write("{0}\n".format("\t".join(feature)))
     return(features)
 
+exon_seq_list = collections.defaultdict(lambda: collections.defaultdict())
+exon_names, exon_seqs = gen.read_fasta(exon_fasta_file)
+for i, name in enumerate(exon_names):
+    t = name.split('.')[0]
+    e = int(name.split('.')[1])
+    if exon_seqs[i] in ["TAG", "TAA", "TGA"]:
+        e = 999
+    exon_seq_list[t][e] = exon_seqs[i]
 
 # ptcs = gen.read_many_fields(ptc_file, "\t")
 # features = gen.read_many_fields(gtf_file, "\t")
@@ -99,17 +107,20 @@ for exon in cds_entries:
         exon_id = 999
     exon_list[transcript_id][exon_id] = [type, strand, start, stop]
 
+
+intron_list = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict())))
+
 for i, transcript in enumerate(exon_list):
-    if i == 1070:
+    if i:
         listed_exons = sorted(exon_list[transcript])
-        print(transcript)
-        for i, exon in enumerate(sorted(exon_list[transcript])):
+        for j, exon in enumerate(sorted(exon_list[transcript])):
             info = exon_list[transcript][exon]
             type = info[0]
             strand = info[1]
 
             focal_exon_start = info[2]
             focal_exon_stop = info[3]
+
 
             # the first exon
             if exon + 1 in listed_exons and exon - 1 not in listed_exons:
@@ -124,8 +135,8 @@ for i, transcript in enumerate(exon_list):
                     intron_start = focal_exon_stop
                     intron_end = next_exon_start
 
-                upstream_intron = [intron_start, intron_end]
-                downstream_intron = [0, 0]
+                downstream_intron = [intron_start, intron_end]
+                upstream_intron = None
 
             # the last exon
             elif exon + 1 not in listed_exons and exon - 1 in listed_exons:
@@ -140,8 +151,8 @@ for i, transcript in enumerate(exon_list):
                     intron_start = prev_exon_stop
                     intron_end = focal_exon_start
 
-                upstream_intron = [0, 0]
-                downstream_intron = [intron_start, intron_end]
+                downstream_intron = None
+                upstream_intron = [intron_start, intron_end]
 
             elif exon + 1 in listed_exons and exon - 1 in listed_exons:
                 exon_type = "internal_exon"
@@ -151,19 +162,48 @@ for i, transcript in enumerate(exon_list):
                 prev_exon_stop = exon_list[transcript][exon - 1][3]
 
                 if strand == "-":
-                    upstream_intron_start = next_exon_stop
-                    upstream_intron_end = focal_exon_start
+                    upstream_intron_start = focal_exon_stop
+                    upstream_intron_end = prev_exon_start
                     downstream_intron_start = next_exon_stop
                     downstream_intron_end = focal_exon_start
                 else:
-                    upstream_intron_start = focal_exon_stop
-                    upstream_intron_end = next_exon_start
+                    upstream_intron_start = prev_exon_stop
+                    upstream_intron_end = focal_exon_start
                     downstream_intron_start = focal_exon_stop
                     downstream_intron_end = next_exon_start
 
                 upstream_intron = [upstream_intron_start, upstream_intron_end]
                 downstream_intron = [downstream_intron_start, downstream_intron_end]
+            else:
+                exon_type = "single_exon"
+                upstream_intron = None
+                downstream_intron = None
 
+            # if exon_type != "first_exon" and exon_type != "single_exon":
+            #     print("U Intron {0}".format(j+1), upstream_intron, upstream_intron[1] - upstream_intron[0])
+            # print("Exon {0} {1}".format(exon, strand), [focal_exon_start, focal_exon_stop], focal_exon_stop-focal_exon_start)
+            # print("{0}...{1}".format(exon_seq_list[transcript][exon][:6], exon_seq_list[transcript][exon][-6:]))
+            # if exon_type != "last_exon" and exon_type != "single_exon" and exon_seq_list[transcript][exon] not in ["TAG", "TAA", "TGA"]:
+            #     print("D Intron {0}".format(j), downstream_intron, downstream_intron[1] - downstream_intron[0])
+            #
+            # print("\n")
 
-            print("Exon {0}".format(exon), [focal_exon_start, focal_exon_stop], focal_exon_stop-focal_exon_start)
-            print("Intron {0}".format(i+1), upstream_intron, upstream_intron[1] - upstream_intron[0])
+            intron_list[transcript][exon]["type"] = exon_type
+            intron_list[transcript][exon]["upstream"] = upstream_intron
+            intron_list[transcript][exon]["downstream"] = downstream_intron
+
+# for transcript in intron_list:
+#     print(transcript)
+#     for exon in sorted(exon_list[transcript]):
+#         if exon != 999:
+#             exon_info = exon_list[transcript][exon]
+#             upstream_intron = intron_list[transcript][exon]["upstream"]
+#             downstream_intron = intron_list[transcript][exon]["downstream"]
+#             type = intron_list[transcript][exon]["type"]
+#
+#             if(upstream_intron):
+#                 print("U", upstream_intron[0], upstream_intron[1])
+#             print(exon, exon_info[2], exon_info[3], type)
+#             if downstream_intron:
+#                 print("D", downstream_intron[0], downstream_intron[1])
+#             print('\n')
