@@ -12,3 +12,5 @@ outputs/
 results/
 .Rhistory
 testfile*.py
+blast/
+binaries
