@@ -24,6 +24,8 @@ ptc_transcript_file = "./temp_data/ptc_transcript_list.bed"
 
 introns_file = "../source_data/introns.bed"
 
+results_file = "./results/clean_run_2/clean_run__analysis_final_output.txt"
+
 def get_feature(query_feature, gtf_file, file, fresh_run):
     if os.path.exists(file) and not fresh_run:
         features = gen.read_many_fields(file, "\t")
@@ -45,13 +47,14 @@ class get_info(object):
         self.aa = ptc[9]
         self.ma = ptc[10]
         self.rel_cds_pos = ptc[11]
+        self.no = ptc[14]
 
 
 def get_ptc_list(ptc_file):
     ptc_list = {}
     for ptc in gen.read_many_fields(ptc_file, "\t")[1:]:
         ptc_info = get_info(ptc)
-        ptc_list[ptc_info.id] = ptc
+        ptc_list[ptc_info.no] = ptc
 
     return ptc_list
 
@@ -62,68 +65,23 @@ def get_cds_list(cds_fasta_file):
         cds_list[name] = cds_seqs[i]
     return cds_list
 
-
-# exon_seq_list = collections.defaultdict(lambda: collections.defaultdict())
-# exon_names, exon_seqs = gen.read_fasta(exon_fasta_file)
-# for i, name in enumerate(exon_names):
-#     t = name.split('.')[0]
-#     e = int(name.split('.')[1])
-#     if exon_seqs[i] in ["TAG", "TAA", "TGA"]:
-#         e = 999
-#     exon_seq_list[t][e] = exon_seqs[i]
-
-# ptcs = gen.read_many_fields(ptc_file, "\t")
-# features = gen.read_many_fields(gtf_file, "\t")
-# exon_names, exon_seqs = gen.read_fasta(exon_fasta_file)
-
-
-# # get a list of cds
-# cds_list = {}
-# for i, name in enumerate(cds_names):
-#     cds_list[name] = cds_seqs[i]
-#
-# # retrive a list of ptc transcripts
-# transcript_list = []
-# for ptc in ptcs[1:]:
-#     transcript_list.append(ptc[3].split('.')[0])
-#
-# # get a list of gene names for the transcripts
-# gene_names = collections.defaultdict()
-# for name in exon_names:
-#     transcript_id = name.split('.')[0]
-#     gene_id = name.split('(')[0].split('.')[-1]
-#     gene_names[transcript_id] = gene_id
-
-
-
-    # # get a file with all the transcripts
-    # transcripts = get_feature('transcript', gtf_file, transcript_file, fresh_run)
-    # with open(ptc_transcript_file, "w") as outfile:
-    #     for transcript in transcripts:
-    #         if len(transcript) > 0:
-    #             info = transcript[8]
-    #             transcript_id = re.findall('transcript_id\s"([^";]*)', info)[0]
-    #             if transcript_id in transcript_list:
-    #                 outfile.write("{0}\n".format("\t".join(transcript)))
-    #
-    #
-
-
 def get_exon_list(cds_file):
     cds_entries = gen.read_many_fields(cds_file, "\t")
     exon_list = collections.defaultdict(lambda: collections.defaultdict())
+    gene_transcript_list = {}
     for exon in cds_entries:
         transcript_id = exon[3].split('.')[0]
         exon_id = int(exon[3].split('.')[1])
+        gene = exon[3].split('.')[2]
         type = exon[4]
         strand = exon[5]
         start = int(exon[1])
         stop = int(exon[2])
-
         if type == "stop_codon":
             exon_id = 999
         exon_list[transcript_id][exon_id] = [type, strand, start, stop]
-    return exon_list
+        gene_transcript_list[transcript_id] = gene
+    return exon_list, gene_transcript_list
 
 
 def get_intron_list(exon_list):
@@ -237,7 +195,10 @@ def get_gene_list(gene_list_file):
     gene_list = {}
     genes = gen.read_many_fields(gene_list_file, "\t")
     for gene in genes:
-        print(gene)
+        gene_info = gene[8]
+        gene_id = re.findall('gene_id\s"([^";]*)', gene_info)[0]
+        gene_list[gene_id] = gene
+    return gene_list
 
 def create_gene_file(gtf_file, genes_file, fresh_run):
 
@@ -256,42 +217,95 @@ def create_gene_file(gtf_file, genes_file, fresh_run):
             #     gene_info = gene_list[transcript_gene_id]
                 outfile.write("{0}\n".format("\t".join(gene)))
 
+def stringify(list):
+    return [str(item) for item in list]
+
+def get_results_list(results_file):
+    results_list = {}
+    results = gen.read_many_fields(results_file, "\t")
+    results_header = results[0][1:]
+    for line in results[1:]:
+        results_list[line[-1]] = line[1:]
+    return(results_header, results_list)
+
 
 if create_files:
     create_gene_file(gtf_file, genes_file, fresh_run)
 
-exon_list = get_exon_list(cds_file)
+exon_list, gene_transcript_list = get_exon_list(cds_file)
 intron_list = get_intron_list(exon_list)
 cds_list = get_cds_list(cds_fasta_file)
 exon_rel_pos_list = get_exon_rel_pos_list(cds_rel_pos_file)
 gene_list = get_gene_list(ptc_gene_file)
-
-
-
 ptc_list = get_ptc_list(ptc_file)
-for ptc in ptc_list:
-    ptc = get_info(ptc_list[ptc])
+results_header, results_list = get_results_list(results_file)
 
-    id = ptc.id
-    transcript = ptc.transcript
-    exon_number = ptc.exon
-    cds_rel_pos = ptc.rel_cds_pos
-    cds_seq = cds_list[ptc.transcript]
-    cds_length = len(cds_seq) - 3   # ignore stop codon
-    internal_intron_count, type = get_intron_stats(intron_list[ptc.transcript], ptc.exon)
+output_file = "./temp_data/info.csv"
+with open(output_file, "w") as outfile:
+    outfile.write("ptc_id,transcript,exon,aa,ma,mutation_frame,gene_length,cds_length,cds_rel_pos,internal_intron_count,exon_length,exon_rel_pos,exon_type,snp_end,flanking_intron_length,other_intron_length,{0}\n".format(",".join(results_header)))
 
-    exon_rel_pos_info = exon_rel_pos_list[ptc.id]
+    for ptc_no in ptc_list:
+        if ptc_no in results_list:
+            ptc = get_info(ptc_list[ptc_no])
 
-    if transcript == exon_rel_pos_info[0] and exon_number == exon_rel_pos_info[1] and ptc.aa == exon_rel_pos_info[3] and ptc.ma == exon_rel_pos_info[4]:
-        rel_exon_position = exon_rel_pos_info[5]
+            id = ptc.id
+            transcript = ptc.transcript
+            exon_number = ptc.exon
+            cds_rel_pos = ptc.rel_cds_pos
+            cds_seq = cds_list[ptc.transcript]
+            cds_length = len(cds_seq) - 3   # ignore stop codon
+            internal_intron_count, type = get_intron_stats(intron_list[ptc.transcript], ptc.exon)
 
-    exon_length = exon_list[transcript][exon_number][3] - exon_list[transcript][exon_number][2]
+            exon_rel_pos_info = exon_rel_pos_list[ptc.id]
 
-    if exon_length % 3 == 0:
-        skip_frame = "in_frame"
-    else:
-        skip_frame = "out_of_frame"
+            if transcript == exon_rel_pos_info[0] and exon_number == exon_rel_pos_info[1] and ptc.aa == exon_rel_pos_info[3] and ptc.ma == exon_rel_pos_info[4]:
+                rel_exon_position = exon_rel_pos_info[5]
 
+            exon_length = exon_list[transcript][exon_number][3] - exon_list[transcript][exon_number][2]
+
+            if exon_length % 3 == 0:
+                skip_frame = "in_frame"
+            else:
+                skip_frame = "out_of_frame"
+
+            gene_id = gene_transcript_list[transcript]
+            gene_length = int(gene_list[gene_id][4]) - int(gene_list[gene_id][3])
+
+            # get the end of the exon the ptc is nearest
+            middle_index = (exon_length + 1) / 2        # have to add 1, because the middle nt of an odd length gene is integer
+            if float(rel_exon_position) < middle_index:
+                end = 5
+            elif float(rel_exon_position) > middle_index:
+                end = 3
+            elif float(rel_exon_position) == middle_index:
+                end = "middle"
+
+            # get the size of the flanking intron
+
+            upstream_intron = intron_list[transcript][exon_number]["upstream"]
+            upstream_length = upstream_intron[1] - upstream_intron[0]
+            downstream_intron = intron_list[transcript][exon_number]["downstream"]
+            downstream_length = downstream_intron[1] - downstream_intron[0]
+
+            if end == 5:
+                flanking = upstream_length
+                other = downstream_length
+            elif end == 3:
+                flanking = downstream_length
+                other = upstream_length
+            elif end == "middle":
+                if upstream_length > downstream_length:
+                    flanking = upstream_length
+                    other = downstream_length
+                else:
+                    flanking = downstream_length
+                    other = upstream_length
+
+            results = results_list[ptc_no]
+            info_list = [id, transcript, exon_number, ptc.aa, ptc.ma, skip_frame, gene_length, cds_length, cds_rel_pos, internal_intron_count, exon_length, rel_exon_position, type, end, flanking, other]
+            infos = info_list + results
+            outline = ",".join(stringify(infos))
+            outfile.write("{0}\n".format(outline))
 
 
     # print(transcript, exon_number, exon_length)
