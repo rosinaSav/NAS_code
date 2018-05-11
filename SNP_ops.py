@@ -3,6 +3,7 @@ Authors: Rosina Savisaar and Liam Abrahams
 Module containing functions for processing SNP data and SNP-related operations.
 '''
 
+import bed_ops as beo
 import bam_ops as bmo
 from cython_func import calc_density_for_concat_several_c
 import generic as gen
@@ -414,7 +415,7 @@ def get_snp_relative_cds_position(snp_exon_relative_positions, snp_cds_position_
     #now get the relative position of the snp within the cds
     with open(snp_cds_position_output, "w") as output:
         error_count = 0
-        for snp in snp_exon_relative_positions:
+        for i, snp in enumerate(snp_exon_relative_positions):
             cds_id = snp[3]
             cds_id_meta = re.search(entry_regex, cds_id)
             snp_cds = cds_id_meta.group(1)
@@ -479,7 +480,7 @@ def get_snp_relative_exon_position(intersect_file, snp_relative_exon_position_fi
 
     return(relative_positions)
 
-def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_file, others_output_file, out_of_frame = False):
+def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_file, others_output_file, out_of_frame = False, ref_check = None):
     '''
     For a set of SNPs, determine the effect of the PTC (nonsense, missense, synonymous).
     Store the nonsense ones in one file and all the rest in another.
@@ -529,46 +530,54 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
                     #from RS: filter out polymorphisms with more than 2 segregating alleles
                     #need to check the number both before and after filtering out non-canonical bases
                     #also check whether the variant type is annotated as a snp
-                    if var_base_count == 1 and len(var_base) == 1 and var_type and var_type == "SNP":
-                        var_base = var_base[0]
-
-                        if strand == "-":
-                            ref_base = gen.reverse_complement(ref_base)
-                            var_base = gen.reverse_complement(var_base)
-                        #get the base of reference cds where the snp occured
-##                        print(snp)
-##                        print(cds_seqs[cds_names.index(cds_id)])
-##                        print(len(cds_seqs[cds_names.index(cds_id)]))
-##                        print("\n")
-                        cds_base = cds_seqs[cds_names.index(cds_id)][snp_index]
-
-                        #check whether cds base and ref base are the same
-                        if cds_base != ref_base:
-                            refbase_error += 1
-##                            print("Cds base and reference base not the same (id: {0})".format(snp[8]))
-##                            print("Cds base: {0}".format(cds_base))
-##                            print("Ref base: {0}".format(ref_base))
-##                            print("Variant base: {0}".format(var_base))
-##                            print("\n")
-                            pass
+                    if var_base_count == 1 and len(var_base) == 1:
+                        ref_pass = False
+                        if ref_check:
+                            if var_type and var_type == "SNP":
+                                ref_pass = True
                         else:
-                            cds_codon, snp_codon, mutation_type = get_snp_type(cds_seqs[cds_names.index(cds_id)], [snp_index, var_base], snp_id, shift = out_of_frame)
+                            ref_pass = True
 
-                            if ancestral_allele:
-                                aa = ancestral_allele.group(1)
-                            else:
-                                aa = "UNDEFINED"
+                        if ref_pass:
+                            var_base = var_base[0]
 
-                            snp[13] = "CDS_CODON={0}$SNP_CODON={1}$AA={2}".format(cds_codon, snp_codon, aa)
-                            snp[12] = mutation_type
-                            if(mutation_type == "ptc"):
-                                snp[14] = str(ptc_id_counter)
-                                ptc_id_counter = ptc_id_counter + 1
-                                ptc_outputs.write("{0}\n".format("\t".join(snp)))
+                            if strand == "-":
+                                ref_base = gen.reverse_complement(ref_base)
+                                var_base = gen.reverse_complement(var_base)
+                            #get the base of reference cds where the snp occured
+    ##                        print(snp)
+    ##                        print(cds_seqs[cds_names.index(cds_id)])
+    ##                        print(len(cds_seqs[cds_names.index(cds_id)]))
+    ##                        print("\n")
+                            cds_base = cds_seqs[cds_names.index(cds_id)][snp_index]
+
+                            #check whether cds base and ref base are the same
+                            if cds_base != ref_base:
+                                refbase_error += 1
+    ##                            print("Cds base and reference base not the same (id: {0})".format(snp[8]))
+    ##                            print("Cds base: {0}".format(cds_base))
+    ##                            print("Ref base: {0}".format(ref_base))
+    ##                            print("Variant base: {0}".format(var_base))
+    ##                            print("\n")
+                                pass
                             else:
-                                snp[14] = str(other_id_counter)
-                                other_id_counter = other_id_counter + 1
-                                other_outputs.write("{0}\n".format("\t".join(snp)))
+                                cds_codon, snp_codon, mutation_type = get_snp_type(cds_seqs[cds_names.index(cds_id)], [snp_index, var_base], snp_id, shift = out_of_frame)
+
+                                if ancestral_allele:
+                                    aa = ancestral_allele.group(1)
+                                else:
+                                    aa = "UNDEFINED"
+
+                                snp[13] = "CDS_CODON={0}$SNP_CODON={1}$AA={2}".format(cds_codon, snp_codon, aa)
+                                snp[12] = mutation_type
+                                if(mutation_type == "ptc"):
+                                    snp[14] = str(ptc_id_counter)
+                                    ptc_id_counter = ptc_id_counter + 1
+                                    ptc_outputs.write("{0}\n".format("\t".join(snp)))
+                                else:
+                                    snp[14] = str(other_id_counter)
+                                    other_id_counter = other_id_counter + 1
+                                    other_outputs.write("{0}\n".format("\t".join(snp)))
 
     if snp_count:
         print("Number of ref errors: {0}/{1} ({2}%)".format(refbase_error, snp_count, np.divide(refbase_error, snp_count)*100))
@@ -1001,3 +1010,117 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
         gen.remove_file(sample_file)
     for concat_file in concat_files:
         gen.remove_file(concat_file)
+
+
+def intersect_snps_parallel(bed_file, snp_file, output_file):
+
+    # read the intervals
+    intervals = gen.read_many_fields(bed_file, "\t")
+    # intersect the vcf file with the intervals
+    processes = gen.run_in_parallel(intervals, ["foo", snp_file, output_file], run_tabix, workers = os.cpu_count() - 2)
+    # return a list of the outputs
+    sample_files = []
+    for process in processes:
+        sample_files.extend(process.get())
+    concatenate_files(sample_files, output_file)
+
+def run_tabix(samples, vcf_file, exclude_xy = False):
+    '''
+    Extract SNPs from the given intervals.
+    bed_file: input bed file for the intervals you want
+    vcf_file: file that contains the SNPs
+    exclude_xy: if True, SNPs on sex chromosomes will not be returned
+    '''
+
+    sex_chromosomes = ["X", "Y"]
+    gen.create_output_directories("./temp_data")
+
+    samples_list = []
+    counter = 0
+    for sample in samples:
+        counter = gen.update_counter(counter, 100, "{0}/{1} processed...".format(counter, len(samples)))
+        chrom = sample[0].lstrip("chr")
+        if chrom in sex_chromosomes and exclude_xy:
+            pass
+        else:
+            #add 1 to start coordinate because bed files are 0-based, whereas the vcf files are 1-based
+            start = int(sample[1]) + 1
+            end = sample[2]
+            trans = sample[3]
+            #generate temporary output file for all SNPs in interval
+            temp_output_file = "temp_data/temp_vcf{0}.vcf".format(random.random())
+            #get ALL SNPs (that is to say, for all samples) for current interval
+            gen.run_process(["tabix", "-h", vcf_file, "{0}:{1}-{2}".format(chrom, start, end)], file_for_output = temp_output_file)
+            samples_list.append(temp_output_file)
+    return samples_list
+
+def concatenate_files(sample_files, output_file_name, chr_prefix = False):
+    '''
+    sample_files: list of temporary tabix files containing snp overlaps
+    output_file_name: name of output file
+    chr_prefix: if True, prefix "chr" to chromosome names in the final output file
+    '''
+    # you want to concatenate the sample files you made (one file per bed interval) but you can't in one go cause there's too many
+    # therefore, you take the 10 last files, concatenate those
+    # then concatenate the next 10 files (moving from the end of the list towards the beginning) to each-other and to the file you got in the previous step
+    # etc.
+    # you juggle the two temp concat file names just so you would be overwriting files rather than creating new ones
+    print('Concatenating files...')
+    sample_file_list = copy.deepcopy(sample_files)
+    concat_files = ["temp_data/temp_concat_file{0}.vcf".format(random.random()), "temp_data/temp_concat_file{0}.vcf".format(random.random())]
+    current_sample_files = sample_files[-10:]
+    del sample_files[-10:]
+    gen.run_process(["vcf-concat"] + current_sample_files, file_for_output = concat_files[0])
+    local_counter = 0
+    files_left = True
+    while files_left:
+        local_counter = local_counter + 1
+        current_sample_files = sample_files[-10:]
+        del sample_files[-10:]
+        if len(sample_files) == 0:
+            files_left = False
+        if local_counter%2 == 0:
+            current_concat_file = concat_files[0]
+            previous_concat_file = concat_files[1]
+        else:
+            current_concat_file = concat_files[1]
+            previous_concat_file = concat_files[0]
+        gen.run_process(["vcf-concat"] + current_sample_files + [previous_concat_file], file_for_output = current_concat_file)
+    sort_file = "{0}_uncompressed.txt".format(output_file_name)
+    #once everything is concatenated, sort the SNPs, prefix "chr" if needed, make a compressed version of the file and make an index for tabix
+    print('Sort SNPs, prefix and compress for tabix...')
+    gen.run_process(["vcf-sort", current_concat_file], file_for_output = sort_file)
+    if chr_prefix:
+        temp_file = "temp_data/temp{0}.txt".format(random.random())
+        with open(sort_file) as infile, open(temp_file, "w") as outfile:
+            for line in infile:
+                dont_write = False
+                if line[0] != "#":
+                    if chr_prefix:
+                        line = "chr" + line
+                if not dont_write:
+                    outfile.write(line)
+        gen.run_process(["mv", temp_file, sort_file])
+    gen.run_process(["bgzip", "-c", sort_file], file_for_output = output_file_name)
+    print('Run tabix...')
+    gen.run_process(["tabix", "-f", "-p", "vcf", output_file_name])
+    #clean up
+    for sample_file in sample_file_list:
+        gen.remove_file(sample_file)
+    for concat_file in concat_files:
+        gen.remove_file(concat_file)
+
+def intersect_vcf_to_bed(bed_file, vcf_file, output_file, change_names = None):
+
+    # if need to rename bed file chromosome for intersect
+    if change_names:
+        gen.create_output_directories("./temp_data")
+        temp_file = "temp_data/temp_intron_bed.{0}".format(random.random())
+        beo.change_bed_names(bed_file, temp_file, full_names = True, header = False)
+    else:
+        temp_file = bed_file
+
+    bmo.intersect_bed(temp_file, vcf_file, write_both = True, output_file = output_file, no_dups = False)
+
+    if change_names:
+        gen.remove_file(temp_file)
