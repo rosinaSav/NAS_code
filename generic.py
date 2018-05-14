@@ -572,3 +572,10 @@ def write_to_fasta(names, seq, fasta_name):
         for i in range(len(names)):
             file.write(">{0}\n".format(names[i]))
             file.write("{0}\n".format(seq[i]))
+
+
+def stringify(item):
+    if isinstance(item, list):
+        return [str(i) for i in item]
+    else:
+        return str(item)

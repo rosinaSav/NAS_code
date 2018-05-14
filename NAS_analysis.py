@@ -481,7 +481,7 @@ def main():
         pass
     else:
         print("Determining SNP type...")
-        so.get_snp_change_status(SNP_file, CDS_fasta, PTC_file, syn_nonsyn_file, out_of_frame = out_of_frame)
+        so.get_snp_change_status(SNP_file, CDS_fasta, PTC_file, syn_nonsyn_file, out_of_frame = out_of_frame, ref_check = True)
         gen.get_time(start)
 
     #filter the exon junctions file to only leave those junctions that flank exons retained in the previous step.
