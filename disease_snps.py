@@ -11,30 +11,68 @@ import os
 import collections
 import re
 import copy
+import numpy as np
 
-def ptc_location_simuation(snp_file, full_bed, cds_fasta, output_directory, required_simulations):
+def ptc_location_simulation(snp_file, full_bed, cds_fasta, output_directory, required_simulations, coding_exons_file):
     '''
     Simulate the snp location.
     For each snp, pick another site that has the same reference allele and that would generate a ptc with the mutated allele.
     Repeat n times.
     '''
 
+    # return all the possible_locations
+    possible_locations = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: [])))
+    nts = ["A", "C", "G", "T"]
+    for nt in nts:
+        location_file = "{0}/possible_ptc_locations_{1}.fasta".format(output_directory, nt)
+        entry_names, entry_locations = gen.read_fasta(location_file)
+        for i, name in enumerate(entry_names):
+            exon = name.split(':')[0]
+            aa = name.split(':')[1][0]
+            ma = name.split(':')[1][-1]
+            possible_locations[exon][aa][ma].append(entry_locations[i])
+
+    exons = gen.read_many_fields(coding_exons_file, "\t")
+    exon_list = {}
+    for exon in exons:
+        exon_list[exon[3]] = int(exon[2]) - int(exon[1])
+
     # create a list of required simulations
     simulations = list(range(1, int(required_simulations) + 1))
-    run_location_simulations(simulations, snp_file, cds_fasta, output_directory)
+    run_location_simulations(simulations, snp_file, possible_locations, exon_list, output_directory)
 
-def run_location_simulations(simulations, snp_file, cds_fasta, output_directory):
+def run_location_simulations(simulations, snp_file, possible_locations, exon_list, output_directory):
     for simulation in simulations:
         print('{0}/{1}...'.format(simulation, len(simulations)))
-        generate_pseudo_snps(snp_file, cds_fasta, output_directory)
+        output_file = "{0}/disease_location_simulation_{1}.bed".format(output_directory, simulation)
+        generate_pseudo_snps(snp_file, possible_locations, exon_list, output_file)
 
 
-def generate_pseudo_snps(snp_file, cds_fasta, output_directory):
+def generate_pseudo_snps(snp_file, possible_locations, exon_list, output_file):
     snps = gen.read_many_fields(snp_file, "\t")
-    # print(snps[:2])
+
+    with open(output_file, "w") as outfile:
+        np.random.seed()
+        for snp in snps[1:]:
+            snp_info = EntryInfo(snp)
+            if len(possible_locations[snp_info.transcript_id][snp_info.aa][snp_info.ma]):
+                possible_ptcs = possible_locations[snp_info.transcript_id][snp_info.aa][snp_info.ma][0].split(',')
+                choices = list(range(len(possible_ptcs)))
+                choice = np.random.choice(choices)
+                pseudo_ptc_choice = possible_ptcs[choice]
+                exon_index = int(re.findall('\d+', pseudo_ptc_choice.split(':')[0])[0])
+                cds_index = re.findall('\d+', pseudo_ptc_choice.split(':')[1])[0]
+                exon_number = re.findall('\d+', pseudo_ptc_choice.split(':')[2])[0]
+
+                id = "{0}.{1}".format(snp_info.transcript_id, exon_number)
+                exon_length = exon_list[id]
+                min_dist = min(exon_index, int(exon_length) - int(exon_index))
+
+                snp.extend([id, "{0}".format(exon_index), "{0}".format(cds_index), str(min_dist)])
+                outfile.write("{0}\n".format("\t".join(snp)))
 
 
-def get_possible_ptc_locations(full_bed, cds_fasta, output_directory):
+def generate_possible_ptc_locations(full_bed, cds_fasta, output_directory):
 
     stop_bases = ["A", "G", "T"]    # a mutation to c cant generate a stop so its not included
     stop_codons = ["TAA", "TAG", "TGA"]
@@ -47,19 +85,20 @@ def get_possible_ptc_locations(full_bed, cds_fasta, output_directory):
 
     # get all the indicies of mutable positions in the cds that could generate an in frame stop
     mutation_index_list = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: [])))
-    for name in cds_list:
+    for x, name in enumerate(cds_list):
         seq = cds_list[name]
         inframe_codons = re.findall('.{3}', seq[:-3])
         for i, codon in enumerate(inframe_codons):
             nts = list(codon)
             for j, nt in enumerate(nts):
                 for mut in stop_bases:
-                    mut_nts = copy.deepcopy(nts)
-                    mut_nts[j] = mut
-                    mut_codon = "".join(mut_nts)
-                    if mut_codon in stop_codons:
-                        mut_index = (i*3) + j
-                        mutation_index_list[name][nt][mut].append(mut_index)
+                    if mut != nt:                       # we dont need 'mutations' that are the same as the ref base
+                        mut_nts = copy.deepcopy(nts)
+                        mut_nts[j] = mut
+                        mut_codon = "".join(mut_nts)
+                        if mut_codon in stop_codons:
+                            mut_index = (i*3) + j
+                            mutation_index_list[name][nt][mut].append(mut_index)
 
     # now also get the exon lengths
     exons = gen.read_many_fields(full_bed, "\t")
@@ -99,7 +138,7 @@ def get_possible_ptc_locations(full_bed, cds_fasta, output_directory):
                     for exon in exon_list_indices[transcript]:
                         if cds_index in exon_list_indices[transcript][exon][0]:
                             start_index = exon_list_indices[transcript][exon][1]
-                            mutation_matched_indices[transcript][ra][ma].append("eidx:{0}:cidx{1}:eid:{2}".format(cds_index-start_index, cds_index, exon))
+                            mutation_matched_indices[transcript][ra][ma].append("eidx{0}:cidx{1}:eid{2}".format(cds_index-start_index, cds_index, exon))
 
     nts = ["A", "C", "G", "T"]
     possible_mutation_files = {}
@@ -128,16 +167,19 @@ class EntryInfo(object):
         self.type = entry[12]
         self.given_id = entry[-1]
 
-def get_ptc_info(ptc_file, relative_exon_positions_file, output_file):
-    '''
-    Get basic info about the location of snp.
-    '''
-
-    exons = gen.read_many_fields(relative_exon_positions_file, "\t")
+def get_exon_list(file):
+    exons = gen.read_many_fields(file, "\t")
     exon_list = {}
     for exon in exons:
         exon_info = EntryInfo(exon)
         exon_list[exon_info.snp_id] = exon
+    return(exon_list)
+
+def get_ptc_info(ptc_file, relative_exon_positions_file, output_file):
+    '''
+    Get basic info about the location of snp.
+    '''
+    exon_list = get_exon_list(relative_exon_positions_file)
 
     ptcs = gen.read_many_fields(ptc_file, "\t")
     with open(output_file, "w") as outfile:
@@ -210,6 +252,7 @@ def main():
 
     # simulation to see if disease ptcs occur at exon ends more conmonly than by chance
     location_simulation_output_directory = "{0}/ptc_location_simulation".format(output_directory)
+    coding_exons_file = "{0}_exons.bed".format(results_prefix)
     if simulate_ptc_location:
         if not required_simulations:
             print("\nERROR: please specify the number of simulations required.\n")
@@ -217,8 +260,9 @@ def main():
         gen.create_output_directories(output_directory)
 
         if get_possible_ptc_locations:
-            get_possible_ptc_locations(full_bed, cds_fasta, output_directory)
-        ptc_location_simuation(disease_ptcs_file, full_bed, cds_fasta, location_simulation_output_directory, required_simulations)
+            print("Getting possible PTC mutation locations...")
+            generate_possible_ptc_locations(full_bed, cds_fasta, location_simulation_output_directory)
+        ptc_location_simulation(disease_ptcs_file, full_bed, cds_fasta, location_simulation_output_directory, required_simulations, coding_exons_file)
 
 
 if __name__ == "__main__":
