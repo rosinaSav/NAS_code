@@ -89,6 +89,7 @@ def main():
 
     if change_env:
         args = ["source", "activate", "py27"]
+        print(" ".join(arg))
         gen.run_process(args)
     # get the data dump file from firehose broad
     print("Getting data from Firehose Broad...")
