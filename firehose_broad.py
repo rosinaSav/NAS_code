@@ -9,6 +9,7 @@ import re
 import random
 import os
 import shutil
+import time
 
 def extract_files(data, data_type, url_search=None):
     '''
@@ -32,7 +33,7 @@ def extract_files(data, data_type, url_search=None):
     return file_list
 
 
-def process_filelist(filelist, output_dir, data_type):
+def process_filelist(filelist, remote_directory, expect_password, data_type):
     '''
     Download and process the files to the output directory.
     filelist: the list of files to be downloaded
@@ -41,7 +42,7 @@ def process_filelist(filelist, output_dir, data_type):
     '''
 
     for i, file in enumerate(filelist):
-
+        start_time = time.time()
         print("{0}: {1}/{2}...".format(data_type, i+1, len(filelist)))
 
         # download file to temp directory
@@ -60,49 +61,54 @@ def process_filelist(filelist, output_dir, data_type):
         for file in os.listdir(extracted_path):
             if file != "MANIFEST.txt":
                 filepath = "{0}/{1}".format(extracted_path, file)
-                args = ["cp", filepath, output_dir]
-                gen.run_process(args)
-
-        # remove the temp dir
+                expect_file = "temp_data/expect_file{0}.txt".format(random.random())
+                expect_string = "#!/usr/bin/expect\nset timeout -1\nspawn rsync {0} {1}\nexpect \"la466@bssv-watson's password:\"\nsend \"{2}\\n\";\nexpect eof\nexit".format(filepath, remote_directory, expect_password)
+                with open(expect_file, "w") as efile:
+                    efile.write(expect_string)
+                gen.run_process(["expect", expect_file])
+                gen.remove_file(expect_file)
+        print("Time spent: {0} minutes.\n".format(round((time.time() - start_time)/60), 3))
         shutil.rmtree(temp_dir)
-
 
 
 def main():
 
     description = "Download disease data."
-    arguments = ["output_directory", "json_file", "clean_download"]
-    args = gen.parse_arguments(description, arguments, flags = [2])
-    output_directory, json_file, clean_download = args.output_directory, arg.json_file, args.clean_download
+    arguments = ["remote_mutation_dir", "remote_rna_dir", "json_file", "password_file", "subset"]
+    args = gen.parse_arguments(description, arguments, flags = [])
+    remote_mutation_dir, remote_rna_dir, json_file, password_file, subset = args.remote_mutation_dir, args.remote_rna_dir, args.json_file, args.password_file, args.subset
 
-    # delete the directories if wanting a fresh download
-    if clean_download:
-        print("Deleting directories for fresh download...")
-        gen.remove_directory(output_directory)
+    #get password for Watson
+    with open(password_file) as file:
+        expect_password = "".join(file)
+        expect_password = expect_password.rstrip("\n")
 
-    mutation_dir = "{0}/mutations".format(output_directory)
-    rna_seq_dir = "{0}/rna_seq".format(output_directory)
-
-    gen.create_output_directories(mutation_dir)
-    gen.create_output_directories(rna_seq_dir)
     gen.create_output_directories("temp_data")
 
     # read the data file
     with open(json_file, "r") as json_open:
         data = json.load(json_open)
 
+
     # extract the required file urls
     print("Getting files...")
     mrna_files = extract_files(data, "mRNASeq", "junction_quantification__data.Level_3")
     mutation_files = extract_files(data, "MAF", "Mutation_Packager_Calls.Level_3")
 
+
+    if subset == "all":
+        mutation_files = mutation_files
+        mrna_files = mrna_files
+    else:
+        mutation_files = mutation_files[:int(subset)]
+        mrna_files = mrna_files[:int(subset)]
+
     # download files
     print("Downloading files...")
-    gen.run_in_parallel(mutation_files, ["foo", mutation_dir, "mutation_files"], process_filelist)
-    gen.run_in_parallel(mrna_files, ["foo", rna_seq_dir, "mRNASeq"], process_filelist)
+    gen.run_in_parallel(mutation_files, ["foo", remote_mutation_dir, expect_password, "mutation_files"], process_filelist, workers = 1)
+    gen.run_in_parallel(mrna_files, ["foo", remote_rna_dir, expect_password, "mRNASeq"], process_filelist)
 
-    # delete the json file
-    gen.remove_file(json_file)
+
 
 if __name__ == "__main__":
     main()

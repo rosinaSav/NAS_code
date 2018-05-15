@@ -15,4 +15,4 @@ testfile*.py
 binaries/
 blast/
 *.pyc
-data.json
+*.json
