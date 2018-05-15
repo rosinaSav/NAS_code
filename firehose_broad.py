@@ -71,9 +71,9 @@ def process_filelist(filelist, output_dir, data_type):
 def main():
 
     description = "Download disease data."
-    arguments = ["output_directory", "clean_download"]
-    args = gen.parse_arguments(description, arguments, flags = [1])
-    output_directory, clean_download = args.output_directory, args.clean_download
+    arguments = ["output_directory", "clean_download", "change_env"]
+    args = gen.parse_arguments(description, arguments, flags = [1, 2])
+    output_directory, clean_download, change_env = args.output_directory, args.clean_download, args.change_env
 
     # delete the directories if wanting a fresh download
     if clean_download:
@@ -87,11 +87,18 @@ def main():
     gen.create_output_directories(rna_seq_dir)
     gen.create_output_directories("temp_data")
 
+    if change_env:
+        args = ["source", "activate", "py27"]
+        gen.run_process(args)
     # get the data dump file from firehose broad
     print("Getting data from Firehose Broad...")
     json_file = "./data.json"
     args = ["python2", "firehose_broad_get.py", json_file]
     gen.run_process(args)
+
+    if change_env:
+        args = ["source", "activate", "root"]
+        gen.run_process(args)
 
     # read the data file
     with open(json_file, "r") as json_open:
