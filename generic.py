@@ -448,6 +448,13 @@ def read_many_fields(input_file, delimiter):
     file_to_read.close()
     return(lines)
 
+def remove_directory(dir):
+    '''
+    Remove directory
+    '''
+    if os.path.exists(dir):
+        shutil.rmtree(dir)
+
 def remove_file(file_name):
     '''
     Remove a file, if it exists.

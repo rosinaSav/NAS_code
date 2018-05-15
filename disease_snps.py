@@ -13,6 +13,32 @@ import re
 import copy
 import numpy as np
 
+def get_ptc_overlaps(disease_ptc_file, ptc_file, output_file):
+    '''
+    Get the overlap between disease ptc file and 1000 genomes ptcs
+    '''
+
+    disease_ptcs = gen.read_many_fields(disease_ptc_file, "\t")
+    ptcs = gen.read_many_fields(ptc_file, "\t")
+
+    disease_ptc_list = {}
+    for ptc in disease_ptcs[1:]:
+        ptc_info = EntryInfo(ptc)
+        disease_ptc_list[ptc_info.snp_pos] = ptc
+
+    ptc_list = {}
+    for ptc in ptcs[1:]:
+        ptc_list[int(ptc[7])] = ptc
+
+    with open(output_file, "w") as outfile:
+        for ptc_pos in ptc_list:
+            if ptc_pos in disease_ptc_list:
+                outfile.write('{0}\t**\t{1}\n'.format("\t".join(ptc_list[ptc_pos]), "\t".join(disease_ptc_list[ptc_pos])))
+
+
+
+
+
 def ptc_location_simulation(snp_file, full_bed, cds_fasta, output_directory, required_simulations, coding_exons_file):
     '''
     Simulate the snp location.
@@ -198,9 +224,9 @@ def get_ptc_info(ptc_file, relative_exon_positions_file, output_file):
 def main():
 
     description = "Look at disease snps."
-    arguments = ["intersect_snps", "get_relative_positions", "get_snp_status", "get_info", "simulate_ptc_location", "get_possible_ptc_locations", "required_simulations"]
-    args = gen.parse_arguments(description, arguments, flags = [0,1,2,3,4,5])
-    intersect_snps, get_relative_positions, get_snp_status, get_info, simulate_ptc_location, get_possible_ptc_locations, required_simulations = args.intersect_snps, args.get_relative_positions, args.get_snp_status, args.get_info, args.simulate_ptc_location, args.get_possible_ptc_locations, args.required_simulations
+    arguments = ["intersect_snps", "get_relative_positions", "get_snp_status", "get_info", "simulate_ptc_location", "get_possible_ptc_locations", "required_simulations", "get_overlaps"]
+    args = gen.parse_arguments(description, arguments, flags = [0,1,2,3,4,5,7])
+    intersect_snps, get_relative_positions, get_snp_status, get_info, simulate_ptc_location, get_possible_ptc_locations, required_simulations, get_overlaps = args.intersect_snps, args.get_relative_positions, args.get_snp_status, args.get_info, args.simulate_ptc_location, args.get_possible_ptc_locations, args.required_simulations, args.get_overlaps
 
     results_prefix = "./results/clean_run_2/clean_run"
 
@@ -263,6 +289,13 @@ def main():
             print("Getting possible PTC mutation locations...")
             generate_possible_ptc_locations(full_bed, cds_fasta, location_simulation_output_directory)
         ptc_location_simulation(disease_ptcs_file, full_bed, cds_fasta, location_simulation_output_directory, required_simulations, coding_exons_file)
+
+    ptc_file = "{0}_ptc_file.txt".format(results_prefix)
+    overlap_file = "{0}/disease__analysis_overlaps.txt".format(output_directory)
+    if get_overlaps:
+        print("Getting overlap between disease PTCs and 1000 genomes PTCs...")
+        get_ptc_overlaps(disease_ptcs_file, ptc_file, overlap_file)
+
 
 
 if __name__ == "__main__":
