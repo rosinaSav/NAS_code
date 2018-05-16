@@ -12,5 +12,7 @@ outputs/
 results/
 .Rhistory
 testfile*.py
+binaries/
 blast/
-binaries
+*.pyc
+*.json

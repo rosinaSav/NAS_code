@@ -448,6 +448,13 @@ def read_many_fields(input_file, delimiter):
     file_to_read.close()
     return(lines)
 
+def remove_directory(dir):
+    '''
+    Remove directory
+    '''
+    if os.path.exists(dir):
+        shutil.rmtree(dir)
+
 def remove_file(file_name):
     '''
     Remove a file, if it exists.
@@ -572,3 +579,10 @@ def write_to_fasta(names, seq, fasta_name):
         for i in range(len(names)):
             file.write(">{0}\n".format(names[i]))
             file.write("{0}\n".format(seq[i]))
+
+
+def stringify(item):
+    if isinstance(item, list):
+        return [str(i) for i in item]
+    else:
+        return str(item)
