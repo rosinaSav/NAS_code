@@ -1,0 +1,9 @@
+Chromosome	Start_position	End_position	dbSNP_RS	Strand	Reference_Allele	Tumor_Seq_Allele1	Tumor_Seq_Allele2	Tumor_Sample_Barcode	Match_Norm_Seq_Allele1	Match_Norm_Seq_Allele2	Matched_Norm_Sample_Barcode	Hugo_Symbol	Entrez_Gene_Id	Variant_Classification	Variant_Type	Refseq_mRNA_Id	Refseq_prot_Id
+1	10	10	pass1	+	G	A	A	TB1	C	C	NB1	S1	.	.	.	.	.
+2	20	20	pass2	-	C	A	A	TB2	C	C	NB2	S2	.	.	.	.	.
+3	30	31	fail1	-	C	A	A	TB3	C	C	NB3	S3	.	.	.	.	.
+3	30	30	fail2	-	C	A		TB3	C	C	NB3	S3	.	.	.	.	.
+3	30	30	fail3	-	C	A	A	TB3	-	C	NB3	S3	.	.	.	.	.
+3	30	30	fail4	-	C	A	A		A	C	NB3	S3	.	.	.	.	.
+3	30	30	fail5	-	C	A	A	TB3	A	C		S3	.	.	.	.	.
+.	30	30	fail6	-	C	A	A	TB3	A	C	NB3	S3	.	.	.	.	.

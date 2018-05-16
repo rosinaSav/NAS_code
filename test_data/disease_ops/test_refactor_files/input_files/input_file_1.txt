@@ -1,0 +1,4 @@
+Chromosome	Start_position	End_position	dbSNP_RS	Strand	Reference_Allele	Tumor_Seq_Allele1	Tumor_Seq_Allele2	Tumor_Sample_Barcode	Match_Norm_Seq_Allele1	Match_Norm_Seq_Allele2	Matched_Norm_Sample_Barcode	Hugo_Symbol	Entrez_Gene_Id	Variant_Classification	Variant_Type	Refseq_mRNA_Id	Refseq_prot_Id	Rubbish_1	Rubbish_2
+1	10	10	pass1	+	G	A	A	TB1	C	C	NB1	S1	.	.	.	.	.	Rubbish Entry 4	Junk
+2	20	20	pass2	-	C	A	A	TB2	C	C	NB2	S2	.	.	.	.	.	Rubbish entry 2	Rubbish Entry 3
+3	30	31	fail1	-	C	A	A	TB3	C	C	NB3	S3	.	.	.	.	.	Rubbish entry

@@ -1,0 +1,4 @@
+1	10	pass1	+	G	A	A	TB1	C	C	NB1	S1	.	.	.	.	.
+2	20	pass2	-	C	A	A	TB2	C	C	NB2	S2	.	.	.	.	.
+4	10	pass1	+	G	A	A	TB1	C	C	NB1	S1	.	.	.	.	.
+5	20	pass2	-	C	A	A	TB2	C	C	NB2	S2	.	.	.	.	.

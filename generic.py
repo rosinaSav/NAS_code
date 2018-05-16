@@ -586,3 +586,10 @@ def stringify(item):
         return [str(i) for i in item]
     else:
         return str(item)
+
+def update_reset_count(count, limit):
+    if count >= limit:
+        count = 0
+    else:
+        count += 1
+    return count
