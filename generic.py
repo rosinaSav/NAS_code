@@ -441,12 +441,16 @@ def read_many_fields(input_file, delimiter):
     Read a csv/tsv/... into a list of lists with each sublist corresponding to one line.
     '''
     file_to_read = open(input_file)
-    field_reader = csv.reader(file_to_read, delimiter = delimiter)
-    lines = []
-    for i in field_reader:
-        lines.append(i)
-    file_to_read.close()
-    return(lines)
+    try:
+        field_reader = csv.reader(file_to_read, delimiter = delimiter)
+        lines = []
+        for i in field_reader:
+            lines.append(i)
+        file_to_read.close()
+        return(lines)
+    except:
+        print("Problem reading file...")
+        return [["Problem reading file"]]
 
 def remove_directory(dir):
     '''
