@@ -1115,7 +1115,7 @@ def intersect_vcf_to_bed(bed_file, vcf_file, output_file, change_names = None):
     # if need to rename bed file chromosome for intersect
     if change_names:
         gen.create_output_directories("./temp_data")
-        temp_file = "temp_data/temp_intron_bed.{0}".format(random.random())
+        temp_file = "temp_data/temp_intersect.{0}".format(random.random())
         beo.change_bed_names(bed_file, temp_file, full_names = True, header = False)
     else:
         temp_file = bed_file

@@ -56,8 +56,6 @@ def change_bed_names(input_bed, output_bed, full_names, header):
             outfile.write("{0}\n".format("\t".join(line)))
 
 
-
-
 def check_coding(exons_file, CDSs_file, outfile, remove_overlapping = False):
         '''
         Given a bed file of exon coordinates and a bed file of CDS coordinates,

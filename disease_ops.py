@@ -6,7 +6,7 @@ Contains more specific functions for operations related the processing of diseas
 import generic as gen
 import os
 import random
-
+import collections
 
 def check_line(line, outlist):
     '''
@@ -15,11 +15,11 @@ def check_line(line, outlist):
 
     exist_list = ["Chromosome", "Start_position", "dbSNP_RS", "Strand", "Reference_Allele", "Tumor_Seq_Allele1",
     "Tumor_Seq_Allele2", "Tumor_Sample_Barcode", "Match_Norm_Seq_Allele1", "Match_Norm_Seq_Allele2",
-    "Matched_Norm_Sample_Barcode"]
+    "Matched_Norm_Sample_Barcode", "Transcript_Strand"]
     match_list = [["Start_position", "End_position"]]
     not_empty_list = ["Chromosome", "Start_position", "Reference_Allele", "Tumor_Seq_Allele1",
     "Tumor_Seq_Allele2", "Tumor_Sample_Barcode", "Match_Norm_Seq_Allele1", "Match_Norm_Seq_Allele2",
-    "Matched_Norm_Sample_Barcode"]
+    "Matched_Norm_Sample_Barcode", "Transcript_Strand"]
 
     for entry in exist_list:
         if entry not in line:
@@ -58,11 +58,14 @@ def refactor_files(dir, output_dir, filename_prefix, full_mutation_file, limit=N
     filename_prefix: prefix for the processed files
     '''
 
+    ### To do : check base
+
     if clean_directory:
         # clean the directory
         [gen.remove_file("{0}/{1}".format(output_dir, file)) for file in os.listdir(output_dir)]
 
     counter = 0
+    passed = 0
     temp_file_list = []
     outlist = [
         "Chromosome", "Start_position", "dbSNP_RS", "Strand", "Reference_Allele", "Tumor_Seq_Allele1",
@@ -96,6 +99,7 @@ def refactor_files(dir, output_dir, filename_prefix, full_mutation_file, limit=N
                 # check that the required information is present
                 passed_checks, entry_out = check_line(line_dict, outlist)
                 if passed_checks:
+                    passed += 1
                     # write to file, and reset counter if we want to split the files up
                     outfile.write("{0}\n".format("\t".join(entry_out)))
                     if limit:
@@ -103,7 +107,7 @@ def refactor_files(dir, output_dir, filename_prefix, full_mutation_file, limit=N
                         if counter == 0:
                             outfile.close()
                             gen.run_process(["cp", current_temp_file, "{0}/{1}".format(output_dir, current_temp_file.split("$")[0].split('/')[-1])])
-                            current_temp_file = "temp_data/{0}_{1}.txt".format(filename_prefix, len(temp_file_list)+1)
+                            current_temp_file = "temp_data/{0}_{1}.txt${2}".format(filename_prefix, len(temp_file_list)+1, random.random())
                             temp_file_list.append(current_temp_file)
                             outfile = open(current_temp_file, "w")
 
@@ -112,7 +116,25 @@ def refactor_files(dir, output_dir, filename_prefix, full_mutation_file, limit=N
     outfile.close()
     gen.run_process(["cp", current_temp_file, "{0}/{1}".format(output_dir, current_temp_file.split("$")[0].split('/')[-1])])
     print("{0} sub files generated...".format(len(temp_file_list)))
+
+    temp_file = "temp_data/{0}.txt".format(random.random())
+    temp_file_list = [temp_file] + temp_file_list
+    with open(temp_file, "w") as temp_out:
+        temp_out.write("##fileformat=VCFv4.1\n")
+        temp_out.write("#{0}\n".format("\t".join(outlist)))
+
     # get one resulting file
     concatenate_files(temp_file_list, full_mutation_file)
     # clean the temp directory if any files remain
     [gen.remove_file(file) for file in temp_file_list]
+
+    # sort file by first, then second column
+    temp_sorted_file = "temp_data/{0}.vcf".format(random.random())
+    gen.run_process(["sort", "-k1,1", "-k2,2n", full_mutation_file], file_for_output = temp_sorted_file)
+    gen.run_process(["cp", temp_sorted_file, full_mutation_file])
+    gen.remove_file(temp_sorted_file)
+
+    zip = "{0}.gz".format(full_mutation_file)
+    gen.run_process(["bgzip", "-c", full_mutation_file], file_for_output = zip)
+
+    print("{0} mutations remain...".format(passed))
