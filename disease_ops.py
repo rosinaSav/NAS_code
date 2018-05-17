@@ -42,7 +42,14 @@ def check_line(line, outlist):
 
     return True, entry_out
 
-def refactor_files(dir, output_dir, filename_prefix, filelimit=None, clean_directory=None):
+def concatenate_files(filelist, output_file):
+    gen.remove_file(output_file)
+    args = ["cat"]
+    for file in filelist:
+        args.append(file)
+    gen.run_process(args, file_for_output = output_file)
+
+def refactor_files(dir, output_dir, filename_prefix, full_mutation_file, limit=None, clean_directory=None):
     '''
     Refactor the files so they resemble something like
     a vcf file that we can use.
@@ -91,11 +98,11 @@ def refactor_files(dir, output_dir, filename_prefix, filelimit=None, clean_direc
                 if passed_checks:
                     # write to file, and reset counter if we want to split the files up
                     outfile.write("{0}\n".format("\t".join(entry_out)))
-                    if filelimit:
-                        counter = gen.update_reset_count(counter, filelimit)
+                    if limit:
+                        counter = gen.update_reset_count(counter, limit)
                         if counter == 0:
                             outfile.close()
-                            gen.run_process(["mv", current_temp_file, "{0}/{1}".format(output_dir, current_temp_file.split("$")[0].split('/')[-1])])
+                            gen.run_process(["cp", current_temp_file, "{0}/{1}".format(output_dir, current_temp_file.split("$")[0].split('/')[-1])])
                             current_temp_file = "temp_data/{0}_{1}.txt".format(filename_prefix, len(temp_file_list)+1)
                             temp_file_list.append(current_temp_file)
                             outfile = open(current_temp_file, "w")
@@ -103,7 +110,9 @@ def refactor_files(dir, output_dir, filename_prefix, filelimit=None, clean_direc
 
     # close the last output file
     outfile.close()
-    gen.run_process(["mv", current_temp_file, "{0}/{1}".format(output_dir, current_temp_file.split("$")[0].split('/')[-1])])
-    print("{0} files generated...".format(len(temp_file_list)))
-    # clean the temp directory
-    [gen.remove_file(file) for file in os.listdir(output_dir)]
+    gen.run_process(["cp", current_temp_file, "{0}/{1}".format(output_dir, current_temp_file.split("$")[0].split('/')[-1])])
+    print("{0} sub files generated...".format(len(temp_file_list)))
+    # get one resulting file
+    concatenate_files(temp_file_list, full_mutation_file)
+    # clean the temp directory if any files remain
+    [gen.remove_file(file) for file in temp_file_list]
