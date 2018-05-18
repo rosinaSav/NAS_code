@@ -315,7 +315,7 @@ def get_codon_start(variant_pos, seq_len, shift = False):
             return("error")
         return(codon_start)
 
-def get_snp_relative_cds_position(snp_exon_relative_positions, snp_cds_position_output, full_bed):
+def get_snp_relative_cds_position(snp_exon_relative_positions, snp_cds_position_output, full_bed, broad_snps_shift=True):
     '''
     Get the position of the snp within a CDS using the relative positions of snps in the features they are found
     '''
@@ -420,7 +420,10 @@ def get_snp_relative_cds_position(snp_exon_relative_positions, snp_cds_position_
             cds_id_meta = re.search(entry_regex, cds_id)
             snp_cds = cds_id_meta.group(1)
             snp_exon_id = cds_id_meta.group(2)
-            snp_exon_position = int(snp[11])
+            if broad_snps_shift:
+                snp_exon_position = int(snp[12])
+            else:
+                snp_exon_position = int(snp[11])
             #snp position in cds is the position in the exon plus the exons position in the cds
             #plus handling stops
             full_ID = cds_id_meta.group(0)
@@ -432,13 +435,16 @@ def get_snp_relative_cds_position(snp_exon_relative_positions, snp_cds_position_
             if extra != "remove":
                 try:
                     snp_cds_position = snp_exon_position + cds_features_relative_positions[snp_cds][int(snp_exon_id)] + extra
-                    snp[11] = str(snp_cds_position)
+                    if broad_snps_shift:
+                        snp[12] = str(snp_cds_position)
+                    else:
+                        snp[11] = str(snp_cds_position)
                     output.write("{0}\n".format("\t".join(snp)))
                 except KeyError:
                     error_count = error_count + 1
     print("Errors: {0}.".format(error_count))
 
-def get_snp_relative_exon_position(intersect_file, snp_relative_exon_position_file):
+def get_snp_relative_exon_position(intersect_file, snp_relative_exon_position_file, broad_snps_shift=None):
     '''
     Get the relative position of a snp within the exon it is found. Used as an intermediate step
     before calculating the snp position in the cds using get_snp_cds_relative_position.
@@ -470,7 +476,10 @@ def get_snp_relative_exon_position(intersect_file, snp_relative_exon_position_fi
             print(intersect)
             raise Exception
         #replace . field with relative position
-        intersect[11] = str(relative_position)
+        if broad_snps_shift:
+            intersect.insert(12, str(relative_position))
+        else:
+            intersect[11] = str(relative_position)
         relative_positions.append(intersect)
 
     # write relative snp positions to output file
@@ -480,7 +489,7 @@ def get_snp_relative_exon_position(intersect_file, snp_relative_exon_position_fi
 
     return(relative_positions)
 
-def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_file, others_output_file, out_of_frame = False, ref_check = None):
+def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_file, others_output_file, out_of_frame = False, ref_check = None, headers=None, broad_snps_shift=None):
     '''
     For a set of SNPs, determine the effect of the PTC (nonsense, missense, synonymous).
     Store the nonsense ones in one file and all the rest in another.
@@ -497,22 +506,32 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
     with open(ptcs_output_file, "w") as ptc_outputs, open(others_output_file, "w") as other_outputs:
         refbase_error = 0
         snp_count = 0
-        #the first line is the header
-        header = "{0}\n".format("\t".join(snps[0]))
-        ptc_outputs.write(header)
-        other_outputs.write(header)
 
-        for snp in snps[1:]:
+        start_index = 0
+        if headers:
+            start_index = 1
+            #the first line is the header
+            header = "{0}\n".format("\t".join(snps[0]))
+            ptc_outputs.write(header)
+            other_outputs.write(header)
+
+        for snp in snps[start_index:]:
             cds_id = re.search(entry_regex, snp[3]).group(1)
-            snp_index = int(snp[11])
+            if broad_snps_shift:
+                snp_index = int(snp[12])
+            else:
+                snp_index = int(snp[11])
             #get the strand
             strand = snp[5]
             #get ancestral base
             ref_base = snp[9]
             #get the information on the variant type
             var_base = snp[10].split(",")
+            if broad_snps_shift:
+                var_base.extend(snp[11].split(","))
+
             var_base_count = len(var_base)
-            var_base = [i for i in var_base if i in ["A", "C", "G", "T"]]
+            var_bases = [i for i in var_base if i in ["A", "C", "G", "T"]]
             ancestral_allele = re.search(ancestral_reg, snp[13])
 
             snp_id = snp[8]
@@ -530,7 +549,14 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
                     #from RS: filter out polymorphisms with more than 2 segregating alleles
                     #need to check the number both before and after filtering out non-canonical bases
                     #also check whether the variant type is annotated as a snp
-                    if var_base_count == 1 and len(var_base) == 1:
+
+                    # also add in here is there are 2 alleles for the disease data
+                    lengths = list(set([len(base) for base in var_bases]))
+                    unique_mutations = list(set(var_bases))
+                    mut_ref_both = False
+                    if len(unique_mutations) == 1:
+                        mut_ref_both = True
+                    if var_base_count == 1 and len(lengths) == 1 and lengths[0] == 1 or broad_snps_shift and var_base_count == 2 and len(lengths) == 1 and lengths[0] == 1:
                         ref_pass = False
                         if ref_check:
                             if var_type and var_type == "SNP":
@@ -539,45 +565,62 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
                             ref_pass = True
 
                         if ref_pass:
-                            var_base = var_base[0]
+                            for var_base in unique_mutations:
+                                # var_base = var_base[0]
 
-                            if strand == "-":
-                                ref_base = gen.reverse_complement(ref_base)
-                                var_base = gen.reverse_complement(var_base)
-                            #get the base of reference cds where the snp occured
-    ##                        print(snp)
-    ##                        print(cds_seqs[cds_names.index(cds_id)])
-    ##                        print(len(cds_seqs[cds_names.index(cds_id)]))
-    ##                        print("\n")
-                            cds_base = cds_seqs[cds_names.index(cds_id)][snp_index]
+                                if strand == "-":
+                                    ref_base = gen.reverse_complement(ref_base)
+                                    var_base = gen.reverse_complement(var_base)
+                                #get the base of reference cds where the snp occured
+        ##                        print(snp)
+        ##                        print(cds_seqs[cds_names.index(cds_id)])
+        ##                        print(len(cds_seqs[cds_names.index(cds_id)]))
+        ##                        print("\n")
+                                cds_base = cds_seqs[cds_names.index(cds_id)][snp_index]
 
-                            #check whether cds base and ref base are the same
-                            if cds_base != ref_base:
-                                refbase_error += 1
-    ##                            print("Cds base and reference base not the same (id: {0})".format(snp[8]))
-    ##                            print("Cds base: {0}".format(cds_base))
-    ##                            print("Ref base: {0}".format(ref_base))
-    ##                            print("Variant base: {0}".format(var_base))
-    ##                            print("\n")
-                                pass
-                            else:
-                                cds_codon, snp_codon, mutation_type = get_snp_type(cds_seqs[cds_names.index(cds_id)], [snp_index, var_base], snp_id, shift = out_of_frame)
-
-                                if ancestral_allele:
-                                    aa = ancestral_allele.group(1)
+                                #check whether cds base and ref base are the same
+                                if cds_base != ref_base:
+                                    refbase_error += 1
+        ##                            print("Cds base and reference base not the same (id: {0})".format(snp[8]))
+        ##                            print("Cds base: {0}".format(cds_base))
+        ##                            print("Ref base: {0}".format(ref_base))
+        ##                            print("Variant base: {0}".format(var_base))
+        ##                            print("\n")
+                                    pass
                                 else:
-                                    aa = "UNDEFINED"
+                                    # remove disease alleles that are the same
+                                    if var_base != ref_base:
+                                        cds_codon, snp_codon, mutation_type = get_snp_type(cds_seqs[cds_names.index(cds_id)], [snp_index, var_base], snp_id, shift = out_of_frame)
 
-                                snp[13] = "CDS_CODON={0}$SNP_CODON={1}$AA={2}".format(cds_codon, snp_codon, aa)
-                                snp[12] = mutation_type
-                                if(mutation_type == "ptc"):
-                                    snp[14] = str(ptc_id_counter)
-                                    ptc_id_counter = ptc_id_counter + 1
-                                    ptc_outputs.write("{0}\n".format("\t".join(snp)))
-                                else:
-                                    snp[14] = str(other_id_counter)
-                                    other_id_counter = other_id_counter + 1
-                                    other_outputs.write("{0}\n".format("\t".join(snp)))
+                                        if broad_snps_shift:
+                                            if mut_ref_both:
+                                                mutation_type_format = "{0}".format(mutation_type)
+                                            else:
+                                                if strand == "-":
+                                                    check_var_base = gen.reverse_complement(var_base)
+                                                else:
+                                                    check_var_base = var_base
+                                                mutation_type_format = "{0}.allele{1}".format(mutation_type, var_bases.index(check_var_base)+1)
+                                            snp.insert(12, mutation_type_format)
+                                            snp[-1] = "CDS_CODON={0}$SNP_CODON={1}".format(cds_codon, snp_codon)
+
+                                        else:
+                                            if ancestral_allele:
+                                                aa = ancestral_allele.group(1)
+                                            else:
+                                                aa = "UNDEFINED"
+                                            snp[13] = "CDS_CODON={0}$SNP_CODON={1}$AA={2}".format(cds_codon, snp_codon, aa)
+                                            snp[12] = mutation_type
+
+                                        if(mutation_type == "ptc"):
+                                            snp[14] = str(ptc_id_counter)
+                                            ptc_id_counter = ptc_id_counter + 1
+                                            ptc_outputs.write("{0}\n".format("\t".join(snp)))
+                                        else:
+                                            snp[14] = str(other_id_counter)
+                                            other_id_counter = other_id_counter + 1
+                                            other_outputs.write("{0}\n".format("\t".join(snp)))
+
 
     if snp_count:
         print("Number of ref errors: {0}/{1} ({2}%)".format(refbase_error, snp_count, np.divide(refbase_error, snp_count)*100))

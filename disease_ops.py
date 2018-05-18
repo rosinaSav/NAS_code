@@ -19,7 +19,9 @@ def check_line(line, outlist):
     match_list = [["Start_position", "End_position"]]
     not_empty_list = ["Chromosome", "Start_position", "Reference_Allele", "Tumor_Seq_Allele1",
     "Tumor_Seq_Allele2", "Tumor_Sample_Barcode", "Match_Norm_Seq_Allele1", "Match_Norm_Seq_Allele2",
-    "Matched_Norm_Sample_Barcode", "Transcript_Strand"]
+    "Matched_Norm_Sample_Barcode"]
+
+    strands = ["+", "-"]
 
     for entry in exist_list:
         if entry not in line:
@@ -27,11 +29,17 @@ def check_line(line, outlist):
     for entry in not_empty_list:
         if line[entry] in ["-", ".", ""]:
             return False, None
-    if line["Strand"] not in ["+", "-"]:
+    if line["Strand"] not in strands or line["Transcript_Strand"] not in strands:
         return False, None
     for pair in match_list:
         if pair[0] not in line or pair[1] not in line or line[pair[0]] != line[pair[1]]:
             return False, None
+
+    if line["Transcript_Strand"] == "-" and line["Strand"] == "+":
+        line["Reference_Allele"] = gen.reverse_complement(line["Reference_Allele"])
+        line["Tumor_Seq_Allele1"] = gen.reverse_complement(line["Tumor_Seq_Allele1"])
+        line["Tumor_Seq_Allele2"] = gen.reverse_complement(line["Tumor_Seq_Allele2"])
+
 
     entry_out = []
     for entry in outlist:
@@ -49,7 +57,7 @@ def concatenate_files(filelist, output_file):
         args.append(file)
     gen.run_process(args, file_for_output = output_file)
 
-def refactor_files(dir, output_dir, filename_prefix, full_mutation_file, limit=None, clean_directory=None):
+def refactor_files(dir, output_dir, filename_prefix, full_mutation_file, limit=None, subset=None, clean_directory=None):
     '''
     Refactor the files so they resemble something like
     a vcf file that we can use.
@@ -57,8 +65,6 @@ def refactor_files(dir, output_dir, filename_prefix, full_mutation_file, limit=N
     output_dir: the directory to output the processed files
     filename_prefix: prefix for the processed files
     '''
-
-    ### To do : check base
 
     if clean_directory:
         # clean the directory
@@ -68,10 +74,10 @@ def refactor_files(dir, output_dir, filename_prefix, full_mutation_file, limit=N
     passed = 0
     temp_file_list = []
     outlist = [
-        "Chromosome", "Start_position", "dbSNP_RS", "Strand", "Reference_Allele", "Tumor_Seq_Allele1",
+        "Chromosome", "Start_position", "dbSNP_RS", "Reference_Allele", "Tumor_Seq_Allele1",
         "Tumor_Seq_Allele2", "Tumor_Sample_Barcode", "Match_Norm_Seq_Allele1", "Match_Norm_Seq_Allele2",
         "Matched_Norm_Sample_Barcode", "Hugo_Symbol", "Entrez_Gene_Id", "Variant_Classification", "Variant_Type",
-        "Refseq_mRNA_Id", "Refseq_prot_Id"
+        "Refseq_mRNA_Id", "Refseq_prot_Id", "Strand", "Transcript_Strand"
     ]
 
     current_temp_file = "temp_data/{0}_{1}.txt${2}".format(filename_prefix, len(temp_file_list)+1, random.random())
@@ -81,6 +87,9 @@ def refactor_files(dir, output_dir, filename_prefix, full_mutation_file, limit=N
     with open("{0}/{1}_readme.txt".format(output_dir, filename_prefix), "w") as readme:
         readme.write("{0}\n".format("\t".join(outlist)))
 
+    mutations_filelist = os.listdir(dir)
+    if subset:
+        mutations_filelist = mutations_filelist[:int(subset)]
 
     for i, file in enumerate(os.listdir(dir)):
         # check the file is one we downloaded
