@@ -18,8 +18,8 @@ import shutil
 def main():
 
     description = "Analysis of disease mutations from firehose broad."
-    args = gen.parse_arguments(description,  ["output_dir", "mutations_dir", "results_prefix", "subset", "clean_run", "process_mutations", "intersect_mutations", "convert_intersect", "get_relative_positions", "get_snp_status"], flags = [3,4,5,6,7,8,9], ints = [])
-    output_dir, mutations_dir, results_prefix, subset, clean_run, process_mutations, intersect_mutations, convert_intersect, get_relative_positions, get_snp_status = args.output_dir, args.mutations_dir, args.results_prefix, args.subset, args.clean_run, args.process_mutations, args.intersect_mutations, args.convert_intersect, args.get_relative_positions, args.get_snp_status
+    args = gen.parse_arguments(description,  ["output_dir", "mutations_dir", "results_prefix", "subset", "subset_no", "clean_run", "process_mutations", "intersect_mutations", "convert_intersect", "get_relative_positions", "get_snp_status"], flags = [3,5,6,7,8,9,10], ints = [4])
+    output_dir, mutations_dir, results_prefix, subset, subset_no, clean_run, process_mutations, intersect_mutations, convert_intersect, get_relative_positions, get_snp_status = args.output_dir, args.mutations_dir, args.results_prefix, args.subset, args.subset_no, args.clean_run, args.process_mutations, args.intersect_mutations, args.convert_intersect, args.get_relative_positions, args.get_snp_status
 
     start = time.time()
     gen.create_directory('temp_data/')
@@ -35,7 +35,7 @@ def main():
     if process_mutations or clean_run:
         print("Processing mutation files...")
         entrylimit = 10000
-        do.refactor_files(mutations_dir, processed_dir, filename_prefix, full_mutation_file, entrylimit, subset, clean_directory = True)
+        do.refactor_files(mutations_dir, processed_dir, filename_prefix, full_mutation_file, entrylimit, subset, subset_no, clean_directory = True)
 
     full_mutation_file_zip = "{0}.gz".format(full_mutation_file)
     coding_exons_file = "{0}_coding_exons.extracted.1000.bed".format(results_prefix)
@@ -62,7 +62,7 @@ def main():
         relative_positions = gen.read_many_fields(disease_snps_relative_exon_positions, "\t")
         so.get_snp_relative_cds_position(relative_positions, disease_snps_relative_cds_positions, full_bed, broad_snps_shift=True)
 
-    # get the change status of the snps to check them
+    # get the change status of the snps to check them, generate two files
     cds_fasta = "{0}_CDS.fasta".format(results_prefix)
     disease_ptcs_file = "{0}/disease_ptcs.txt".format(output_dir)
     disease_other_file = "{0}/disease_other_snps.txt".format(output_dir)

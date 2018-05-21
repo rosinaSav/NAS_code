@@ -439,6 +439,7 @@ def get_snp_relative_cds_position(snp_exon_relative_positions, snp_cds_position_
                         snp[12] = str(snp_cds_position)
                     else:
                         snp[11] = str(snp_cds_position)
+                    snp.append(str(snp_exon_position))
                     output.write("{0}\n".format("\t".join(snp)))
                 except KeyError:
                     error_count = error_count + 1

@@ -23,28 +23,32 @@ def check_line(line, outlist):
 
     strands = ["+", "-"]
 
+    # check that the required entries exist
     for entry in exist_list:
         if entry not in line:
             return False, None
+    # check not empty
     for entry in not_empty_list:
         if line[entry] in ["-", ".", ""]:
             return False, None
+    # check the strands exist
     if line["Strand"] not in strands or line["Transcript_Strand"] not in strands:
         return False, None
+    # check that the items in a pair exist and they match
     for pair in match_list:
         if pair[0] not in line or pair[1] not in line or line[pair[0]] != line[pair[1]]:
             return False, None
 
-    if line["Transcript_Strand"] == "-" and line["Strand"] == "+":
-        line["Reference_Allele"] = gen.reverse_complement(line["Reference_Allele"])
-        line["Tumor_Seq_Allele1"] = gen.reverse_complement(line["Tumor_Seq_Allele1"])
-        line["Tumor_Seq_Allele2"] = gen.reverse_complement(line["Tumor_Seq_Allele2"])
-
-
+    # write the entry
     entry_out = []
     for entry in outlist:
         if entry in line and line[entry] not in ["", " "]:
-            entry_out.append(line[entry])
+            if entry in ["Reference_Allele", "Tumor_Seq_Allele1", "Tumor_Seq_Allele2"] and line["Transcript_Strand"] == "-":
+                base = gen.reverse_complement(line[entry])
+                entry_out.append(base)
+                print("{0}\t{1}\t{2}\t{3}".format(entry, line["Start_position"], line[entry], base))
+            else:
+                entry_out.append(line[entry])
         else:
             entry_out.append('.')
 
@@ -57,7 +61,7 @@ def concatenate_files(filelist, output_file):
         args.append(file)
     gen.run_process(args, file_for_output = output_file)
 
-def refactor_files(dir, output_dir, filename_prefix, full_mutation_file, limit=None, subset=None, clean_directory=None):
+def refactor_files(dir, output_dir, filename_prefix, full_mutation_file, limit=None, subset=None, subset_no=None, clean_directory=None):
     '''
     Refactor the files so they resemble something like
     a vcf file that we can use.
@@ -89,11 +93,12 @@ def refactor_files(dir, output_dir, filename_prefix, full_mutation_file, limit=N
 
     mutations_filelist = os.listdir(dir)
     if subset:
-        mutations_filelist = mutations_filelist[:int(subset)]
+        mutations_filelist = mutations_filelist[:int(subset_no)]
 
-    for i, file in enumerate(os.listdir(dir)):
+
+    for i, file in enumerate(mutations_filelist):
         # check the file is one we downloaded
-        if ".DS_Store" not in file:
+        if ".DS_Store" not in file and i == 34:
             filepath = "{0}/{1}".format(dir, file)
             mutations = gen.read_many_fields(filepath, "\t")
 
