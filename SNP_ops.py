@@ -579,8 +579,14 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
         ##                        print("\n")
                                 cds_base = cds_seqs[cds_names.index(cds_id)][snp_index]
 
+                                # need to convert back to + strand because the snps are encoded on the + strand
+                                if broad_snps_shift and strand == "-":
+                                    cds_base = gen.reverse_complement(cds_base)
+                                    ref_base = gen.reverse_complement(ref_base)
+                                    var_base = gen.reverse_complement(var_base)
                                 #check whether cds base and ref base are the same
                                 if cds_base != ref_base:
+                                    print(strand, cds_base, ref_base)
                                     refbase_error += 1
         ##                            print("Cds base and reference base not the same (id: {0})".format(snp[8]))
         ##                            print("Cds base: {0}".format(cds_base))
@@ -597,10 +603,10 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
                                             if mut_ref_both:
                                                 mutation_type_format = "{0}".format(mutation_type)
                                             else:
-                                                if strand == "-":
-                                                    check_var_base = gen.reverse_complement(var_base)
-                                                else:
-                                                    check_var_base = var_base
+                                                # if strand == "-":
+                                                #     check_var_base = gen.reverse_complement(var_base)
+                                                # else:
+                                                check_var_base = var_base
                                                 mutation_type_format = "{0}.allele{1}".format(mutation_type, var_bases.index(check_var_base)+1)
                                             snp.insert(12, mutation_type_format)
                                             snp[-1] = "CDS_CODON={0}$SNP_CODON={1}".format(cds_codon, snp_codon)

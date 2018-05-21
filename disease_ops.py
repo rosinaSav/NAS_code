@@ -15,7 +15,7 @@ def check_line(line, outlist):
 
     exist_list = ["Chromosome", "Start_position", "dbSNP_RS", "Strand", "Reference_Allele", "Tumor_Seq_Allele1",
     "Tumor_Seq_Allele2", "Tumor_Sample_Barcode", "Match_Norm_Seq_Allele1", "Match_Norm_Seq_Allele2",
-    "Matched_Norm_Sample_Barcode", "Transcript_Strand"]
+    "Matched_Norm_Sample_Barcode", "Transcript_Strand", "NCBI_Build"]
     match_list = [["Start_position", "End_position"]]
     not_empty_list = ["Chromosome", "Start_position", "Reference_Allele", "Tumor_Seq_Allele1",
     "Tumor_Seq_Allele2", "Tumor_Sample_Barcode", "Match_Norm_Seq_Allele1", "Match_Norm_Seq_Allele2",
@@ -38,15 +38,18 @@ def check_line(line, outlist):
     for pair in match_list:
         if pair[0] not in line or pair[1] not in line or line[pair[0]] != line[pair[1]]:
             return False, None
+    # check the genome build
+    if line["NCBI_Build"] != "37":
+        return False, None
 
     # write the entry
     entry_out = []
     for entry in outlist:
         if entry in line and line[entry] not in ["", " "]:
             if entry in ["Reference_Allele", "Tumor_Seq_Allele1", "Tumor_Seq_Allele2"] and line["Transcript_Strand"] == "-":
-                base = gen.reverse_complement(line[entry])
+                base = line[entry]
+                # base = gen.reverse_complement(line[entry])
                 entry_out.append(base)
-                print("{0}\t{1}\t{2}\t{3}".format(entry, line["Start_position"], line[entry], base))
             else:
                 entry_out.append(line[entry])
         else:

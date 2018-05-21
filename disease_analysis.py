@@ -38,11 +38,10 @@ def main():
         do.refactor_files(mutations_dir, processed_dir, filename_prefix, full_mutation_file, entrylimit, subset, subset_no, clean_directory = True)
 
     full_mutation_file_zip = "{0}.gz".format(full_mutation_file)
-    coding_exons_file = "{0}_coding_exons.extracted.1000.bed".format(results_prefix)
+    coding_exons_file = "{0}_coding_exons.extracted.2000.bed".format(results_prefix)
     intersect_file = "{0}/mutations_coding_exons_intersect.vcf".format(output_dir)
     if intersect_mutations or clean_run:
         print("Intersecting mutations with coding exons...")
-        # gen.run_process(["tabix", "-p", "vcf", mutations_zip])
         gen.run_process(["tabix", "-p", "vcf", full_mutation_file_zip])
         so.intersect_snps_parallel(coding_exons_file, full_mutation_file_zip, intersect_file)
 
