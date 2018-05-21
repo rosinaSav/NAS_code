@@ -101,7 +101,7 @@ def refactor_files(dir, output_dir, filename_prefix, full_mutation_file, limit=N
 
     for i, file in enumerate(mutations_filelist):
         # check the file is one we downloaded
-        if ".DS_Store" not in file and i == 34:
+        if ".DS_Store" not in file:
             filepath = "{0}/{1}".format(dir, file)
             mutations = gen.read_many_fields(filepath, "\t")
 
