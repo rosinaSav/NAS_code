@@ -49,7 +49,7 @@ def check_line(line, outlist):
             if entry in ["Reference_Allele", "Tumor_Seq_Allele1", "Tumor_Seq_Allele2"] and line["Transcript_Strand"] == "-":
                 # if on the - strand, need to read on the - strand
                 base = line[entry]
-                # base = gen.reverse_complement(line[entry])
+                base = gen.reverse_complement(base)
                 entry_out.append(base)
             else:
                 entry_out.append(line[entry])

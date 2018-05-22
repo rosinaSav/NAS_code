@@ -584,10 +584,11 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
                                 else:
                                     comp = False
 
+                                print(strand, cds_id, "\tRef: {0}\ttemp_ref: {1}\tCDS: {2}\t".format(ref_base, temp_ref_base, cds_base))
+
                                 #check whether cds base and ref base are the same
                                 if cds_base != temp_ref_base:
-                                    print("Error\n")
-                                    # print(strand, cds_base, ref_base, var_base)
+                                    print('Error\n')
                                     refbase_error += 1
         ##                            print("Cds base and reference base not the same (id: {0})".format(snp[8]))
         ##                            print("Cds base: {0}".format(cds_base))
