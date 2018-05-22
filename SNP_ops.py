@@ -516,7 +516,7 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
             ptc_outputs.write(header)
             other_outputs.write(header)
 
-        for snp in snps[start_index:]:
+        for snp_count_id, snp in enumerate(snps[start_index:]):
             cds_id = re.search(entry_regex, snp[3]).group(1)
             if broad_snps_shift:
                 snp_index = int(snp[12])
@@ -554,10 +554,11 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
                     # also add in here is there are 2 alleles for the disease data
                     lengths = list(set([len(base) for base in var_bases]))
                     unique_mutations = list(set(var_bases))
+
                     mut_ref_both = False
                     if len(unique_mutations) == 1:
                         mut_ref_both = True
-                    if var_base_count == 1 and len(lengths) == 1 and lengths[0] == 1 or broad_snps_shift and var_base_count == 2 and len(lengths) == 1 and lengths[0] == 1:
+                    if var_base_count == 1 and len(lengths) == 1 and lengths[0] == 1 or broad_snps_shift and len(lengths) == 1 and lengths[0] == 1:
                         ref_pass = False
                         if ref_check:
                             if var_type and var_type == "SNP":
@@ -565,28 +566,28 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
                         else:
                             ref_pass = True
 
+                        cds_base = cds_seqs[cds_names.index(cds_id)][snp_index]
+
+                        # temp_ref_base = copy.deepcopy(ref_base)
+
                         if ref_pass:
                             for var_base in unique_mutations:
                                 # var_base = var_base[0]
 
-                                if strand == "-":
-                                    ref_base = gen.reverse_complement(ref_base)
-                                    var_base = gen.reverse_complement(var_base)
-                                #get the base of reference cds where the snp occured
-        ##                        print(snp)
-        ##                        print(cds_seqs[cds_names.index(cds_id)])
-        ##                        print(len(cds_seqs[cds_names.index(cds_id)]))
-        ##                        print("\n")
-                                cds_base = cds_seqs[cds_names.index(cds_id)][snp_index]
+                                temp_ref_base = copy.deepcopy(ref_base)
 
-                                # need to convert back to + strand because the snps are encoded on the + strand
-                                if broad_snps_shift and strand == "-":
-                                    cds_base = gen.reverse_complement(cds_base)
-                                    ref_base = gen.reverse_complement(ref_base)
+                                # temp_ref_base = copy.deepcopy(ref_base)
+                                if strand == "-":
+                                    temp_ref_base = gen.reverse_complement(temp_ref_base)
                                     var_base = gen.reverse_complement(var_base)
+                                    comp = True
+                                else:
+                                    comp = False
+
                                 #check whether cds base and ref base are the same
-                                if cds_base != ref_base:
-                                    print(strand, cds_base, ref_base)
+                                if cds_base != temp_ref_base:
+                                    print("Error\n")
+                                    # print(strand, cds_base, ref_base, var_base)
                                     refbase_error += 1
         ##                            print("Cds base and reference base not the same (id: {0})".format(snp[8]))
         ##                            print("Cds base: {0}".format(cds_base))
@@ -596,17 +597,17 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
                                     pass
                                 else:
                                     # remove disease alleles that are the same
-                                    if var_base != ref_base:
+                                    if var_base != temp_ref_base:
                                         cds_codon, snp_codon, mutation_type = get_snp_type(cds_seqs[cds_names.index(cds_id)], [snp_index, var_base], snp_id, shift = out_of_frame)
 
                                         if broad_snps_shift:
                                             if mut_ref_both:
                                                 mutation_type_format = "{0}".format(mutation_type)
                                             else:
-                                                # if strand == "-":
-                                                #     check_var_base = gen.reverse_complement(var_base)
-                                                # else:
-                                                check_var_base = var_base
+                                                if strand == "-":
+                                                    check_var_base = gen.reverse_complement(var_base)
+                                                else:
+                                                    check_var_base = var_base
                                                 mutation_type_format = "{0}.allele{1}".format(mutation_type, var_bases.index(check_var_base)+1)
                                             snp.insert(12, mutation_type_format)
                                             snp[-1] = "CDS_CODON={0}$SNP_CODON={1}".format(cds_codon, snp_codon)

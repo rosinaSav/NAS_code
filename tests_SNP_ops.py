@@ -229,7 +229,7 @@ class Test_SNP_ops(unittest.TestCase):
         observed_other_snps = "test_data/snp_ops/test_get_snp_change_status/observed_get_snp_other_status.bed"
         gen.remove_file(observed_ptc_snps)
         gen.remove_file(observed_other_snps)
-        get_snp_change_status(snp_relative_cds_position, cds_fasta, observed_ptc_snps, observed_other_snps)
+        get_snp_change_status(snp_relative_cds_position, cds_fasta, observed_ptc_snps, observed_other_snps, headers=True)
         observed_ptc_snps = gen.read_many_fields(observed_ptc_snps, "\t")
         observed_other_snps = gen.read_many_fields(observed_other_snps, "\t")
         self.assertEqual(observed_ptc_snps, expected_ptc_snps)

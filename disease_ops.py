@@ -47,6 +47,7 @@ def check_line(line, outlist):
     for entry in outlist:
         if entry in line and line[entry] not in ["", " "]:
             if entry in ["Reference_Allele", "Tumor_Seq_Allele1", "Tumor_Seq_Allele2"] and line["Transcript_Strand"] == "-":
+                # if on the - strand, need to read on the - strand
                 base = line[entry]
                 # base = gen.reverse_complement(line[entry])
                 entry_out.append(base)
@@ -79,6 +80,7 @@ def refactor_files(dir, output_dir, filename_prefix, full_mutation_file, limit=N
 
     counter = 0
     passed = 0
+    useable_count = 0
     temp_file_list = []
     outlist = [
         "Chromosome", "Start_position", "dbSNP_RS", "Reference_Allele", "Tumor_Seq_Allele1",
@@ -98,36 +100,44 @@ def refactor_files(dir, output_dir, filename_prefix, full_mutation_file, limit=N
     if subset:
         mutations_filelist = mutations_filelist[:int(subset_no)]
 
+    # remove any extras
+    mutations_filelist = [file for file in mutations_filelist if '.DS_Store' not in file]
+
+
+    print("{0} mutation files...".format(len(mutations_filelist)))
 
     for i, file in enumerate(mutations_filelist):
-        # check the file is one we downloaded
-        if ".DS_Store" not in file:
-            filepath = "{0}/{1}".format(dir, file)
-            mutations = gen.read_many_fields(filepath, "\t")
+        filepath = "{0}/{1}".format(dir, file)
+        mutations = gen.read_many_fields(filepath, "\t")
 
-            # read the header line
-            headers = mutations[0]
-            # for each of the mutations, write to a dictionary to query
-            for mut in mutations[1:]:
-                line_dict = {}
-                for j, entry in enumerate(mut):
-                    line_dict[headers[j]] = entry
+        file_count = 0
+        # read the header line
+        headers = mutations[0]
+        # for each of the mutations, write to a dictionary to query
+        for mut in mutations[1:]:
+            line_dict = {}
+            for j, entry in enumerate(mut):
+                line_dict[headers[j]] = entry
 
-                # check that the required information is present
-                passed_checks, entry_out = check_line(line_dict, outlist)
-                if passed_checks:
-                    passed += 1
-                    # write to file, and reset counter if we want to split the files up
-                    outfile.write("{0}\n".format("\t".join(entry_out)))
-                    if limit:
-                        counter = gen.update_reset_count(counter, limit)
-                        if counter == 0:
-                            outfile.close()
-                            gen.run_process(["cp", current_temp_file, "{0}/{1}".format(output_dir, current_temp_file.split("$")[0].split('/')[-1])])
-                            current_temp_file = "temp_data/{0}_{1}.txt${2}".format(filename_prefix, len(temp_file_list)+1, random.random())
-                            temp_file_list.append(current_temp_file)
-                            outfile = open(current_temp_file, "w")
+            # check that the required information is present
+            passed_checks, entry_out = check_line(line_dict, outlist)
+            if passed_checks:
+                file_count += 1
+                passed += 1
+                # write to file, and reset counter if we want to split the files up
+                outfile.write("{0}\n".format("\t".join(entry_out)))
+                if limit:
+                    counter = gen.update_reset_count(counter, limit)
+                    if counter == 0:
+                        outfile.close()
+                        gen.run_process(["cp", current_temp_file, "{0}/{1}".format(output_dir, current_temp_file.split("$")[0].split('/')[-1])])
+                        current_temp_file = "temp_data/{0}_{1}.txt${2}".format(filename_prefix, len(temp_file_list)+1, random.random())
+                        temp_file_list.append(current_temp_file)
+                        outfile = open(current_temp_file, "w")
+        if file_count > 0:
+            useable_count += 1
 
+    print("{0} files with useable mutations...".format(useable_count))
 
     # close the last output file
     outfile.close()
@@ -155,3 +165,30 @@ def refactor_files(dir, output_dir, filename_prefix, full_mutation_file, limit=N
     gen.run_process(["bgzip", "-c", full_mutation_file], file_for_output = zip)
 
     print("{0} mutations remain...".format(passed))
+
+
+def process_reads(dir):
+
+    filelist = [file for file in os.listdir(dir) if file != ".DS_Store"]
+
+    sample_reads = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict()))
+
+    for file in filelist[-1:]:
+        filepath = "{0}/{1}".format(dir, file)
+        reads = gen.read_many_fields(filepath, "\t")
+
+        samples = reads[0][1:]
+
+        for read in reads[2:]:
+            chr = read[0].split(':')[0].strip('chr')
+            start = read[0].split(':')[1]
+            end = read[0].split(':')[3]
+
+            for i, count in enumerate(read[1:]):
+                sample_reads[samples[i]][chr]["{0}:{1}".format(start, end)] = count
+
+    for sample in sample_reads:
+        print(sample)
+        # for chr in sample_reads[sample]:
+        #     for interval in sample_reads[sample][chr]:
+        #         print(sample, chr, interval, sample_reads[sample][chr][interval])
