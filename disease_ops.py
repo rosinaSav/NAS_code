@@ -47,9 +47,15 @@ def check_line(line, outlist):
     for entry in outlist:
         if entry in line and line[entry] not in ["", " "]:
             if entry in ["Reference_Allele", "Tumor_Seq_Allele1", "Tumor_Seq_Allele2"] and line["Transcript_Strand"] == "-":
+                # *****
+                # After lots of checking, for some reason the alleles
+                # are listed as on the + strand in the files
+                # but are actually on the correct strands. I dont think we need
+                # to convert here
+
                 # if on the - strand, need to read on the - strand
                 base = line[entry]
-                base = gen.reverse_complement(base)
+                # base = gen.reverse_complement(base)
                 entry_out.append(base)
             else:
                 entry_out.append(line[entry])
