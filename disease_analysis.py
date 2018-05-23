@@ -41,7 +41,7 @@ def main():
             do.refactor_files(mutations_dir, processed_dir, filename_prefix, full_mutation_file, entrylimit, subset, subset_no, clean_directory = True)
 
         full_mutation_file_zip = "{0}.gz".format(full_mutation_file)
-        coding_exons_file = "{0}_coding_exons.extracted.1000.bed".format(results_prefix)
+        coding_exons_file = "{0}_coding_exons.bed".format(results_prefix)
         intersect_file = "{0}/mutations_coding_exons_intersect.vcf".format(output_dir)
         if intersect_mutations or clean_run:
             print("Intersecting mutations with coding exons...")
