@@ -15,13 +15,13 @@ def check_line(line, outlist):
 
     exist_list = ["Chromosome", "Start_position", "dbSNP_RS", "Strand", "Reference_Allele", "Tumor_Seq_Allele1",
     "Tumor_Seq_Allele2", "Tumor_Sample_Barcode", "Match_Norm_Seq_Allele1", "Match_Norm_Seq_Allele2",
-    "Matched_Norm_Sample_Barcode", "Transcript_Strand", "NCBI_Build"]
+    "Matched_Norm_Sample_Barcode", "Transcript_Strand", "NCBI_Build", "t_ref_count", "t_alt_count"]
     match_list = [["Start_position", "End_position"]]
     not_empty_list = ["Chromosome", "Start_position", "Reference_Allele", "Tumor_Seq_Allele1",
     "Tumor_Seq_Allele2", "Tumor_Sample_Barcode", "Match_Norm_Seq_Allele1", "Match_Norm_Seq_Allele2",
-    "Matched_Norm_Sample_Barcode"]
+    "Matched_Norm_Sample_Barcode", "t_ref_count", "t_alt_count"]
 
-    strands = ["+", "-"]
+    strands = ["+", "-", "1", "-1"]
 
     # check that the required entries exist
     for entry in exist_list:
@@ -92,7 +92,7 @@ def refactor_files(dir, output_dir, filename_prefix, full_mutation_file, limit=N
         "Chromosome", "Start_position", "dbSNP_RS", "Reference_Allele", "Tumor_Seq_Allele1",
         "Tumor_Seq_Allele2", "Tumor_Sample_Barcode", "Match_Norm_Seq_Allele1", "Match_Norm_Seq_Allele2",
         "Matched_Norm_Sample_Barcode", "Hugo_Symbol", "Entrez_Gene_Id", "Variant_Classification", "Variant_Type",
-        "Refseq_mRNA_Id", "Refseq_prot_Id", "Strand", "Transcript_Strand"
+        "Refseq_mRNA_Id", "Refseq_prot_Id", "Strand", "Transcript_Strand", "t_ref_count", "t_alt_count"
     ]
 
     current_temp_file = "temp_data/{0}_{1}.txt${2}".format(filename_prefix, len(temp_file_list)+1, random.random())
