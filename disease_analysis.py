@@ -81,7 +81,7 @@ def main():
 
     process_rna_dir = "{0}/processed_reads".format(output_dir)
     if process_reads:
-        do.process_reads(disease_ptcs_file, rna_dir, output_dir)
+        do.process_counts(rna_dir, process_rna_dir, exon_junctions_file)
 
 
 if __name__ == "__main__":

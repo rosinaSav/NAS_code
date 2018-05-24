@@ -37,3 +37,19 @@ class Test_disease_ops(unittest.TestCase):
             line_pass, line_out = check_line(line_dict, outlist)
             observed.append(line_pass)
         self.assertEqual(observed, expected)
+
+    def test_junction_raw_counts_to_bed(self):
+        rawfile = "counts_file.txt"
+        expected = "test_data/disease_ops/test_junction_raw_counts_to_bed/expected.bed"
+        expected_samples = "test_data/disease_ops/test_junction_raw_counts_to_bed/expected_samples.bed"
+        observed = "test_data/disease_ops/test_junction_raw_counts_to_bed/observed.bed"
+        observed_samples = "test_data/disease_ops/test_junction_raw_counts_to_bed/observed_samples.bed"
+        dir = "test_data/disease_ops/test_junction_raw_counts_to_bed"
+        gen.remove_file(observed)
+        junction_raw_counts_to_bed(rawfile, dir, observed, observed_samples)
+        observed = gen.read_many_fields(observed, "\t")
+        expected = gen.read_many_fields(expected, "\t")
+        self.assertEqual(observed, expected)
+        observed_samples = gen.read_many_fields(observed_samples, "\t")
+        expected_samples = gen.read_many_fields(expected_samples, "\t")
+        self.assertEqual(observed_samples, expected_samples)

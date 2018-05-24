@@ -3,6 +3,8 @@ Authors: Rosina Savisaar and Liam Abrahams.
 Contains more specific functions for operations related the processing of disease data.
 '''
 
+import bed_ops as beo
+import bam_ops as bao
 import generic as gen
 import os
 import random
@@ -173,34 +175,62 @@ def refactor_files(dir, output_dir, filename_prefix, full_mutation_file, limit=N
     print("{0} mutations remain...".format(passed))
 
 
-def process_reads(ptc_file, dir, output_dir):
+def junction_raw_counts_to_bed(file, dir, output_file, output_sample_file):
+    '''
+    Write the exon junction raw counts to a bed file format.
+    files: list of files to process
+    dir: directory containing files with raw counts
+    output_dir: directory to contain the processed files
+    '''
 
+    print("Processing {0}...".format(file))
+    filepath = "{0}/{1}".format(dir, file)
+    # read file
+    file_lines = gen.read_many_fields(filepath, "\t")
+    # get a list of sample barcodes and the lines
+    samples = file_lines[0][1:]
+    lines = file_lines[2:]
+
+    # write the samples to a file
+    with open(output_sample_file, "w") as sample_outfile:
+        sample_outfile.write("{0}\n".format("\t".join(samples)))
+
+    with open(output_file, "w") as outfile:
+        # write each of the lines to a bed like format
+        for line in lines:
+            info = line[0].split(':')
+            chr = info[0]
+            start = info[1]
+            strand = info[2][0]
+            stop = info[3]
+            line_items = [chr, start, stop, ".", strand]
+            line_items.extend(line[1:])
+            outfile.write("{0}\n".format("\t".join(line_items)))
+
+def process_file(files, dir, output_dir, exon_junctions_file):
+    '''
+    Wrapper for processing each raw counts file
+    '''
+    for file in files:
+        file_prefix = "{0}/{1}".format(output_dir, file[:-4])
+        # convert the file to a bed like format
+        file_bed_format = "{0}.bed".format(file_prefix)
+        file_sample_list = "{0}_sample_list.bed".format(file_prefix)
+        junction_raw_counts_to_bed(file, dir, file_bed_format, file_sample_list)
+        # intersect with exon junctions
+        exon_junction_intersect = "{0}_exon_junction_intersect.bed".format(file_prefix)
+        bao.intersect_bed(exon_junctions_file, file_bed_format, output_file=exon_junction_intersect, write_both=True, no_dups = False)
+
+
+def process_counts(dir, output_dir, exon_junctions_file):
+    '''
+    Wrapper for processing reads
+    dir: directory containing files with raw counts
+    output_dir: directory to contain the processed files
+    '''
     gen.create_output_directories(output_dir)
+    # get a list of all the files
     filelist = [file for file in os.listdir(dir) if file != ".DS_Store"]
-
-    # sample_reads = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict()))
-
-    unique_samples = []
-    total_samples = []
-
-    for file in filelist[:1]:
-
-        sample = file.split('.')[0]
-        print(sample)
-
-        filepath = "{0}/{1}".format(dir, file)
-        head = gen.run_process(["head", "-1", filepath])
-
-        cols = head.strip('\n').split('\t')
-        samples = cols[1:]
-
-    #     reads = gen.read_many_fields(filepath, "\t")
-    #     samples = reads[0][1:]
-    #
-        total_samples.extend(samples)
-        for sample in samples:
-            if sample not in unique_samples:
-                unique_samples.append(sample)
-
-    print(len(unique_samples))
-    print(len(total_samples))
+    # run the processing
+    # gen.run_in_parallel(filelist[:1], ["foo", dir, output_dir, exon_junctions_file], process_file)
+    process_file(filelist[:1], dir, output_dir, exon_junctions_file)

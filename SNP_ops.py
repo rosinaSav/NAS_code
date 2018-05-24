@@ -615,6 +615,15 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
                                             snp.insert(12, mutation_type_format)
                                             snp[-1] = "CDS_CODON={0}$SNP_CODON={1}".format(cds_codon, snp_codon)
 
+                                            if(mutation_type == "ptc"):
+                                                snp.insert(14, str(ptc_id_counter))
+                                                ptc_id_counter = ptc_id_counter + 1
+                                                ptc_outputs.write("{0}\n".format("\t".join(snp)))
+                                            else:
+                                                snp.insert(14, str(other_id_counter)) 
+                                                other_id_counter = other_id_counter + 1
+                                                other_outputs.write("{0}\n".format("\t".join(snp)))
+
                                         else:
                                             if ancestral_allele:
                                                 aa = ancestral_allele.group(1)
@@ -623,14 +632,14 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
                                             snp[13] = "CDS_CODON={0}$SNP_CODON={1}$AA={2}".format(cds_codon, snp_codon, aa)
                                             snp[12] = mutation_type
 
-                                        if(mutation_type == "ptc"):
-                                            snp[14] = str(ptc_id_counter)
-                                            ptc_id_counter = ptc_id_counter + 1
-                                            ptc_outputs.write("{0}\n".format("\t".join(snp)))
-                                        else:
-                                            snp[14] = str(other_id_counter)
-                                            other_id_counter = other_id_counter + 1
-                                            other_outputs.write("{0}\n".format("\t".join(snp)))
+                                            if(mutation_type == "ptc"):
+                                                snp[14] = str(ptc_id_counter)
+                                                ptc_id_counter = ptc_id_counter + 1
+                                                ptc_outputs.write("{0}\n".format("\t".join(snp)))
+                                            else:
+                                                snp[14] = str(other_id_counter)
+                                                other_id_counter = other_id_counter + 1
+                                                other_outputs.write("{0}\n".format("\t".join(snp)))
 
 
     if snp_count:

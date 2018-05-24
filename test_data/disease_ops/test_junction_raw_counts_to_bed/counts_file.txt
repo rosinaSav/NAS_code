@@ -1,0 +1,5 @@
+ref	sample1	sample2	sample3
+interval	raw_count	raw_count	raw_count
+chr1:100:+chr1:120:+	30	20	40
+chr1:200:-chr1:220:-	10	20	30
+chr2:400:+chr2:500:+	100	0	3

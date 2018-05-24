@@ -339,6 +339,7 @@ def count_junction_reads(sam, junctions, outfile, read_count):
     '''
     out_dict = {}
     haplotypes = ["0", "1", "N"]
+
     with open(sam) as file:
         for line in file:
             line = line.split("\t")
@@ -354,7 +355,10 @@ def count_junction_reads(sam, junctions, outfile, read_count):
                 haplotype = (line[0].split("|"))[1]
             if chrom in junctions:
                 #get intron position in chromosome coordinates based on the alignment cigar
+
                 putative_junctions = map_intron_from_cigar(cigar, sam_start)
+                print(cigar, sam_start)
+                print(putative_junctions)
                 if putative_junctions:
                     for junction in putative_junctions:
                         #if the 3'end of the exon is in the junctions dict
@@ -671,6 +675,7 @@ def read_exon_junctions(junctions_file):
                     exons = ["{0}.{1}".format(trans, current_exon + (1 * mult_factor))]
                     types = ["skip"]
                 out_dict[chrom][start][end] = {"exon": exons, "type": types}
+
     return(out_dict)
 
 def retrieve_bams_core(all_files, local_directory, host, user, password, ftp_directory, expect_string):
