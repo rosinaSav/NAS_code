@@ -73,8 +73,9 @@ def main():
             so.get_snp_change_status(disease_snps_relative_cds_positions, cds_fasta, disease_ptcs_file, disease_other_file, broad_snps_shift=True)
 
 
+    process_rna_dir = "{0}/processed_reads".format(output_dir)
     if process_reads:
-        do.process_reads(rna_dir)
+        do.process_reads(disease_ptcs_file, rna_dir, output_dir)
 
 
 if __name__ == "__main__":

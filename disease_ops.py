@@ -173,28 +173,34 @@ def refactor_files(dir, output_dir, filename_prefix, full_mutation_file, limit=N
     print("{0} mutations remain...".format(passed))
 
 
-def process_reads(dir):
+def process_reads(ptc_file, dir, output_dir):
 
+    gen.create_output_directories(output_dir)
     filelist = [file for file in os.listdir(dir) if file != ".DS_Store"]
 
-    sample_reads = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict()))
+    # sample_reads = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict()))
 
-    for file in filelist[-1:]:
-        filepath = "{0}/{1}".format(dir, file)
-        reads = gen.read_many_fields(filepath, "\t")
+    unique_samples = []
+    total_samples = []
 
-        samples = reads[0][1:]
+    for file in filelist[:1]:
 
-        for read in reads[2:]:
-            chr = read[0].split(':')[0].strip('chr')
-            start = read[0].split(':')[1]
-            end = read[0].split(':')[3]
-
-            for i, count in enumerate(read[1:]):
-                sample_reads[samples[i]][chr]["{0}:{1}".format(start, end)] = count
-
-    for sample in sample_reads:
+        sample = file.split('.')[0]
         print(sample)
-        # for chr in sample_reads[sample]:
-        #     for interval in sample_reads[sample][chr]:
-        #         print(sample, chr, interval, sample_reads[sample][chr][interval])
+
+        filepath = "{0}/{1}".format(dir, file)
+        head = gen.run_process(["head", "-1", filepath])
+
+        cols = head.strip('\n').split('\t')
+        samples = cols[1:]
+
+    #     reads = gen.read_many_fields(filepath, "\t")
+    #     samples = reads[0][1:]
+    #
+        total_samples.extend(samples)
+        for sample in samples:
+            if sample not in unique_samples:
+                unique_samples.append(sample)
+
+    print(len(unique_samples))
+    print(len(total_samples))
