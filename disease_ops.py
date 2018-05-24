@@ -185,16 +185,13 @@ def process_reads(dir):
 
         samples = reads[0][1:]
 
+        print(len(reads[2:]))
+
         for read in reads[2:]:
+            # print(read)
             chr = read[0].split(':')[0].strip('chr')
             start = read[0].split(':')[1]
             end = read[0].split(':')[3]
 
             for i, count in enumerate(read[1:]):
                 sample_reads[samples[i]][chr]["{0}:{1}".format(start, end)] = count
-
-    for sample in sample_reads:
-        print(sample)
-        # for chr in sample_reads[sample]:
-        #     for interval in sample_reads[sample][chr]:
-        #         print(sample, chr, interval, sample_reads[sample][chr][interval])
