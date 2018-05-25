@@ -33,7 +33,7 @@ def extract_files(data, data_type, url_search=None):
     return file_list
 
 
-def process_filelist(filelist, remote_directory, expect_password, data_type):
+def process_filelist(filelist, remote_directory, expect_password, remote, data_type):
     '''
     Download and process the files to the output directory.
     filelist: the list of files to be downloaded
@@ -62,11 +62,16 @@ def process_filelist(filelist, remote_directory, expect_password, data_type):
             if file != "MANIFEST.txt":
                 filepath = "{0}/{1}".format(extracted_path, file)
                 expect_file = "temp_data/expect_file{0}.txt".format(random.random())
-                expect_string = "#!/usr/bin/expect\nset timeout -1\nspawn rsync {0} {1}\nexpect \"la466@bssv-watson's password:\"\nsend \"{2}\\n\";\nexpect eof\nexit".format(filepath, remote_directory, expect_password)
-                with open(expect_file, "w") as efile:
-                    efile.write(expect_string)
-                gen.run_process(["expect", expect_file])
-                gen.remove_file(expect_file)
+
+                # if remote folders
+                if remote:
+                    expect_string = "#!/usr/bin/expect\nset timeout -1\nspawn rsync {0} {1}\nexpect \"la466@bssv-watson's password:\"\nsend \"{2}\\n\";\nexpect eof\nexit".format(filepath, remote_directory, expect_password)
+                    with open(expect_file, "w") as efile:
+                        efile.write(expect_string)
+                    gen.run_process(["expect", expect_file])
+                    gen.remove_file(expect_file)
+                else:
+                    gen.run_process(["mv", filepath, remote_directory])
         print("Time spent: {0} minutes.\n".format(round((time.time() - start_time)/60), 3))
         shutil.rmtree(temp_dir)
 
@@ -74,9 +79,9 @@ def process_filelist(filelist, remote_directory, expect_password, data_type):
 def main():
 
     description = "Download disease data."
-    arguments = ["remote_mutation_dir", "remote_rna_dir", "json_file", "password_file", "subset"]
-    args = gen.parse_arguments(description, arguments, flags = [])
-    remote_mutation_dir, remote_rna_dir, json_file, password_file, subset = args.remote_mutation_dir, args.remote_rna_dir, args.json_file, args.password_file, args.subset
+    arguments = ["mutation_dir", "rna_dir", "exon_rna_dir", "json_file", "password_file", "subset", "remote", "all_data", "mutations", "exon_junctions", "full_exons"]
+    args = gen.parse_arguments(description, arguments, flags = [6,7,8,9,10])
+    mutation_dir, rna_dir, exon_rna_dir, json_file, password_file, subset, remote, all_data, mutations, exon_junctions, full_exons = args.mutation_dir, args.rna_dir, args.exon_rna_dir, args.json_file, args.password_file, args.subset, args.remote, args.all_data, args.mutations, args.exon_junctions, args.full_exons
 
     #get password for Watson
     with open(password_file) as file:
@@ -93,20 +98,27 @@ def main():
     # extract the required file urls
     print("Getting files...")
     mrna_files = extract_files(data, "mRNASeq", "junction_quantification__data.Level_3")
+    exon_mrna_files = extract_files(data, "mRNASeq", "exon_quantification__data.Level_3")
     mutation_files = extract_files(data, "MAF", "Mutation_Packager_Calls.Level_3")
 
 
     if subset == "all":
         mutation_files = mutation_files
         mrna_files = mrna_files
+        exon_mrna_files = exon_mrna_files
     else:
         mutation_files = mutation_files[:int(subset)]
         mrna_files = mrna_files[:int(subset)]
+        exon_mrna_files = exon_mrna_files[:int(subset)]
 
     # download files
     print("Downloading files...")
-    gen.run_in_parallel(mutation_files, ["foo", remote_mutation_dir, expect_password, "mutation_files"], process_filelist, workers = 1)
-    gen.run_in_parallel(mrna_files, ["foo", remote_rna_dir, expect_password, "mRNASeq"], process_filelist)
+    if mutations or all_data:
+        gen.run_in_parallel(mutation_files, ["foo", mutation_dir, expect_password, remote, "mutation_files"], process_filelist)
+    if exon_junctions or all_data:
+        gen.run_in_parallel(mrna_files, ["foo", rna_dir, expect_password, remote, "mRNASeq"], process_filelist)
+    if full_exons or all_data:
+        gen.run_in_parallel(exon_mrna_files, ["foo", exon_rna_dir, expect_password, remote, "exon mRNASeq"], process_filelist)
 
 
 
