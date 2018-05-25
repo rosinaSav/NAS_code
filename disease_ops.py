@@ -183,7 +183,6 @@ def junction_raw_counts_to_bed(file, dir, output_file, output_sample_file):
     output_dir: directory to contain the processed files
     '''
 
-    print("Processing {0}...".format(file))
     filepath = "{0}/{1}".format(dir, file)
     # read file
     file_lines = gen.read_many_fields(filepath, "\t")
@@ -207,22 +206,83 @@ def junction_raw_counts_to_bed(file, dir, output_file, output_sample_file):
             line_items.extend(line[1:])
             outfile.write("{0}\n".format("\t".join(line_items)))
 
-def process_file(files, dir, output_dir, exon_junctions_file):
+def raw_counts_to_samples(intersect_file, sample_file, output_dir):
+    '''
+    Take a list of samples and write the read counts for each sample
+    to its own file
+    intersect_file: file containing intersect of exon junctions and raw counts
+    sample_file: file containing sample_names
+    output_dir: directory of the output folder
+    '''
+
+    # read in the sample names
+    samples = gen.read_many_fields(sample_file, "\t")[0]
+
+    # create an output directory to hold the samples
+    gen.create_output_directories(output_dir)
+
+    # read in the raw counts
+    raw_counts = gen.read_many_fields(intersect_file, "\t")
+
+    # for each sample
+    for i, sample in enumerate(samples):
+        sample_file = "{0}/{1}.bed".format(output_dir, sample)
+
+        with open(sample_file, "w") as outfile:
+            # for each of the raw counts, create list with raw count and add to file
+            for entry in raw_counts:
+                outlist = entry[:11]
+                outlist.append(entry[11 + i])
+                outfile.write("{0}\n".format("\t".join(outlist)))
+
+
+def get_exon_locations(file):
+
+    entries = gen.read_many_fields(file, "\t")
+    # create dictionaries
+    location_list = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict()))
+
+    for entry in entries:
+        chr = entry[0]
+        t = entry[3].split('.')[0]
+        e = int(entry[3].split('.')[1])
+        start = int(entry[1])
+        stop = int(entry[2])
+        # create all sites in a transcript
+        for i in list(range(start, stop)):
+            location_list[chr][i] = [t, e]
+
+    return location_list
+
+
+
+def process_files(files, dir, output_dir, output_junction_suffix, exon_junctions_file, coding_exons_file):
     '''
     Wrapper for processing each raw counts file
     '''
+
+    location_list = get_exon_locations(coding_exons_file)
+
     for file in files:
+        print("Processing {0}...".format(file))
+        sample = file.split('.')[0]
         file_prefix = "{0}/{1}".format(output_dir, file[:-4])
         # convert the file to a bed like format
         file_bed_format = "{0}.bed".format(file_prefix)
         file_sample_list = "{0}_sample_list.bed".format(file_prefix)
         junction_raw_counts_to_bed(file, dir, file_bed_format, file_sample_list)
-        # intersect with exon junctions
+        # # intersect with exon junctions
         exon_junction_intersect = "{0}_exon_junction_intersect.bed".format(file_prefix)
         bao.intersect_bed(exon_junctions_file, file_bed_format, output_file=exon_junction_intersect, write_both=True, no_dups = False)
 
+        sample_dir = "{0}/{1}".format(output_dir, sample)
+        raw_counts_to_samples(exon_junction_intersect, file_sample_list, sample_dir)
 
-def process_counts(dir, output_dir, exon_junctions_file):
+        read_count = 1000
+        sample_junctions_output_dir = "{0}/{1}_{2}".format(output_dir, sample, output_junction_suffix)
+        count_junction_reads(sample_dir, sample_junctions_output_dir, read_count, location_list)
+
+def process_counts(dir, output_dir, output_junction_suffix, exon_junctions_file, junctions, results_prefix):
     '''
     Wrapper for processing reads
     dir: directory containing files with raw counts
@@ -232,5 +292,78 @@ def process_counts(dir, output_dir, exon_junctions_file):
     # get a list of all the files
     filelist = [file for file in os.listdir(dir) if file != ".DS_Store"]
     # run the processing
-    # gen.run_in_parallel(filelist[:1], ["foo", dir, output_dir, exon_junctions_file], process_file)
-    process_file(filelist[:1], dir, output_dir, exon_junctions_file)
+    coding_exons_file = "{0}_coding_exons.bed".format(results_prefix)
+
+    gen.run_in_parallel(filelist, ["foo", dir, output_dir, output_junction_suffix, exon_junctions_file, coding_exons_file], process_files)
+    # process_files(filelist, dir, output_dir, output_junction_suffix, exon_junctions_file, location_list)
+
+
+def count_junction_reads(sample_dir, output_dir, read_count, location_list):
+    '''
+    Given a sample file and a dictionary of exon-exon junctions, count how many reads overlap each junction.
+    For each exon, count how many reads support its skipping and how many support its inclusion.
+    Multiply the former count by 2.
+    '''
+
+    sex_chr = ["chrX", "chrY"]
+
+    gen.create_output_directories(output_dir)
+
+    out_dict = collections.defaultdict(lambda: collections.defaultdict(lambda: [0,0]))
+
+    samples = os.listdir(sample_dir)
+
+    for sample in samples:
+        filepath = "{0}/{1}".format(sample_dir, sample)
+
+        lines = gen.read_many_fields(filepath, "\t")
+
+        for line in lines:
+            chrom = line[6]
+            start = int(line[7])
+            stop = int(line[8])
+            raw_count = int(line[-1])
+
+            if chrom not in sex_chr:
+                if len(location_list[chrom][start]) and len(location_list[chrom][stop]):
+                    transcript = location_list[chrom][start][0]
+                    exon1 = location_list[chrom][start][1]
+                    exon2 = location_list[chrom][stop][1]
+                    if abs(exon1-exon2) == 1:
+                        out_dict[transcript][exon1][0] += raw_count
+                        out_dict[transcript][exon2][0] += raw_count
+                    else:
+                        # add 1 to the start of the skipped exons to exlucde the first exon
+                        # and get all inbetween
+                        skipped_exons = list(range(min(exon1, exon2)+1, max(exon1, exon2)))
+                        for j in skipped_exons:
+                            out_dict[transcript][j][1] += raw_count
+
+        outfile = "{0}/{1}".format(output_dir, sample)
+        with open(outfile, "w") as file:
+            file.write("exon\tskippedx2\tincluded\ttotal_reads\n")
+            for transcript in sorted(out_dict):
+                for exon in sorted(out_dict[transcript]):
+                    file.write("{0}.{1}\t{2}|0|0\t{3}|0|0\t{4}\n".format(transcript, exon, out_dict[transcript][exon][1]*2, out_dict[transcript][exon][0], read_count))
+
+def check_ptcs(ptc_file, processed_dir, processed_suffix):
+
+    # create a dictionary of the samples and their corresponding files
+    processed_dirs = [dir for dir in os.listdir(processed_dir) if processed_suffix in dir]
+    processed_filelist = {}
+    for dir in processed_dirs:
+        dir = "{0}/{1}".format(processed_dir, dir)
+        filelist = os.listdir(dir)
+        for file in filelist:
+            if file != ".DS_Store":
+                processed_filelist[file.strip('.bed')] = "{0}/{1}".format(dir, file)
+
+
+    ptcs = gen.read_many_fields(ptc_file, "\t")
+
+    for ptc in ptcs:
+        t_barcode = ptc[15]
+        n_barcode = ptc[18]
+
+        if t_barcode in processed_filelist and n_barcode in processed_filelist:
+            print(t_barcode)

@@ -53,3 +53,21 @@ class Test_disease_ops(unittest.TestCase):
         observed_samples = gen.read_many_fields(observed_samples, "\t")
         expected_samples = gen.read_many_fields(expected_samples, "\t")
         self.assertEqual(observed_samples, expected_samples)
+
+    def test_raw_counts_to_samples(self):
+        sample_file = "test_data/disease_ops/test_raw_counts_to_samples/samples.bed"
+        intersect_file = "test_data/disease_ops/test_raw_counts_to_samples/IN.intersect.bed"
+        output_dir = "test_data/disease_ops/test_raw_counts_to_samples/IN"
+        expected1 = "test_data/disease_ops/test_raw_counts_to_samples/expected1.bed"
+        expected2 = "test_data/disease_ops/test_raw_counts_to_samples/expected2.bed"
+        observed1 = "test_data/disease_ops/test_raw_counts_to_samples/IN/observed1.bed"
+        observed2 = "test_data/disease_ops/test_raw_counts_to_samples/IN/observed2.bed"
+        gen.remove_file(observed1)
+        gen.remove_file(observed2)
+        raw_counts_to_samples(intersect_file, sample_file, output_dir)
+        observed1 = gen.read_many_fields(observed1, "\t")
+        observed2 = gen.read_many_fields(observed2, "\t")
+        expected1 = gen.read_many_fields(expected1, "\t")
+        expected2 = gen.read_many_fields(expected2, "\t")
+        self.assertEqual(observed1, expected1)
+        self.assertEqual(observed2, expected2)
