@@ -47,7 +47,7 @@ def main():
         so.intersect_snps_parallel(coding_exons_file, full_mutation_file_zip, intersect_file)
 
     bed_intersect_file = "{0}/mutations_coding_exons_intersect.bed".format(output_dir)
-    if convert_intersect or snp_ops or clean_run or not os.path.isfile(bed_intersect_file):
+    if convert_intersect or snp_ops or clean_run:
         print("Converting intersect file to bed format...")
         so.intersect_vcf_to_bed(coding_exons_file, intersect_file, bed_intersect_file, change_names = True)
 
@@ -55,7 +55,7 @@ def main():
     full_bed = "{0}_CDS.bed".format(results_prefix)
     disease_snps_relative_exon_positions = "{0}/disease_snp_relative_exon_positions.bed".format(output_dir)
     disease_snps_relative_cds_positions = "{0}/disease_snp_relative_cds_positions.bed".format(output_dir)
-    if get_relative_positions or snp_ops or clean_run or not os.path.isfile(disease_snps_relative_exon_positions) or not os.path.isfile(disease_snps_relative_cds_positions):
+    if get_relative_positions or snp_ops or clean_run:
         print("Getting snp relative positions...")
         so.get_snp_relative_exon_position(bed_intersect_file, disease_snps_relative_exon_positions, broad_snps_shift=True)
         # output to var because this is how the function was made
@@ -66,13 +66,13 @@ def main():
     cds_fasta = "{0}_CDS.fasta".format(results_prefix)
     disease_ptcs_file = "{0}/disease_ptcs.txt".format(output_dir)
     disease_other_file = "{0}/disease_other_snps.txt".format(output_dir)
-    if get_snp_status or snp_ops or clean_run or not os.path.isfile(disease_ptcs_file) or not os.path.isfile(disease_other_file):
+    if get_snp_status or snp_ops or clean_run:
         print("Getting snp status...")
         so.get_snp_change_status(disease_snps_relative_cds_positions, cds_fasta, disease_ptcs_file, disease_other_file, broad_snps_shift=True)
 
     exon_junctions_file = "{0}_exon_junctions.bed".format(results_prefix)
     ptc_exon_junctions_file = "{0}/ptc_filtered_exon_junctions.bed".format(output_dir)
-    if filter_junctions or clean_run or not os.path.isfile(ptc_exon_junctions_file):
+    if filter_junctions or clean_run:
         #filter the exon junctions file to only leave those junctions that flank exons retained in the previous step.
         print("Filtering exon-exon junctions to only leave those that flank exons with a PTC variant...")
         beo.filter_exon_junctions(exon_junctions_file, disease_ptcs_file, ptc_exon_junctions_file)
