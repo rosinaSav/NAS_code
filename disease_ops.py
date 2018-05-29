@@ -370,11 +370,46 @@ def check_ptcs(ptc_file, processed_dir, processed_suffix):
 
 
 
-def process_raw_reads(input_dir, output_dir):
+def process_raw_reads(input_dir, output_file):
 
     # get list of files
     filelist = [file for file in os.listdir(input_dir) if file != '.DS_Store']
 
+    temp_filelist = []
+
     for i, file in enumerate(filelist):
         if file.startswith('CHOL'):
-            print(file)
+
+            samples_raw_counts = collections.defaultdict(lambda: 0)
+
+            filepath = "{0}/{1}".format(input_dir, file)
+            with open(filepath) as infile:
+                lines = infile.readlines()
+
+                samples_list = lines[0].split('\t')[1:][::3]
+                info_list = lines[1].split('\t')[1:][::3]
+
+                for line in lines[2:]:
+                    raw_counts = line.split('\t')[1:][::3]
+                    for j, count in enumerate(raw_counts):
+                        samples_raw_counts[samples_list[j]] += int(count)
+
+            temp_file = "temp_data/{0}".format(random.random())
+            with open(temp_file, "w") as temp:
+                for sample in samples_raw_counts:
+                    temp.write("{0}\t{1}\n".format(sample, samples_raw_counts[sample]))
+            temp_filelist.append(temp_file)
+
+    # now write all raw counts to one file
+    all_samples = collections.defaultdict(lambda: 0)
+    with open(output_file, "w") as outfile:
+        for file in temp_filelist:
+            counts = gen.read_many_fields(file, "\t")
+            for sample in counts:
+                all_samples[sample[0]] += int(sample[1])
+
+        for sample in all_samples:
+            outfile.write("{0}\t{1}\n".format(sample, all_samples[sample]))
+
+    for file in temp_filelist:
+        gen.remove_file(file)

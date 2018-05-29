@@ -79,9 +79,9 @@ def main():
 
     # junctions = bao.read_exon_junctions(ptc_exon_junctions_file)
 
-    exon_reads_output_dir = "{0}/processed_exon_reads".format(output_dir)
+    exon_reads_file = "{0}/processed_exon_raw_read_counts.txt".format(output_dir)
     if process_exon_reads:
-        do.process_raw_reads(exon_reads_dir, exon_reads_output_dir)
+        do.process_raw_reads(exon_reads_dir, exon_reads_file)
 
     processed_rna_dir = "{0}/processed_reads".format(output_dir)
     processed_junction_suffix = "processed_junctions"
