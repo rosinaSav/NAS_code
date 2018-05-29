@@ -378,27 +378,25 @@ def process_raw_reads(input_dir, output_file):
     temp_filelist = []
 
     for i, file in enumerate(filelist):
-        if file.startswith('CHOL'):
+        samples_raw_counts = collections.defaultdict(lambda: 0)
 
-            samples_raw_counts = collections.defaultdict(lambda: 0)
+        filepath = "{0}/{1}".format(input_dir, file)
+        with open(filepath) as infile:
+            lines = infile.readlines()
 
-            filepath = "{0}/{1}".format(input_dir, file)
-            with open(filepath) as infile:
-                lines = infile.readlines()
+            samples_list = lines[0].split('\t')[1:][::3]
+            info_list = lines[1].split('\t')[1:][::3]
 
-                samples_list = lines[0].split('\t')[1:][::3]
-                info_list = lines[1].split('\t')[1:][::3]
+            for line in lines[2:]:
+                raw_counts = line.split('\t')[1:][::3]
+                for j, count in enumerate(raw_counts):
+                    samples_raw_counts[samples_list[j]] += int(count)
 
-                for line in lines[2:]:
-                    raw_counts = line.split('\t')[1:][::3]
-                    for j, count in enumerate(raw_counts):
-                        samples_raw_counts[samples_list[j]] += int(count)
-
-            temp_file = "temp_data/{0}".format(random.random())
-            with open(temp_file, "w") as temp:
-                for sample in samples_raw_counts:
-                    temp.write("{0}\t{1}\n".format(sample, samples_raw_counts[sample]))
-            temp_filelist.append(temp_file)
+        temp_file = "temp_data/{0}".format(random.random())
+        with open(temp_file, "w") as temp:
+            for sample in samples_raw_counts:
+                temp.write("{0}\t{1}\n".format(sample, samples_raw_counts[sample]))
+        temp_filelist.append(temp_file)
 
     # now write all raw counts to one file
     all_samples = collections.defaultdict(lambda: 0)
