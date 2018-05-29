@@ -378,6 +378,7 @@ def process_raw_reads(input_dir, output_file):
     temp_filelist = []
 
     for i, file in enumerate(filelist):
+        print('Processing {0}/{1}: {2}...'.format(i, len(filelist), file))
         samples_raw_counts = collections.defaultdict(lambda: 0)
 
         filepath = "{0}/{1}".format(input_dir, file)
