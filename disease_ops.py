@@ -294,8 +294,8 @@ def process_counts(dir, output_dir, output_junction_suffix, exon_junctions_file,
     # run the processing
     coding_exons_file = "{0}_coding_exons.bed".format(results_prefix)
 
-    gen.run_in_parallel(filelist, ["foo", dir, output_dir, output_junction_suffix, exon_junctions_file, coding_exons_file], process_files)
-    # process_files(filelist, dir, output_dir, output_junction_suffix, exon_junctions_file, location_list)
+    # gen.run_in_parallel(filelist, ["foo", dir, output_dir, output_junction_suffix, exon_junctions_file, coding_exons_file], process_files)
+    process_files(filelist, dir, output_dir, output_junction_suffix, exon_junctions_file, coding_exons_file)
 
 
 def count_junction_reads(sample_dir, output_dir, read_count, location_list):
@@ -367,3 +367,14 @@ def check_ptcs(ptc_file, processed_dir, processed_suffix):
 
         if t_barcode in processed_filelist and n_barcode in processed_filelist:
             print(t_barcode)
+
+
+
+def process_raw_reads(input_dir, output_dir):
+
+    # get list of files
+    filelist = [file for file in os.listdir(input_dir) if file != '.DS_Store']
+
+    for i, file in enumerate(filelist):
+        if file.startswith('CHOL'):
+            print(file)

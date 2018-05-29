@@ -18,8 +18,8 @@ import shutil
 def main():
 
     description = "Analysis of disease mutations from firehose broad."
-    args = gen.parse_arguments(description,  ["output_dir", "mutations_dir", "rna_dir", "results_prefix", "subset", "subset_no", "clean_run", "snp_ops", "process_mutations", "intersect_mutations", "convert_intersect", "get_relative_positions", "get_snp_status", "filter_junctions", "process_reads", "check_ptcs"], flags = [4,6,7,8,9,10,11,12,13,14,15], ints = [5])
-    output_dir, mutations_dir, rna_dir, results_prefix, subset, subset_no, clean_run, snp_ops, process_mutations, intersect_mutations, convert_intersect, get_relative_positions, get_snp_status, filter_junctions, process_reads, check_ptcs = args.output_dir, args.mutations_dir, args.rna_dir, args.results_prefix, args.subset, args.subset_no, args.clean_run, args.snp_ops, args.process_mutations, args.intersect_mutations, args.convert_intersect, args.get_relative_positions, args.get_snp_status, args.filter_junctions, args.process_reads, args.check_ptcs
+    args = gen.parse_arguments(description,  ["output_dir", "mutations_dir", "rna_dir", "exon_reads_dir", "results_prefix", "subset", "subset_no", "clean_run", "snp_ops", "process_mutations", "intersect_mutations", "convert_intersect", "get_relative_positions", "get_snp_status", "filter_junctions", "process_exon_reads", "process_reads", "check_ptcs"], flags = [5,7,8,9,10,11,12,13,14,15,16,17], ints = [6])
+    output_dir, mutations_dir, rna_dir, exon_reads_dir, results_prefix, subset, subset_no, clean_run, snp_ops, process_mutations, intersect_mutations, convert_intersect, get_relative_positions, get_snp_status, filter_junctions, process_exon_reads, process_reads, check_ptcs = args.output_dir, args.mutations_dir, args.rna_dir, args.exon_reads_dir, args.results_prefix, args.subset, args.subset_no, args.clean_run, args.snp_ops, args.process_mutations, args.intersect_mutations, args.convert_intersect, args.get_relative_positions, args.get_snp_status, args.filter_junctions, args.process_exon_reads, args.process_reads, args.check_ptcs
 
     start = time.time()
     gen.create_directory('temp_data/')
@@ -77,7 +77,11 @@ def main():
         print("Filtering exon-exon junctions to only leave those that flank exons with a PTC variant...")
         beo.filter_exon_junctions(exon_junctions_file, disease_ptcs_file, ptc_exon_junctions_file)
 
-    junctions = bao.read_exon_junctions(ptc_exon_junctions_file)
+    # junctions = bao.read_exon_junctions(ptc_exon_junctions_file)
+
+    exon_reads_output_dir = "{0}/processed_exon_reads".format(output_dir)
+    if process_exon_reads:
+        do.process_raw_reads(exon_reads_dir, exon_reads_output_dir)
 
     processed_rna_dir = "{0}/processed_reads".format(output_dir)
     processed_junction_suffix = "processed_junctions"
