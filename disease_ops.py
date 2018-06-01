@@ -255,11 +255,21 @@ def get_exon_locations(file):
     return location_list
 
 
+def get_full_raw_counts(file):
 
-def process_files(files, dir, output_dir, output_junction_suffix, exon_junctions_file, coding_exons_file):
+    raw_counts = {}
+    counts = gen.read_many_fields(file, "\t")
+    for sample in counts:
+        raw_counts[sample[0]] = int(sample[1])
+    return(raw_counts)
+
+
+def process_files(files, dir, output_dir, output_junction_suffix, exon_junctions_file, coding_exons_file, exon_counts_file):
     '''
     Wrapper for processing each raw counts file
     '''
+
+    raw_counts = get_full_raw_counts(exon_counts_file)
 
     location_list = get_exon_locations(coding_exons_file)
 
@@ -278,11 +288,10 @@ def process_files(files, dir, output_dir, output_junction_suffix, exon_junctions
         sample_dir = "{0}/{1}".format(output_dir, sample)
         raw_counts_to_samples(exon_junction_intersect, file_sample_list, sample_dir)
 
-        read_count = 1000
         sample_junctions_output_dir = "{0}/{1}_{2}".format(output_dir, sample, output_junction_suffix)
-        count_junction_reads(sample_dir, sample_junctions_output_dir, read_count, location_list)
+        count_junction_reads(sample_dir, sample_junctions_output_dir, raw_counts, location_list)
 
-def process_counts(dir, output_dir, output_junction_suffix, exon_junctions_file, junctions, results_prefix):
+def process_counts(dir, output_dir, output_junction_suffix, exon_junctions_file, results_prefix, exon_counts_file):
     '''
     Wrapper for processing reads
     dir: directory containing files with raw counts
@@ -295,10 +304,10 @@ def process_counts(dir, output_dir, output_junction_suffix, exon_junctions_file,
     coding_exons_file = "{0}_coding_exons.bed".format(results_prefix)
 
     # gen.run_in_parallel(filelist, ["foo", dir, output_dir, output_junction_suffix, exon_junctions_file, coding_exons_file], process_files)
-    process_files(filelist, dir, output_dir, output_junction_suffix, exon_junctions_file, coding_exons_file)
+    process_files(filelist, dir, output_dir, output_junction_suffix, exon_junctions_file, coding_exons_file, exon_counts_file)
 
 
-def count_junction_reads(sample_dir, output_dir, read_count, location_list):
+def count_junction_reads(sample_dir, output_dir, full_counts, location_list):
     '''
     Given a sample file and a dictionary of exon-exon junctions, count how many reads overlap each junction.
     For each exon, count how many reads support its skipping and how many support its inclusion.
@@ -314,8 +323,8 @@ def count_junction_reads(sample_dir, output_dir, read_count, location_list):
     samples = os.listdir(sample_dir)
 
     for sample in samples:
+        sample_name = sample[:-4]
         filepath = "{0}/{1}".format(sample_dir, sample)
-
         lines = gen.read_many_fields(filepath, "\t")
 
         for line in lines:
@@ -344,7 +353,7 @@ def count_junction_reads(sample_dir, output_dir, read_count, location_list):
             file.write("exon\tskippedx2\tincluded\ttotal_reads\n")
             for transcript in sorted(out_dict):
                 for exon in sorted(out_dict[transcript]):
-                    file.write("{0}.{1}\t{2}|0|0\t{3}|0|0\t{4}\n".format(transcript, exon, out_dict[transcript][exon][1]*2, out_dict[transcript][exon][0], read_count))
+                    file.write("{0}.{1}\t{2}|0|0\t{3}|0|0\t{4}\n".format(transcript, exon, out_dict[transcript][exon][1]*2, out_dict[transcript][exon][0], full_counts[sample_name]))
 
 
 
@@ -383,16 +392,64 @@ def check_ptcs(ptc_file, processed_dir, processed_suffix):
             t_samples = gen.read_many_fields(t_sample_file, "\t")
 
 
+<<<<<<< HEAD
             for sample in t_samples:
                 sample_transcript = sample[0].split('.')[0]
                 if transcript == sample_transcript:
                     incl_count = int(sample[2].split('|')[0])
                     skip_count = int(sample[1].split('|')[0])
+=======
+def process_raw_counts(input_dir, output_file):
+    '''
+    Process the raw counts for all exons for each sample.
+    input_dir: the directory containing the raw count files.
+    '''
+>>>>>>> 5b2ee73730f001f8748a2ab82b4ef5904724f0ef
 
                     if incl_count != 0 and skip_count != 0:
                         print(ptc)
                         print(sample)
 
+<<<<<<< HEAD
                     # for n_sample in n_samples:
                     #     if n_sample[0] == exon:
                     #         print(sample, n_sample)
+=======
+    temp_filelist = []
+
+    for i, file in enumerate(filelist):
+        print('Processing {0}/{1}: {2}...'.format(i, len(filelist), file))
+        samples_raw_counts = collections.defaultdict(lambda: 0)
+
+        filepath = "{0}/{1}".format(input_dir, file)
+        with open(filepath) as infile:
+            lines = infile.readlines()
+
+            samples_list = lines[0].split('\t')[1:][::3]
+            info_list = lines[1].split('\t')[1:][::3]
+
+            for line in lines[2:]:
+                raw_counts = line.split('\t')[1:][::3]
+                for j, count in enumerate(raw_counts):
+                    samples_raw_counts[samples_list[j]] += int(count)
+
+        temp_file = "temp_data/{0}".format(random.random())
+        with open(temp_file, "w") as temp:
+            for sample in samples_raw_counts:
+                temp.write("{0}\t{1}\n".format(sample, samples_raw_counts[sample]))
+        temp_filelist.append(temp_file)
+
+    # now write all raw counts to one file
+    all_samples = collections.defaultdict(lambda: 0)
+    with open(output_file, "w") as outfile:
+        for file in temp_filelist:
+            counts = gen.read_many_fields(file, "\t")
+            for sample in counts:
+                all_samples[sample[0]] += int(sample[1])
+
+        for sample in all_samples:
+            outfile.write("{0}\t{1}\n".format(sample, all_samples[sample]))
+
+    for file in temp_filelist:
+        gen.remove_file(file)
+>>>>>>> 5b2ee73730f001f8748a2ab82b4ef5904724f0ef
