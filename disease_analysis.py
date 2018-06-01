@@ -88,7 +88,6 @@ def main():
     if process_reads:
         do.process_counts(rna_dir, processed_rna_dir, processed_junction_suffix, exon_junctions_file, junctions, results_prefix)
 
-
     if check_ptcs:
         do.check_ptcs(disease_ptcs_file, processed_rna_dir, processed_junction_suffix)
 

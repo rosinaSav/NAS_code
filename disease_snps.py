@@ -7,237 +7,28 @@ import generic as gen
 import bed_ops as beo
 import bam_ops as bao
 import SNP_ops as so
+import disease_snps_ops as dso
 import os
 import collections
 import re
 import copy
 import numpy as np
 
-def get_ptc_overlaps(disease_ptc_file, ptc_file, output_file):
-    '''
-    Get the overlap between disease ptc file and 1000 genomes ptcs
-    '''
-
-    disease_ptcs = gen.read_many_fields(disease_ptc_file, "\t")
-    ptcs = gen.read_many_fields(ptc_file, "\t")
-
-    disease_ptc_list = {}
-    for ptc in disease_ptcs[1:]:
-        ptc_info = EntryInfo(ptc)
-        disease_ptc_list[ptc_info.snp_pos] = ptc
-
-    ptc_list = {}
-    for ptc in ptcs[1:]:
-        ptc_list[int(ptc[7])] = ptc
-
-    with open(output_file, "w") as outfile:
-        for ptc_pos in ptc_list:
-            if ptc_pos in disease_ptc_list:
-                outfile.write('{0}\t**\t{1}\n'.format("\t".join(ptc_list[ptc_pos]), "\t".join(disease_ptc_list[ptc_pos])))
-
-
-
-
-
-def ptc_location_simulation(snp_file, full_bed, cds_fasta, output_directory, required_simulations, coding_exons_file):
-    '''
-    Simulate the snp location.
-    For each snp, pick another site that has the same reference allele and that would generate a ptc with the mutated allele.
-    Repeat n times.
-    '''
-
-    # return all the possible_locations
-    possible_locations = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: [])))
-    nts = ["A", "C", "G", "T"]
-    for nt in nts:
-        location_file = "{0}/possible_ptc_locations_{1}.fasta".format(output_directory, nt)
-        entry_names, entry_locations = gen.read_fasta(location_file)
-        for i, name in enumerate(entry_names):
-            exon = name.split(':')[0]
-            aa = name.split(':')[1][0]
-            ma = name.split(':')[1][-1]
-            possible_locations[exon][aa][ma].append(entry_locations[i])
-
-    exons = gen.read_many_fields(coding_exons_file, "\t")
-    exon_list = {}
-    for exon in exons:
-        exon_list[exon[3]] = int(exon[2]) - int(exon[1])
-
-    # create a list of required simulations
-    simulations = list(range(1, int(required_simulations) + 1))
-    run_location_simulations(simulations, snp_file, possible_locations, exon_list, output_directory)
-
-def run_location_simulations(simulations, snp_file, possible_locations, exon_list, output_directory):
-    for simulation in simulations:
-        print('{0}/{1}...'.format(simulation, len(simulations)))
-        output_file = "{0}/disease_location_simulation_{1}.bed".format(output_directory, simulation)
-        generate_pseudo_snps(snp_file, possible_locations, exon_list, output_file)
-
-
-def generate_pseudo_snps(snp_file, possible_locations, exon_list, output_file):
-    snps = gen.read_many_fields(snp_file, "\t")
-
-    with open(output_file, "w") as outfile:
-        np.random.seed()
-        for snp in snps[1:]:
-            snp_info = EntryInfo(snp)
-            if len(possible_locations[snp_info.transcript_id][snp_info.aa][snp_info.ma]):
-                possible_ptcs = possible_locations[snp_info.transcript_id][snp_info.aa][snp_info.ma][0].split(',')
-                choices = list(range(len(possible_ptcs)))
-                choice = np.random.choice(choices)
-                pseudo_ptc_choice = possible_ptcs[choice]
-                exon_index = int(re.findall('\d+', pseudo_ptc_choice.split(':')[0])[0])
-                cds_index = re.findall('\d+', pseudo_ptc_choice.split(':')[1])[0]
-                exon_number = re.findall('\d+', pseudo_ptc_choice.split(':')[2])[0]
-
-                id = "{0}.{1}".format(snp_info.transcript_id, exon_number)
-                exon_length = exon_list[id]
-                min_dist = min(exon_index, int(exon_length) - int(exon_index))
-
-                snp.extend([id, "{0}".format(exon_index), "{0}".format(cds_index), str(min_dist)])
-                outfile.write("{0}\n".format("\t".join(snp)))
-
-
-def generate_possible_ptc_locations(full_bed, cds_fasta, output_directory):
-
-    stop_bases = ["A", "G", "T"]    # a mutation to c cant generate a stop so its not included
-    stop_codons = ["TAA", "TAG", "TGA"]
-
-    # get the list of coding sequnces
-    cds_names, cds_seqs = gen.read_fasta(cds_fasta)
-    cds_list = {}
-    for i, name in enumerate(cds_names):
-        cds_list[name] = cds_seqs[i]
-
-    # get all the indicies of mutable positions in the cds that could generate an in frame stop
-    mutation_index_list = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: [])))
-    for x, name in enumerate(cds_list):
-        seq = cds_list[name]
-        inframe_codons = re.findall('.{3}', seq[:-3])
-        for i, codon in enumerate(inframe_codons):
-            nts = list(codon)
-            for j, nt in enumerate(nts):
-                for mut in stop_bases:
-                    if mut != nt:                       # we dont need 'mutations' that are the same as the ref base
-                        mut_nts = copy.deepcopy(nts)
-                        mut_nts[j] = mut
-                        mut_codon = "".join(mut_nts)
-                        if mut_codon in stop_codons:
-                            mut_index = (i*3) + j
-                            mutation_index_list[name][nt][mut].append(mut_index)
-
-    # now also get the exon lengths
-    exons = gen.read_many_fields(full_bed, "\t")
-    exon_list_lengths = collections.defaultdict(lambda: collections.defaultdict())
-    for exon in exons:
-        start = int(exon[1])
-        stop = int(exon[2])
-        transcript_id = exon[3].split('.')[0]
-        exon_id = int(exon[3].split('.')[1])
-        type = exon[4]
-        if type == "CDS":
-            exon_list_lengths[transcript_id][exon_id] = stop-start
-
-    # get all the possible cds indicies but grouped into exons
-    exon_list_indices = collections.defaultdict(lambda: collections.defaultdict())
-    for transcript in exon_list_lengths:
-        current_end = 0
-        current_start = 0
-        for i, exon in enumerate(sorted(exon_list_lengths[transcript])):
-            # get the length of the exon, add to the current length
-            exon_length = exon_list_lengths[transcript][exon]
-            current_end += exon_length
-            # generate the indicies for that exon
-            indices = list(range(current_start, current_end))
-            exon_list_indices[transcript][exon] = [indices, current_start]
-            # now move the start
-            current_start += exon_length
-
-    mutation_matched_indices = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: [])))
-    # for each of the possible ptc generating mutations
-    for transcript in mutation_index_list:
-        for ra in mutation_index_list[transcript]:
-            for ma in mutation_index_list[transcript][ra]:
-                # get the list of cds indices
-                cds_index_list = mutation_index_list[transcript][ra][ma]
-                for cds_index in cds_index_list:
-                    for exon in exon_list_indices[transcript]:
-                        if cds_index in exon_list_indices[transcript][exon][0]:
-                            start_index = exon_list_indices[transcript][exon][1]
-                            mutation_matched_indices[transcript][ra][ma].append("eidx{0}:cidx{1}:eid{2}".format(cds_index-start_index, cds_index, exon))
-
-    nts = ["A", "C", "G", "T"]
-    possible_mutation_files = {}
-    for nt in nts:
-        output_file = "{0}/possible_ptc_locations_{1}.fasta".format(output_directory, nt)
-        with open(output_file, "w") as outfile:
-            for transcript in mutation_matched_indices:
-                for ma in sorted(mutation_matched_indices[transcript][nt]):
-                    outfile.write(">{0}:{1}-{2}\n".format(transcript, nt, ma))
-                    outfile.write("{0}\n".format(",".join(mutation_matched_indices[transcript][nt][ma])))
-
-
-class EntryInfo(object):
-    def __init__(self, entry):
-        self.chr = entry[0]
-        self.exon_start = int(entry[1])
-        self.exon_stop = int(entry[2])
-        self.transcript_id = entry[3].split('.')[0]
-        self.exon_id = int(entry[3].split('.')[1])
-        self.strand = entry[5]
-        self.snp_pos = int(entry[7])
-        self.snp_id = int(entry[8])
-        self.aa = entry[9]
-        self.ma = entry[10]
-        self.rel_pos = int(entry[11])
-        self.type = entry[12]
-        self.given_id = entry[-1]
-
-def get_exon_list(file):
-    exons = gen.read_many_fields(file, "\t")
-    exon_list = {}
-    for exon in exons:
-        exon_info = EntryInfo(exon)
-        exon_list[exon_info.snp_id] = exon
-    return(exon_list)
-
-def get_ptc_info(ptc_file, relative_exon_positions_file, output_file):
-    '''
-    Get basic info about the location of snp.
-    '''
-    exon_list = get_exon_list(relative_exon_positions_file)
-
-    ptcs = gen.read_many_fields(ptc_file, "\t")
-    with open(output_file, "w") as outfile:
-        header_list = ["ptc_id", "transcript_id", "exon_id", "aa", "ma", "exon_length", "5_dist", "3_dist", "min_dist"]
-        outfile.write("{0}\n".format(",".join(header_list)))
-        for ptc in ptcs:
-            ptc_info = EntryInfo(ptc)
-            ptc = EntryInfo(exon_list[ptc_info.snp_id])
-            # check the type
-            if ptc_info.type != ".":
-                exon_length = ptc.exon_stop - ptc.exon_start
-                three_prime_dist = exon_length - ptc.rel_pos
-                output_list = gen.stringify([ptc_info.given_id, ptc.transcript_id, ptc.exon_id, ptc.aa, ptc.ma, exon_length, ptc.rel_pos, three_prime_dist, min(ptc.rel_pos, three_prime_dist)])
-                outfile.write("{0}\n".format(",".join(output_list)))
-
 def main():
 
     description = "Look at disease snps."
-    arguments = ["intersect_snps", "get_relative_positions", "get_snp_status", "get_info", "simulate_ptc_location", "get_possible_ptc_locations", "required_simulations", "get_overlaps"]
-    args = gen.parse_arguments(description, arguments, flags = [0,1,2,3,4,5,7])
-    intersect_snps, get_relative_positions, get_snp_status, get_info, simulate_ptc_location, get_possible_ptc_locations, required_simulations, get_overlaps = args.intersect_snps, args.get_relative_positions, args.get_snp_status, args.get_info, args.simulate_ptc_location, args.get_possible_ptc_locations, args.required_simulations, args.get_overlaps
+    arguments = ["disease_snps_file", "output_directory", "results_prefix", "intersect_snps", "get_relative_positions", "get_snp_status", "get_info", "simulate_ptc_location", "get_possible_ptc_locations", "required_simulations", "get_overlaps"]
+    args = gen.parse_arguments(description, arguments, flags = [3,4,5,6,7,8,9,10])
+    disease_snps_file, output_directory, results_prefix, intersect_snps, get_relative_positions, get_snp_status, get_info, simulate_ptc_location, get_possible_ptc_locations, required_simulations, get_overlaps = args.disease_snps_file, args.output_directory, args.results_prefix, args.intersect_snps, args.get_relative_positions, args.get_snp_status, args.get_info, args.simulate_ptc_location, args.get_possible_ptc_locations, args.required_simulations, args.get_overlaps
 
-    results_prefix = "./results/clean_run_2/clean_run"
-
-    output_directory = "results/disease_snps"
+    # create the output directory if it doesnt already exist
     gen.create_output_directories(output_directory)
 
-    disease_snps_file = "./source_data/clinvar_20180429.vcf.gz"
+    # disease_snps_file = "./source_data/clinvar_20180429.vcf.gz"
     disease_snps_index_file = "{0}.tbi".format(disease_snps_file)
 
     if not os.path.isfile(disease_snps_file) or not os.path.isfile(disease_snps_index_file):
-        print("\nERROR: Please provide the required disease SNPs files.\n")
+        print("\nERROR: Please provide the required disease SNPs file(s).\n")
         raise Exception
 
     # intersect the coding exons with the disease snps
@@ -246,7 +37,7 @@ def main():
     disease_snp_intersect_file_bed = "{0}/disease_snp_intersect.bed".format(output_directory)
     if intersect_snps or not os.path.isfile(disease_snp_intersect_file_vcf) or not os.path.isfile(disease_snp_intersect_file_bed):
         print("Intersecting snps with exons")
-        # so.intersect_snps_parallel(exon_bed, disease_snps_file, disease_snp_intersect_file_vcf)
+        so.intersect_snps_parallel(exon_bed, disease_snps_file, disease_snp_intersect_file_vcf)
         so.intersect_vcf_to_bed(exon_bed, disease_snp_intersect_file_vcf, disease_snp_intersect_file_bed, change_names = True)
 
     # get relative positions of the snps in cds and exons
@@ -273,8 +64,8 @@ def main():
     output_file_other_info = "{0}/disease__analysis_other_info.txt".format(output_directory)
     if get_info:
         print("Getting PTC information...")
-        get_ptc_info(disease_ptcs_file, disease_snps_relative_exon_positions, output_file_ptc_info)
-        get_ptc_info(disease_other_file, disease_snps_relative_exon_positions, output_file_other_info)
+        dso.get_ptc_info(disease_ptcs_file, disease_snps_relative_exon_positions, output_file_ptc_info)
+        dso.get_ptc_info(disease_other_file, disease_snps_relative_exon_positions, output_file_other_info)
 
     # simulation to see if disease ptcs occur at exon ends more conmonly than by chance
     location_simulation_output_directory = "{0}/ptc_location_simulation".format(output_directory)
@@ -287,14 +78,14 @@ def main():
 
         if get_possible_ptc_locations:
             print("Getting possible PTC mutation locations...")
-            generate_possible_ptc_locations(full_bed, cds_fasta, location_simulation_output_directory)
-        ptc_location_simulation(disease_ptcs_file, full_bed, cds_fasta, location_simulation_output_directory, required_simulations, coding_exons_file)
+            dso.generate_possible_ptc_locations(full_bed, cds_fasta, location_simulation_output_directory)
+        dso.ptc_location_simulation(disease_ptcs_file, full_bed, cds_fasta, location_simulation_output_directory, required_simulations, coding_exons_file)
 
     ptc_file = "{0}_ptc_file.txt".format(results_prefix)
     overlap_file = "{0}/disease__analysis_overlaps.txt".format(output_directory)
     if get_overlaps:
         print("Getting overlap between disease PTCs and 1000 genomes PTCs...")
-        get_ptc_overlaps(disease_ptcs_file, ptc_file, overlap_file)
+        dso.get_ptc_overlaps(disease_ptcs_file, ptc_file, overlap_file)
 
 
 

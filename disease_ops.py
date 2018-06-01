@@ -346,6 +346,9 @@ def count_junction_reads(sample_dir, output_dir, read_count, location_list):
                 for exon in sorted(out_dict[transcript]):
                     file.write("{0}.{1}\t{2}|0|0\t{3}|0|0\t{4}\n".format(transcript, exon, out_dict[transcript][exon][1]*2, out_dict[transcript][exon][0], read_count))
 
+
+
+
 def check_ptcs(ptc_file, processed_dir, processed_suffix):
 
     # create a dictionary of the samples and their corresponding files
@@ -356,25 +359,40 @@ def check_ptcs(ptc_file, processed_dir, processed_suffix):
         filelist = os.listdir(dir)
         for file in filelist:
             if file != ".DS_Store":
-                processed_filelist[file.strip('.bed')] = "{0}/{1}".format(dir, file)
+                processed_filelist[file.strip('.bed')[:15]] = "{0}/{1}".format(dir, file)
 
 
     ptcs = gen.read_many_fields(ptc_file, "\t")
 
+    ptcs_with_samples = []
+
     for ptc in ptcs:
-        t_barcode = ptc[15]
-        n_barcode = ptc[18]
+        t_sample = ptc[15][:15]
 
-        if t_barcode in processed_filelist and n_barcode in processed_filelist:
-            print(t_barcode)
+        if t_sample in processed_filelist:
+            ptcs_with_samples.append(ptc)
+
+    for i, ptc in enumerate(ptcs_with_samples):
+
+        if i:
+            transcript = ptc[3].split('.')[0]
+            t_sample = ptc[15][:15]
+            n_sample = ptc[18][:15]
+
+            t_sample_file = processed_filelist[t_sample]
+            t_samples = gen.read_many_fields(t_sample_file, "\t")
 
 
+            for sample in t_samples:
+                sample_transcript = sample[0].split('.')[0]
+                if transcript == sample_transcript:
+                    incl_count = int(sample[2].split('|')[0])
+                    skip_count = int(sample[1].split('|')[0])
 
-def process_raw_reads(input_dir, output_dir):
+                    if incl_count != 0 and skip_count != 0:
+                        print(ptc)
+                        print(sample)
 
-    # get list of files
-    filelist = [file for file in os.listdir(input_dir) if file != '.DS_Store']
-
-    for i, file in enumerate(filelist):
-        if file.startswith('CHOL'):
-            print(file)
+                    # for n_sample in n_samples:
+                    #     if n_sample[0] == exon:
+                    #         print(sample, n_sample)

@@ -315,7 +315,7 @@ def get_codon_start(variant_pos, seq_len, shift = False):
             return("error")
         return(codon_start)
 
-def get_snp_relative_cds_position(snp_exon_relative_positions, snp_cds_position_output, full_bed, broad_snps_shift=True):
+def get_snp_relative_cds_position(snp_exon_relative_positions, snp_cds_position_output, full_bed, broad_snps_shift=None):
     '''
     Get the position of the snp within a CDS using the relative positions of snps in the features they are found
     '''
@@ -620,7 +620,7 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
                                                 ptc_id_counter = ptc_id_counter + 1
                                                 ptc_outputs.write("{0}\n".format("\t".join(snp)))
                                             else:
-                                                snp.insert(14, str(other_id_counter)) 
+                                                snp.insert(14, str(other_id_counter))
                                                 other_id_counter = other_id_counter + 1
                                                 other_outputs.write("{0}\n".format("\t".join(snp)))
 
