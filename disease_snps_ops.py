@@ -212,3 +212,102 @@ def get_ptc_info(ptc_file, relative_exon_positions_file, output_file):
                 three_prime_dist = exon_length - ptc.rel_pos
                 output_list = gen.stringify([ptc_info.given_id, ptc.transcript_id, ptc.exon_id, ptc.aa, ptc.ma, exon_length, ptc.rel_pos, three_prime_dist, min(ptc.rel_pos, three_prime_dist)])
                 outfile.write("{0}\n".format(",".join(output_list)))
+
+def refactor_ptc_file(input_file, output_file, header=None):
+    '''
+    Refactor PTC file ready for intersect
+    '''
+    entries = gen.read_many_fields(input_file, "\t")
+    if header:
+        start = 1
+    else:
+        start = 0
+
+    with open(output_file, "w") as outfile:
+        for entry in entries[start:]:
+            exon_info = entry[:6]
+            ptc_info = entry[6:]
+            ptc_end = str(int(ptc_info[1]) + 1)
+            strand = exon_info[5]
+            ptc_info.insert(2, ptc_end)
+            ptc_info.insert(3, ".")
+            ptc_info.insert(4, strand)
+            ptc_info.extend(exon_info)
+            ptc_info[0] = ptc_info[0].strip('chr')
+            outfile.write("{0}\n".format("\t".join(ptc_info)))
+
+def compare_ptcs(intersect_file, ptc_file, relative_exon_positions_file, exon_fasta, cds_fasta, output_file):
+    '''
+    Get the location of ptcs and whether or not they are disease causing
+    '''
+    exon_list = collections.defaultdict(lambda: [])
+    exon_names, exon_seqs = gen.read_fasta(exon_fasta)
+    for i, name in enumerate(exon_names):
+        transcript = name.split('.')[0]
+        exon = int(name.split('.')[1])
+        if len(exon_seqs[i]) > 3:
+            exon_list[transcript].append(exon)
+
+    cds_list = {}
+    cds_names, cds_seqs = gen.read_fasta(cds_fasta)
+    for i, name in enumerate(cds_names):
+        cds_list[name] = cds_seqs[i]
+
+    disease_ptcs = gen.read_many_fields(intersect_file, "\t")
+    disease_ptc_ids = []
+    for ptc in disease_ptcs:
+        disease_ptc_ids.append(int(ptc[11]))
+
+    relative_position_entries = gen.read_many_fields(relative_exon_positions_file, "\t")
+    relative_positions = {}
+    for entry in relative_position_entries:
+        entry = entry[:12]
+        snp_id = entry[8]
+        exon_length = int(entry[2]) - int(entry[1])
+        rel_pos = entry[-1]
+        relative_positions[snp_id] = [entry[3], int(entry[7]), int(rel_pos), exon_length]
+
+
+    ptcs = gen.read_many_fields(ptc_file, "\t")
+    with open(output_file, "w") as outfile:
+        outfile.write("snp_id\ttranscript\texon_no\ttotal_exons\texon_length\trel_exon_position\texon_dist\texon_end\trel_cds_position\tcds_length\tref_allele\tmut_allele\tdisease\tnmd\n")
+
+        for ptc in ptcs[1:]:
+            snp_pos = int(ptc[7])
+            snp_id = ptc[8]
+            transcript_exon = ptc[3]
+            transcript = ptc[3].split('.')[0]
+            exon = int(ptc[3].split('.')[1])
+            snp_ref = int(ptc[14])
+            cds_pos = ptc[11]
+            ref_allele = ptc[9]
+            mut_allele = ptc[10]
+
+            relative_position_entry = relative_positions[snp_id]
+            exon_rel_pos = relative_position_entry[2]
+            exon_length = relative_position_entry[3]
+            dist_to_end = exon_length - exon_rel_pos
+
+            distances = [exon_rel_pos, dist_to_end]
+            min_dist = min(distances)
+
+            if distances.index(min_dist) == 0:
+                end = 5
+            else:
+                end = 3
+
+            total_exons = len(exon_list[transcript])
+            cds_length = len(cds_list[transcript])
+
+            if exon == sorted(exon_list[transcript])[-1] or exon == sorted(exon_list[transcript])[-2] and dist_to_end < 50:
+                nmd = 0
+            else:
+                nmd = 1
+
+            if snp_ref in disease_ptc_ids:
+                disease = 1
+            else:
+                disease = 0
+
+            outlist = gen.stringify([snp_id, transcript, exon, total_exons, exon_length, exon_rel_pos, min_dist, end, cds_pos, cds_length, ref_allele, mut_allele, disease, nmd])
+            outfile.write("{0}\n".format("\t".join(outlist)))

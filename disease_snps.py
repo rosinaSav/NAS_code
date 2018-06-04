@@ -13,13 +13,14 @@ import collections
 import re
 import copy
 import numpy as np
+import random
 
 def main():
 
     description = "Look at disease snps."
-    arguments = ["disease_snps_file", "output_directory", "results_prefix", "intersect_snps", "get_relative_positions", "get_snp_status", "get_info", "simulate_ptc_location", "get_possible_ptc_locations", "required_simulations", "get_overlaps"]
-    args = gen.parse_arguments(description, arguments, flags = [3,4,5,6,7,8,9,10])
-    disease_snps_file, output_directory, results_prefix, intersect_snps, get_relative_positions, get_snp_status, get_info, simulate_ptc_location, get_possible_ptc_locations, required_simulations, get_overlaps = args.disease_snps_file, args.output_directory, args.results_prefix, args.intersect_snps, args.get_relative_positions, args.get_snp_status, args.get_info, args.simulate_ptc_location, args.get_possible_ptc_locations, args.required_simulations, args.get_overlaps
+    arguments = ["disease_snps_file", "output_directory", "results_prefix", "intersect_snps", "get_relative_positions", "get_snp_status", "get_info", "simulate_ptc_location", "get_possible_ptc_locations", "required_simulations", "get_overlaps", "intersect_ptcs", "compare_ptcs"]
+    args = gen.parse_arguments(description, arguments, flags = [3,4,5,6,7,8,9,10,11,12])
+    disease_snps_file, output_directory, results_prefix, intersect_snps, get_relative_positions, get_snp_status, get_info, simulate_ptc_location, get_possible_ptc_locations, required_simulations, get_overlaps, intersect_ptcs, compare_ptcs = args.disease_snps_file, args.output_directory, args.results_prefix, args.intersect_snps, args.get_relative_positions, args.get_snp_status, args.get_info, args.simulate_ptc_location, args.get_possible_ptc_locations, args.required_simulations, args.get_overlaps, args.intersect_ptcs, args.compare_ptcs
 
     # create the output directory if it doesnt already exist
     gen.create_output_directories(output_directory)
@@ -87,6 +88,23 @@ def main():
         print("Getting overlap between disease PTCs and 1000 genomes PTCs...")
         dso.get_ptc_overlaps(disease_ptcs_file, ptc_file, overlap_file)
 
+    # get intersect between the clinvar ptcs and 1000 genomes ptcs
+    ptc_intersect_file = "{0}/ptc_intersect.bed".format(output_directory)
+    if intersect_ptcs:
+        temp_disease_ptc_file = "temp_data/{0}".format(random.random())
+        dso.refactor_ptc_file(disease_ptcs_file, temp_disease_ptc_file)
+        temp_k_genomes_ptc_file = "temp_data/{0}".format(random.random())
+        dso.refactor_ptc_file(ptc_file, temp_k_genomes_ptc_file, header=True)
+        bao.intersect_bed(temp_k_genomes_ptc_file, temp_disease_ptc_file, write_both = True, no_dups=False, output_file = ptc_intersect_file)
+        gen.remove_file(temp_disease_ptc_file)
+        gen.remove_file(temp_k_genomes_ptc_file)
+
+    compare_file = "{0}/ptc_distances_disease.txt".format(output_directory)
+    relative_exon_positions_file = "{0}_SNP_relative_exon_position.bed".format(results_prefix)
+    exon_fasta = "{0}_CDS_intervals.fasta".format(results_prefix)
+    cds_fasta = "{0}_CDS.fasta".format(results_prefix)
+    if compare_ptcs:
+        dso.compare_ptcs(ptc_intersect_file, ptc_file, relative_exon_positions_file, exon_fasta, cds_fasta, compare_file)
 
 
 if __name__ == "__main__":

@@ -23,19 +23,29 @@ greater <- sum(sim_props > real_prop)
 p <- (greater + 1) / (length(sim_props) + 1)
 p
 
-read_in_simulations = function(simulant_prefix, simulant_number, ids, column_names) {
-  sim_mat = matrix(NA, 1, 19)
-  # colnames(sim_mat) = column_names
-  out_list = rep(list(sim_mat), length(ids))
-  for (sim in 1:simulant_number) {
-    print(sim)
-    current_data = read.table(paste(simulant_prefix, sim, ".bed", sep = ""), sep="\t"), header = TRUE, stringsAsFactors = FALSE, sep = "\t")
-    for (exon in 1:dim(current_data)[1]) {
-      current_id = current_data[exon, "id"]
-      if (current_id %in% ids) {
-        out_list[[match(current_id, ids)]] = rbind(out_list[[match(current_id, ids)]], current_data[exon, ])
-      }
-    }
-  }
-  return(out_list)
-}
+
+file <- read.table('results/clinvar/ptc_distances_disease.txt', head=T, sep="\t")
+head(file)
+
+disease = file[file$disease == 1,]
+others = file[file$disease == 0,]
+
+nrow(others[others$exon_dist <= 3,]) / nrow(others)
+nrow(disease[disease$exon_dist <= 3,]) / nrow(disease)
+
+nrow(others[others$exon_dist > 3 & others$exon_dist <= 69,]) / nrow(others)
+nrow(disease[disease$exon_dist > 3 & disease$exon_dist <= 69,]) / nrow(disease)
+
+
+
+
+# are disease ptcs in genes with more exons?
+# absolute number of exons in disease genes is higher than non disease
+wilcox.test(disease$total_exons, others$total_exons)
+
+# but disease genes tend to be longer, does this make a difference
+# if we are comparing between ptcs?
+wilcox.test(disease$cds_length, others$cds_length)
+
+median(disease$total_exons)
+median(others$total_exons)
