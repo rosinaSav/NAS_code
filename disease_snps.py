@@ -68,18 +68,16 @@ def main():
         dso.get_ptc_info(disease_ptcs_file, disease_snps_relative_exon_positions, output_file_ptc_info)
         dso.get_ptc_info(disease_other_file, disease_snps_relative_exon_positions, output_file_other_info)
 
-    # simulation to see if disease ptcs occur at exon ends more conmonly than by chance
-    location_simulation_output_directory = "{0}/ptc_location_simulation".format(output_directory)
+    location_simulation_output_directory = "{0}/possible_ptc_locations".format(output_directory)
     coding_exons_file = "{0}_exons.bed".format(results_prefix)
+    if get_possible_ptc_locations:
+        print("Getting possible PTC mutation locations...")
+        dso.generate_possible_ptc_locations(full_bed, cds_fasta, location_simulation_output_directory)
+
+    # simulation to see if disease ptcs occur at exon ends more conmonly than by chance
     if simulate_ptc_location:
         if not required_simulations:
             print("\nERROR: please specify the number of simulations required.\n")
-            # create the simulation_folder
-        gen.create_output_directories(output_directory)
-
-        if get_possible_ptc_locations:
-            print("Getting possible PTC mutation locations...")
-            dso.generate_possible_ptc_locations(full_bed, cds_fasta, location_simulation_output_directory)
         dso.ptc_location_simulation(disease_ptcs_file, full_bed, cds_fasta, location_simulation_output_directory, required_simulations, coding_exons_file)
 
     ptc_file = "{0}_ptc_file.txt".format(results_prefix)
@@ -103,8 +101,9 @@ def main():
     relative_exon_positions_file = "{0}_SNP_relative_exon_position.bed".format(results_prefix)
     exon_fasta = "{0}_CDS_intervals.fasta".format(results_prefix)
     cds_fasta = "{0}_CDS.fasta".format(results_prefix)
+    cds_bed_file = "{0}_CDS.bed".format(results_prefix)
     if compare_ptcs:
-        dso.compare_ptcs(ptc_intersect_file, ptc_file, relative_exon_positions_file, exon_fasta, cds_fasta, compare_file)
+        dso.compare_ptcs(ptc_intersect_file, ptc_file, relative_exon_positions_file, exon_fasta, cds_fasta, cds_bed_file, compare_file)
 
 
 if __name__ == "__main__":

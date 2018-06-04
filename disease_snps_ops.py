@@ -8,6 +8,51 @@ import re
 import copy
 import numpy as np
 
+def get_gene_length(cds_bed_file):
+    '''
+    Get info on the whole gene length
+    '''
+    cds_bed_lines = gen.read_many_fields(cds_bed_file, "\t")
+    info = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict()))))
+
+    for line in cds_bed_lines:
+        chr = line[0]
+        t = line[3].split('.')[0]
+        e = int(line[3].split('.')[1])
+        type = line[4]
+        start = int(line[1])
+        stop = int(line[2])
+        strand = line[5]
+
+        if chr not in ["chrX", "chrY"]:
+            info[strand][t][e][type] = [start, stop]
+
+    transcripts = collections.defaultdict(lambda: [])
+
+    for strand in info:
+        for t in info[strand]:
+            if strand == "+":
+                start_exon = min(sorted(info[strand][t]))
+                end_exon = max(sorted(info[strand][t]))
+                gene_start = info[strand][t][start_exon]["CDS"][0]
+                if "stop_codon" in info[strand][t][end_exon]:
+                    gene_end = info[strand][t][end_exon]["stop_codon"][1]
+                else:
+                    gene_end = info[strand][t][end_exon]["CDS"][1]
+            else:
+                start_exon = min(sorted(info[strand][t]))
+                end_exon = max(sorted(info[strand][t]))
+                gene_end = info[strand][t][start_exon]["CDS"][1]
+                if "stop_codon" in info[strand][t][end_exon]:
+                    gene_start = info[strand][t][end_exon]["stop_codon"][0]
+                else:
+                    gene_start = info[strand][t][end_exon]["CDS"][0]
+
+            transcripts[t] = [gene_start, gene_end, gene_end-gene_start, strand]
+
+    return(transcripts)
+
+
 def get_ptc_overlaps(disease_ptc_file, ptc_file, output_file):
     '''
     Get the overlap between disease ptc file and 1000 genomes ptcs
@@ -91,6 +136,8 @@ def generate_pseudo_snps(snp_file, possible_locations, exon_list, output_file):
 
 
 def generate_possible_ptc_locations(full_bed, cds_fasta, output_directory):
+
+    gen.create_output_directories(output_directory)
 
     stop_bases = ["A", "G", "T"]    # a mutation to c cant generate a stop so its not included
     stop_codons = ["TAA", "TAG", "TGA"]
@@ -236,7 +283,7 @@ def refactor_ptc_file(input_file, output_file, header=None):
             ptc_info[0] = ptc_info[0].strip('chr')
             outfile.write("{0}\n".format("\t".join(ptc_info)))
 
-def compare_ptcs(intersect_file, ptc_file, relative_exon_positions_file, exon_fasta, cds_fasta, output_file):
+def compare_ptcs(intersect_file, ptc_file, relative_exon_positions_file, exon_fasta, cds_fasta, cds_bed_file, output_file):
     '''
     Get the location of ptcs and whether or not they are disease causing
     '''
@@ -267,10 +314,12 @@ def compare_ptcs(intersect_file, ptc_file, relative_exon_positions_file, exon_fa
         rel_pos = entry[-1]
         relative_positions[snp_id] = [entry[3], int(entry[7]), int(rel_pos), exon_length]
 
+    gene_lengths = get_gene_length(cds_bed_file)
+
 
     ptcs = gen.read_many_fields(ptc_file, "\t")
     with open(output_file, "w") as outfile:
-        outfile.write("snp_id\ttranscript\texon_no\ttotal_exons\texon_length\trel_exon_position\texon_dist\texon_end\trel_cds_position\tcds_length\tref_allele\tmut_allele\tdisease\tnmd\n")
+        outfile.write("snp_id\tsnp_pos\ttranscript\texon_no\ttotal_exons\texon_length\trel_exon_position\texon_dist\texon_end\trel_cds_position\tcds_length\tgene_length\tgene_left_length\tgene_right_length\tgene_half\tref_allele\tmut_allele\tdisease\tnmd\n")
 
         for ptc in ptcs[1:]:
             snp_pos = int(ptc[7])
@@ -291,6 +340,18 @@ def compare_ptcs(intersect_file, ptc_file, relative_exon_positions_file, exon_fa
             distances = [exon_rel_pos, dist_to_end]
             min_dist = min(distances)
 
+            gene = gene_lengths[transcript]
+            gene_start = gene[0]
+            gene_end = gene[1]
+            gene_middle = gene_start + ((gene_end - gene_start)/2)
+            gene_left_length = snp_pos - gene_start
+            gene_right_length = gene_end - snp_pos
+            if gene_middle - snp_pos > 0:
+                gene_half = 5
+            else:
+                gene_half = 3
+
+
             if distances.index(min_dist) == 0:
                 end = 5
             else:
@@ -309,5 +370,5 @@ def compare_ptcs(intersect_file, ptc_file, relative_exon_positions_file, exon_fa
             else:
                 disease = 0
 
-            outlist = gen.stringify([snp_id, transcript, exon, total_exons, exon_length, exon_rel_pos, min_dist, end, cds_pos, cds_length, ref_allele, mut_allele, disease, nmd])
+            outlist = gen.stringify([snp_id, snp_pos, transcript, exon, total_exons, exon_length, exon_rel_pos, min_dist, end, cds_pos, cds_length, gene[2], gene_left_length, gene_right_length, gene_half, ref_allele, mut_allele, disease, nmd])
             outfile.write("{0}\n".format("\t".join(outlist)))

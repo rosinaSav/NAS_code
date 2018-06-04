@@ -39,6 +39,7 @@ nrow(disease[disease$exon_dist > 3 & disease$exon_dist <= 69,]) / nrow(disease)
 
 
 
+
 # are disease ptcs in genes with more exons?
 # absolute number of exons in disease genes is higher than non disease
 wilcox.test(disease$total_exons, others$total_exons)
@@ -49,3 +50,15 @@ wilcox.test(disease$cds_length, others$cds_length)
 
 median(disease$total_exons)
 median(others$total_exons)
+
+
+# does the position in the gene have an influence on where ptcs occur?
+first_half = nrow(file[file$gene_left_length < file$gene_right_length,])
+binom.test(x = first_half, n = nrow(file), p = 0.5, alternative = "g")
+
+first_half_disease = nrow(file[file$gene_left_length < file$gene_right_length & file$disease == 1 ,])
+binom.test(x = first_half_disease, n = nrow(file[file$disease == 1,]), p = 0.5, alternative = "g")
+
+first_half_non_disease = nrow(file[file$gene_left_length < file$gene_right_length & file$disease != 1 ,])
+binom.test(x = first_half_non_disease, n = nrow(file[file$disease != 1,]), p = 0.5, alternative = "g")
+

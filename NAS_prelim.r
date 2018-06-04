@@ -253,6 +253,7 @@ chosen_colour = "RoyalBlue"
 
 #PSI
 NAS_data = prepare_dataset("results/clean_run_2/clean_run__analysis_final_output.txt")
+NAS_dat_shift = prepare_dataset("results/clean_run_2/clean_run_out_of_frame__analysis_final_output.txt")
 neg_control = read_in_simulations("results/clean_run_2/simulation_output/final_output_simulation_", 100, NAS_data$id, colnames(NAS_data))
 perform_tests(NAS_data)
 summary(NAS_data)
@@ -295,6 +296,7 @@ hist(NAS_data$PSI_het_PTC - NAS_data$PSI_w_PTC, breaks = 100, col = chosen_colou
 
 graphics.off()
 big_changes_PSI = plot_individual_change(NAS_data, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "Exons with >5% change between any two categories", "PSI", 5, 100)
+big_changes_PSI_shift = plot_individual_change(NAS_data_shift, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "Exons with >5% change between any two categories", "PSI", 5, 100)
 
 #RPMskip
 par(mfrow = c(1, 1))
@@ -329,6 +331,7 @@ dev.off()
 
 graphics.off()
 big_changes_RPMskip = plot_individual_change(NAS_data, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "Exons with >0.025 change between any two categories", "RPMskip", 0.025, 5, reverse = TRUE)
+big_changes_RPMskip_shift = plot_individual_change(NAS_data_shift, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "Exons with >0.025 change between any two categories", "RPMskip", 0.025, 5, reverse = TRUE)
 
 #analysis of the exons that show a big change
 #is the overlap between the ones that show a big change in RPMskip and those that show a big change
@@ -336,7 +339,8 @@ big_changes_RPMskip = plot_individual_change(NAS_data, "norm_count_w_PTC", "norm
 overlap = intersect(big_changes_PSI, big_changes_RPMskip)
 overlap_significance(length(overlap), dim(NAS_data)[1], length(big_changes_PSI), length(big_changes_RPMskip), 10000)
 
-#are the ones that show a big change expressed at lower levels than those that don't (FANTOM data)?
+overlap
+
 expression = read.csv("results/clean_run_2/clean_run_FANTOM_expression_per_transcript.txt", sep = "\t", header = TRUE, stringsAsFactors = FALSE)
 expression_analysis(overlap, NAS_data$exon, expression)
 
