@@ -283,10 +283,23 @@ def refactor_ptc_file(input_file, output_file, header=None):
             ptc_info[0] = ptc_info[0].strip('chr')
             outfile.write("{0}\n".format("\t".join(ptc_info)))
 
-def compare_ptcs(intersect_file, ptc_file, relative_exon_positions_file, exon_fasta, cds_fasta, cds_bed_file, output_file):
+def compare_ptcs(intersect_file, ptc_file, relative_exon_positions_file, exon_fasta, cds_fasta, cds_bed_file, intron_bed, output_file):
     '''
     Get the location of ptcs and whether or not they are disease causing
     '''
+
+    introns = gen.read_many_fields(intron_bed, "\t")
+    intron_list = collections.defaultdict(lambda: collections.defaultdict(lambda: [False, False]))
+
+    for intron in introns:
+        t = intron[3].split('.')[0]
+        exon_3_prime = int(intron[3].split('.')[1].split('-')[0])
+        exon_5_prime = int(intron[3].split('.')[1].split('-')[1])
+        start = int(intron[1])
+        stop = int(intron[2])
+        intron_list[t][exon_3_prime][1] = stop-start
+        intron_list[t][exon_5_prime][0] = stop-start
+
     exon_list = collections.defaultdict(lambda: [])
     exon_names, exon_seqs = gen.read_fasta(exon_fasta)
     for i, name in enumerate(exon_names):
@@ -319,7 +332,7 @@ def compare_ptcs(intersect_file, ptc_file, relative_exon_positions_file, exon_fa
 
     ptcs = gen.read_many_fields(ptc_file, "\t")
     with open(output_file, "w") as outfile:
-        outfile.write("snp_id\tsnp_pos\ttranscript\texon_no\ttotal_exons\texon_length\trel_exon_position\texon_dist\texon_end\trel_cds_position\tcds_length\tgene_length\tgene_left_length\tgene_right_length\tgene_half\tref_allele\tmut_allele\tdisease\tnmd\n")
+        outfile.write("snp_id\tsnp_pos\ttranscript\texon_no\ttotal_exons\texon_length\trel_exon_position\texon_dist\texon_end\trel_cds_position\tcds_length\tgene_length\tgene_left_length\tgene_right_length\tgene_half\tref_allele\tmut_allele\tdisease\tnmd\tflanking_intron\tother_intron\n")
 
         for ptc in ptcs[1:]:
             snp_pos = int(ptc[7])
@@ -351,11 +364,17 @@ def compare_ptcs(intersect_file, ptc_file, relative_exon_positions_file, exon_fa
             else:
                 gene_half = 3
 
-
             if distances.index(min_dist) == 0:
                 end = 5
             else:
                 end = 3
+
+            if end == 5:
+                flanking_intron = intron_list[transcript][exon][0]
+                other_intron = intron_list[transcript][exon][1]
+            else:
+                flanking_intron = intron_list[transcript][exon][1]
+                other_intron = intron_list[transcript][exon][0]
 
             total_exons = len(exon_list[transcript])
             cds_length = len(cds_list[transcript])
@@ -370,5 +389,50 @@ def compare_ptcs(intersect_file, ptc_file, relative_exon_positions_file, exon_fa
             else:
                 disease = 0
 
-            outlist = gen.stringify([snp_id, snp_pos, transcript, exon, total_exons, exon_length, exon_rel_pos, min_dist, end, cds_pos, cds_length, gene[2], gene_left_length, gene_right_length, gene_half, ref_allele, mut_allele, disease, nmd])
+            outlist = gen.stringify([snp_id, snp_pos, transcript, exon, total_exons, exon_length, exon_rel_pos, min_dist, end, cds_pos, cds_length, gene[2], gene_left_length, gene_right_length, gene_half, ref_allele, mut_allele, disease, nmd, flanking_intron, other_intron])
             outfile.write("{0}\n".format("\t".join(outlist)))
+
+def get_introns(exon_bed, output_file):
+    '''
+    Get the introns between exons in a file
+    '''
+
+    class Define_Exon(object):
+        def __init__(self, exon):
+            self.chr = exon[0]
+            self.start = int(exon[1])
+            self.stop = int(exon[2])
+            self.transcript_id = exon[3].split('.')[0]
+            self.exon_no = int(exon[3].split('.')[1])
+            self.type = exon[4]
+            self.strand = exon[5]
+
+
+    exons = gen.read_many_fields(exon_bed, "\t")
+
+    # get a dictionary of exons split by transcript and number
+    exon_list = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict()))
+    for item in exons:
+        exon = Define_Exon(item)
+        if exon.type == "stop_codon":
+            exon.exon_no = 999999
+        exon_list[exon.transcript_id][exon.exon_no] = item
+
+    # now get the introns and write to file
+    with open(output_file, "w") as outfile:
+        for transcript in exon_list:
+            for exon_no in sorted(exon_list[transcript]):
+                exon = Define_Exon(exon_list[transcript][exon_no])
+                # check that the next exon exists, assuming its id will not be higher than 999999
+                if exon.exon_no + 1 in exon_list[transcript]:
+                    next_exon = Define_Exon(exon_list[exon.transcript_id][exon.exon_no + 1])
+
+                    if exon.strand == "-":
+                        intron_start = next_exon.stop
+                        intron_stop = exon.start
+                    else:
+                        intron_start = exon.stop
+                        intron_stop = next_exon.start
+
+                    outlist = gen.stringify([exon.chr, intron_start, intron_stop, "{0}.{1}-{2}".format(exon.transcript_id, exon.exon_no, next_exon.exon_no), ".", exon.strand])
+                    outfile.write("{0}\n".format("\t".join(outlist)))
