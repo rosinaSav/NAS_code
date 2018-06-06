@@ -109,7 +109,7 @@ def process_mutation_files(input_dir, output_dir, output_file, subset=None):
         entries = gen.read_many_fields(filepath, "\t")
         # remove any information lines
         entries = [entry for entry in entries if entry[0][0] != "#"]
-        header = entries[0]
+        header = entries[0][:34]
 
         # create a temporary file to hold the mutations
         temp_filepath = "temp_data/{0}".format(random.random())
@@ -118,7 +118,7 @@ def process_mutation_files(input_dir, output_dir, output_file, subset=None):
         with open(temp_filepath, "w") as temp_file:
             temp_file.write("{0}\n".format("\t".join(output_list)))
             for entry in entries[1:]:
-                passed, build_pass, entry = check_entry(entry, header, required_list, non_empty_list, match_list)
+                passed, build_pass, entry = check_entry(entry[:34], header, required_list, non_empty_list, match_list)
                 if passed and build_pass:
                     line_output = []
                     for item in output_list:
