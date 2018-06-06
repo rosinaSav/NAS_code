@@ -104,6 +104,7 @@ def process_mutation_files(input_dir, output_dir, output_file, subset=None):
 
     for id in ids:
         filepath = filelist[id]
+        print(filepath)
 
         entries = gen.read_many_fields(filepath, "\t")
         # remove any information lines
