@@ -71,33 +71,45 @@ params = {
     "filters": filters,
     "fields": fields,
     "format": "json",
-    "size": "200000"
+    "size": "2000000"
     }
 
-# The parameters are passed to 'json' rather than 'params' in this case
-response = requests.post(files_endpt, headers = {"Content-Type": "application/json"}, json = params)
 
-data = response.content.decode("utf-8")
+def run_data_query(mutation_data_file):
 
-json_data = json.loads(data)
+    print("Querying GDC api...")
+    # The parameters are passed to 'json' rather than 'params' in this case
+    response = requests.post(files_endpt, headers = {"Content-Type": "application/json"}, json = params)
 
-print(json_data["data"]["pagination"])
+    data = response.content.decode("utf-8")
 
-ids = []
-for hit in json_data["data"]["hits"][:3]:
-    filename = hit["file_name"]
-    cases = hit["cases"]
-    id = hit["id"]
-    ids.append(id)
+    json_data = json.loads(data)
 
-outfile_path = "temp_data/json_data.txt"
-outfile = open(outfile_path, "w")
-id_list = {"ids": ids}
-outfile.write(json.dumps(id_list))
-outfile.close()
+    ids = []
+    for hit in json_data["data"]["hits"][:2]:
+        filename = hit["file_name"]
+        cases = hit["cases"]
+        id = hit["id"]
+        ids.append(id)
 
-# str = "curl --remote-name --remote-header-name --request POST --header 'Content-Type: application/json' --data @temp_data/json_data.txt 'https://api.gdc.cancer.gov/legacy/data'"
-# print(str.split(' '))
-args = ['curl', '--remote-name', '--remote-header-name', '--request', 'POST', '--header', '"Content-Type: application/json"', '--data', '@{0}'.format(outfile_path), '"https://api.gdc.cancer.gov/legacy/data"']
-" ".join(args)
-gen.run_process(args)
+    outfile = open(mutation_data_file, "w")
+    id_list = {"ids": ids}
+    outfile.write(json.dumps(id_list))
+    outfile.close()
+
+
+def main():
+
+    description = "Get the information to download files from the GDC."
+    args = gen.parse_arguments(description,  ["mutation_data_file"], flags = [])
+    mutation_data_file = args.mutation_data_file
+
+    run_data_query(mutation_data_file)
+
+    args = ['curl', '--remote-name', '--remote-header-name', '--request', 'POST', '--header', '"Content-Type: application/json"', '--data', '@{0}'.format(mutation_data_file), '"https://api.gdc.cancer.gov/legacy/data"']
+    print("\nCopy and run the command below:\n")
+    print("{0}\n".format(" ".join(args)))
+
+
+if __name__ == "__main__":
+    main()
