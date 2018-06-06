@@ -86,7 +86,7 @@ def run_data_query(mutation_data_file):
     json_data = json.loads(data)
 
     ids = []
-    for hit in json_data["data"]["hits"][:2]:
+    for hit in json_data["data"]["hits"]:
         filename = hit["file_name"]
         cases = hit["cases"]
         id = hit["id"]
