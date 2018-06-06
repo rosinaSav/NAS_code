@@ -135,6 +135,8 @@ def process_mutation_files(input_dir, output_dir, output_file, subset=None):
         temp_out.write("##fileformat=VCFv4.1\n")
         temp_out.write("#{0}\n".format("\t".join(output_list)))
 
+    print(temp_filelist)
+
     # join the files together
     concat_file = "temp_data/{0}.concat".format(random.random())
     concatenate_files(temp_filelist, concat_file)
