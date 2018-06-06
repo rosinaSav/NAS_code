@@ -1080,7 +1080,8 @@ def intersect_snps_parallel(bed_file, snp_file, output_file):
     # read the intervals
     intervals = gen.read_many_fields(bed_file, "\t")
     # intersect the vcf file with the intervals
-    processes = gen.run_in_parallel(intervals, ["foo", snp_file, output_file], run_tabix, workers = os.cpu_count() - 2)
+    workers = max(26, os.cpu_count())
+    processes = gen.run_in_parallel(intervals, ["foo", snp_file, output_file], run_tabix, workers = workers)
     # return a list of the outputs
     sample_files = []
     for process in processes:
