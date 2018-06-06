@@ -135,22 +135,22 @@ def process_mutation_files(input_dir, output_dir, output_file, subset=None):
         temp_out.write("##fileformat=VCFv4.1\n")
         temp_out.write("#{0}\n".format("\t".join(output_list)))
 
-    # # join the files together
-    # concat_file = "temp_data/{0}.concat".format(random.random())
-    # concatenate_files(temp_filelist, concat_file)
-    #
-    # # remove the individual temp files
-    # [gen.remove_file(file) for file in temp_filelist]
-    #
-    # # sort file by first, then second column
-    # temp_sorted_file = "temp_data/{0}.vcf".format(random.random())
-    # gen.run_process(["sort", "-k1,1", "-k2,2n", concat_file], file_for_output = temp_sorted_file)
-    # gen.run_process(["cp", temp_sorted_file, output_file])
-    # gen.remove_file(concat_file)
-    # gen.remove_file(temp_sorted_file)
-    #
-    # zip = "{0}.gz".format(output_file)
-    # gen.run_process(["bgzip", "-c", output_file], file_for_output = zip)
-    #
-    # returned_mutations = gen.run_process(["wc", "-l", output_file])
-    # print("Processed SNPS: {0}".format(returned_mutations))
+    # join the files together
+    concat_file = "temp_data/{0}.concat".format(random.random())
+    concatenate_files(temp_filelist, concat_file)
+
+    # remove the individual temp files
+    [gen.remove_file(file) for file in temp_filelist]
+
+    # sort file by first, then second column
+    temp_sorted_file = "temp_data/{0}.vcf".format(random.random())
+    gen.run_process(["sort", "-k1,1", "-k2,2n", concat_file], file_for_output = temp_sorted_file)
+    gen.run_process(["cp", temp_sorted_file, output_file])
+    gen.remove_file(concat_file)
+    gen.remove_file(temp_sorted_file)
+
+    zip = "{0}.gz".format(output_file)
+    gen.run_process(["bgzip", "-c", output_file], file_for_output = zip)
+
+    returned_mutations = gen.run_process(["wc", "-l", output_file])
+    print("Processed SNPS: {0}".format(returned_mutations))
