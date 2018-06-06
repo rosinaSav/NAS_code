@@ -142,7 +142,7 @@ def process_mutation_files(input_dir, output_dir, output_file, subset=None):
     concatenate_files(temp_filelist, concat_file)
 
     # remove the individual temp files
-    [gen.remove_file(file) for file in temp_filelist]
+    # [gen.remove_file(file) for file in temp_filelist]
 
     # sort file by first, then second column
     temp_sorted_file = "temp_data/{0}.vcf".format(random.random())
