@@ -45,7 +45,7 @@ def check_entry(entry, header, required_list, non_empty_list, match_list):
         if len(list(set(hits))) > 1:
             return False, False, None
     # check the build
-    if entry_dict["NCBI_Build"] not in ["hg19", "37"]:
+    if entry_dict["NCBI_Build"] not in ["hg19", "37", "GRCh37", "GRCh37-lite"]:
         return False, True, None
 
     # return passed
@@ -111,12 +111,16 @@ def process_mutation_files(input_dir, output_dir, output_file, subset=None):
         entries = [entry for entry in entries if entry[0][0] != "#"]
         header = entries[0][:34]
 
+        if "Start_position" in header:
+            header[header.index("Start_position")] = "Start_Position"
+        if "End_position" in header:
+            header[header.index("End_position")] = "End_Position"
+
         # create a temporary file to hold the mutations
         temp_filepath = "temp_data/{0}".format(random.random())
         temp_filelist.append(temp_filepath)
 
         with open(temp_filepath, "w") as temp_file:
-            temp_file.write("{0}\n".format("\t".join(output_list)))
             for entry in entries[1:]:
                 passed, build_pass, entry = check_entry(entry[:34], header, required_list, non_empty_list, match_list)
                 if passed and build_pass:
@@ -135,14 +139,14 @@ def process_mutation_files(input_dir, output_dir, output_file, subset=None):
         temp_out.write("##fileformat=VCFv4.1\n")
         temp_out.write("#{0}\n".format("\t".join(output_list)))
 
-    print(temp_filelist)
-
     # join the files together
     concat_file = "temp_data/{0}.concat".format(random.random())
     concatenate_files(temp_filelist, concat_file)
 
+    # print(temp_filelist)
+
     # remove the individual temp files
-    # [gen.remove_file(file) for file in temp_filelist]
+    [gen.remove_file(file) for file in temp_filelist]
 
     # sort file by first, then second column
     temp_sorted_file = "temp_data/{0}.vcf".format(random.random())

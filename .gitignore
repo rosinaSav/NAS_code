@@ -11,7 +11,7 @@ build/
 outputs/
 results/
 .Rhistory
-testfile*.py
+testfile*
 binaries/
 blast/
 *.pyc
