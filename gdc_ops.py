@@ -140,15 +140,14 @@ def process_mutation_files(input_dir, output_dir, output_file, subset=None):
     # create header and write
     # need to do this separately as to ensure the header remains at
     # the top of the file
-    temp_file = "temp_data/header.txt".format(random.random())
-    concat_filelist = [temp_file, concat_file]
-    with open(temp_file, "w") as temp_out:
-        temp_out.write("##fileformat=VCFv4.1\n")
-        temp_out.write("#{0}\n".format("\t".join(output_list)))
+    # temp_file = "temp_data/header.txt".format(random.random())
     full_concat_file = "temp_data/{0}.full_concat".format(random.random())
-    concatenate_files(concat_filelist, full_concat_file)
-
-    # print(temp_filelist)
+    # concat_filelist = [temp_file, concat_file]
+    with open(full_concat_file, "w") as concat_out:
+        concat_out.write("##fileformat=VCFv4.1\n")
+        concat_out.write("#{0}\n".format("\t".join(output_list)))
+        with open(concat_file, "r") as infile:
+            concat_out.write(infile.read())
 
     # remove the individual temp files
     gen.remove_file(concat_file)
