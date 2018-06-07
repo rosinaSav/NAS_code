@@ -29,7 +29,7 @@ def main():
     processed_mutations = "{0}/processed_mutations.vcf".format(output_dir)
     if process_mutations or full_run or snp_run:
         print("Processing mutation files...")
-        gdco.process_mutation_files(mutations_dir, output_dir, processed_mutations, subset=3)
+        gdco.process_mutation_files(mutations_dir, output_dir, processed_mutations)
 
     # intersec the snps with coding exons
     processed_mutations_gz = "{0}.gz".format(processed_mutations)
