@@ -33,7 +33,7 @@ def main():
 
     # intersec the snps with coding exons
     processed_mutations_gz = "{0}.gz".format(processed_mutations)
-    coding_exons_file = "{0}_coding_exons.extracted.2000.bed".format(results_prefix)
+    coding_exons_file = "{0}_coding_exons.bed".format(results_prefix)
     intersect_file = "{0}/processed_mutations_coding_exons_intersect.vcf".format(output_dir)
     bed_intersect_file = "{0}/processed_mutations_coding_exons_intersect.bed".format(output_dir)
     if intersect_mutations or full_run or snp_run:
