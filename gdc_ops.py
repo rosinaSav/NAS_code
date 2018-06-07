@@ -133,26 +133,32 @@ def process_mutation_files(input_dir, output_dir, output_file, subset=None):
                         line_output.append(entry[item])
                     temp_file.write("{0}\n".format("\t".join(line_output)))
 
+    # join the files together
+    concat_file = "temp_data/{0}.concat1".format(random.random())
+    concatenate_files(temp_filelist, concat_file)
+
+    # create header and write
+    # need to do this separately as to ensure the header remains at
+    # the top of the file
     temp_file = "temp_data/header.txt".format(random.random())
-    temp_filelist = [temp_file] + temp_filelist
+    concat_filelist = [temp_file, concat_file]
     with open(temp_file, "w") as temp_out:
         temp_out.write("##fileformat=VCFv4.1\n")
         temp_out.write("#{0}\n".format("\t".join(output_list)))
-
-    # join the files together
-    concat_file = "temp_data/{0}.concat".format(random.random())
-    concatenate_files(temp_filelist, concat_file)
+    full_concat_file = "temp_data/{0}.full_concat".format(random.random())
+    concatenate_files(concat_filelist, full_concat_file)
 
     # print(temp_filelist)
 
     # remove the individual temp files
+    gen.remove_file(concat_file)
     [gen.remove_file(file) for file in temp_filelist]
 
     # sort file by first, then second column
     temp_sorted_file = "temp_data/{0}.vcf".format(random.random())
-    gen.run_process(["sort", "-k1,1", "-k2,2n", concat_file], file_for_output = temp_sorted_file)
+    gen.run_process(["sort", "-k1,1", "-k2,2n", full_concat_file], file_for_output = temp_sorted_file)
     gen.run_process(["cp", temp_sorted_file, output_file])
-    gen.remove_file(concat_file)
+    gen.remove_file(full_concat_file)
     gen.remove_file(temp_sorted_file)
 
     zip = "{0}.gz".format(output_file)
