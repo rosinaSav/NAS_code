@@ -137,6 +137,10 @@ def process_mutation_files(input_dir, output_dir, output_file, subset=None):
     concat_file = "temp_data/{0}.concat1".format(random.random())
     concatenate_files(temp_filelist, concat_file)
 
+    # sort file by first, then second column
+    temp_sorted_file = "temp_data/{0}.vcf".format(random.random())
+    gen.run_process(["sort", "-k1,1", "-k2,2n", concat_file], file_for_output = temp_sorted_file)
+
     # create header and write
     # need to do this separately as to ensure the header remains at
     # the top of the file
@@ -146,22 +150,19 @@ def process_mutation_files(input_dir, output_dir, output_file, subset=None):
     with open(full_concat_file, "w") as concat_out:
         concat_out.write("##fileformat=VCFv4.1\n")
         concat_out.write("#{0}\n".format("\t".join(output_list)))
-        with open(concat_file, "r") as infile:
+        with open(temp_sorted_file, "r") as infile:
             concat_out.write(infile.read())
 
-    # remove the individual temp files
-    gen.remove_file(concat_file)
-    [gen.remove_file(file) for file in temp_filelist]
 
-    # sort file by first, then second column
-    temp_sorted_file = "temp_data/{0}.vcf".format(random.random())
-    gen.run_process(["sort", "-k1,1", "-k2,2n", full_concat_file], file_for_output = temp_sorted_file)
-    gen.run_process(["cp", temp_sorted_file, output_file])
-    gen.remove_file(full_concat_file)
-    gen.remove_file(temp_sorted_file)
-
+    gen.run_process(["cp", full_concat_file, output_file])
     zip = "{0}.gz".format(output_file)
     gen.run_process(["bgzip", "-c", output_file], file_for_output = zip)
 
     returned_mutations = gen.run_process(["wc", "-l", output_file])
     print("Processed SNPS: {0}".format(returned_mutations))
+
+    # remove the individual temp files
+    gen.remove_file(concat_file)
+    gen.remove_file(full_concat_file)
+    gen.remove_file(temp_sorted_file)
+    [gen.remove_file(file) for file in temp_filelist]
