@@ -311,3 +311,113 @@ def compare_ptcs(intersect_file, ptc_file, relative_exon_positions_file, exon_fa
 
             outlist = gen.stringify([snp_id, transcript, exon, total_exons, exon_length, exon_rel_pos, min_dist, end, cds_pos, cds_length, ref_allele, mut_allele, disease, nmd])
             outfile.write("{0}\n".format("\t".join(outlist)))
+
+
+def compare_distances(clinvar_ptc_file, clinvar_relative_exon_positions_file, ptc_file, ptc_relative_exon_positions_file, output_file):
+
+    clinvar_relative_position_entries = gen.read_many_fields(clinvar_relative_exon_positions_file, "\t")
+    clinvar_relative_positions = {}
+    for entry in clinvar_relative_position_entries:
+        # print(entry)
+        entry = entry[:12]
+        snp_id = entry[8]
+        exon_length = int(entry[2]) - int(entry[1])
+        rel_pos = entry[-1]
+        pos = int(entry[7])
+        clinvar_relative_positions[snp_id] = [snp_id, entry[3], int(entry[7]), int(rel_pos), exon_length]
+
+    # print(sorted([pos for pos in clinvar_relative_positions]))
+
+    ptc_relative_position_entries = gen.read_many_fields(ptc_relative_exon_positions_file, "\t")
+    ptc_relative_positions = {}
+    for entry in ptc_relative_position_entries:
+        entry = entry[:12]
+        snp_id = entry[8]
+        rel_pos = entry[-1]
+        pos = int(entry[7])
+        exon_length = int(entry[2]) - int(entry[1])
+        ptc_relative_positions[pos] = [snp_id, entry[3], int(entry[7]), int(rel_pos), exon_length]
+
+    clinvar_ptcs = gen.read_many_fields(clinvar_ptc_file, "\t")
+    clinvar_ptc_locations = []
+    clinvar_ptc_list = {}
+    for ptc in clinvar_ptcs:
+        pos = int(ptc[7])
+        clinvar_ptc_locations.append(pos)
+        clinvar_ptc_list[pos] = ptc
+    ptcs = gen.read_many_fields(ptc_file, "\t")
+    ptc_locations = []
+    ptc_list = {}
+    for ptc in ptcs[1:]:
+        pos = int(ptc[7])
+        ptc_locations.append(pos)
+        ptc_list[pos] = ptc
+
+    overlap = [loc for loc in ptc_locations if loc in clinvar_ptc_locations]
+
+    count = 0
+    with open(output_file, "w") as outfile:
+        outfile.write("transcript,exon,exon_length,rel_exon_pos,min_dist,exon_end,1000_genomes,clinvar\n")
+        for pos in ptc_list:
+            if pos not in overlap:
+                ptc = ptc_list[pos]
+                ptc_id = ptc[8]
+                exon = ptc[3]
+                t = exon.split('.')[0]
+                e = exon.split('.')[1]
+                e_start = int(ptc[1])
+                e_end = int(ptc[2])
+                gpos = int(ptc[7])
+                rel_pos_info = ptc_relative_positions[gpos]
+                rel_pos = rel_pos_info[3]
+                exon_length = rel_pos_info[4]
+                clinvar = 0
+                kgenomes = 1
+
+                dist_to_end = exon_length - rel_pos
+
+                distances = [rel_pos, dist_to_end]
+                min_dist = min(distances)
+
+                if distances.index(min_dist) == 0:
+                    exon_end = 5
+                else:
+                    exon_end = 3
+
+                outlist = gen.stringify([t, e, exon_length, rel_pos, min_dist, exon_end, kgenomes, clinvar])
+                outfile.write("{0}\n".format(",".join(outlist)))
+        for pos in clinvar_ptc_list:
+            if pos not in overlap:
+                ptc = clinvar_ptc_list[pos]
+                snp_id = ptc[8]
+                if snp_id in clinvar_relative_positions:
+
+                    rel_pos_info = clinvar_relative_positions[snp_id]
+
+                    ptc_id = ptc[8]
+                    exon = ptc[3]
+                    t = exon.split('.')[0]
+                    e = exon.split('.')[1]
+                    e_start = int(ptc[1])
+                    e_end = int(ptc[2])
+                    gpos = int(ptc[7])
+
+                    rel_pos = rel_pos_info[3]
+                    exon_length = rel_pos_info[4]
+                    clinvar = 1
+                    kgenomes = 0
+
+
+
+                    dist_to_end = exon_length - rel_pos
+
+                    distances = [rel_pos, dist_to_end]
+                    min_dist = min(distances)
+
+                    if distances.index(min_dist) == 0:
+                        exon_end = 5
+                    else:
+                        exon_end = 3
+
+                    outlist = gen.stringify([t, e, exon_length, rel_pos, min_dist, exon_end, kgenomes, clinvar])
+                    outfile.write("{0}\n".format(",".join(outlist)))

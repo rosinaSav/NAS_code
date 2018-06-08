@@ -765,7 +765,7 @@ def merge_and_header(file1, file2, out_file):
     gen.remove_file(temp2)
 
 
-def ptc_locations(PTC_file, snp_relative_exon_position_file, bam_analysis_output_file, output_file):
+def ptc_locations(PTC_file, snp_relative_exon_position_file, output_file):
     '''
     Get the information regarding PTC positions in the exons
     '''
@@ -791,16 +791,16 @@ def ptc_locations(PTC_file, snp_relative_exon_position_file, bam_analysis_output
     for ptc in ptcs[1:]:
         ptc_ids[ptc[8]] = ptc[14]
 
-    bam_outputs = gen.read_many_fields(bam_analysis_output_file, "\t")
-    # create a dictionary of the bam output with the ref of the ptc
-    bam_output_list = {}
-    for bam_output in bam_outputs[1:]:
-        bam_output_list[int(bam_output[-1])] = bam_output
+    # bam_outputs = gen.read_many_fields(bam_analysis_output_file, "\t")
+    # # create a dictionary of the bam output with the ref of the ptc
+    # bam_output_list = {}
+    # for bam_output in bam_outputs[1:]:
+    #     bam_output_list[int(bam_output[-1])] = bam_output
 
     snps = gen.read_many_fields(snp_relative_exon_position_file, "\t")
 
     with open(output_file, "w") as outfile:
-        outfile.write("{0},rel_exon_pos,exon_length,5prime_dist,3prime_dist,max_dist,min_dist,{1},ptc_ref_id\n".format(",".join(ptcs[0][:11]), ",".join(bam_outputs[0][1:-1])))
+        outfile.write("{0},rel_exon_pos,exon_length,5prime_dist,3prime_dist,max_dist,min_dist,ptc_ref_id\n".format(",".join(ptcs[0][:11])))
         for snp in snps[1:]:
             snp = SNP_object(snp)
             if snp.id in ptc_ids:
@@ -815,9 +815,9 @@ def ptc_locations(PTC_file, snp_relative_exon_position_file, bam_analysis_output
                     max_dist = max(five_prime_dist, three_prime_dist)
                     min_dist = min(five_prime_dist, three_prime_dist)
                     # get the bam output line
-                    bam_output = bam_output_list[ptc_id]
+                    # bam_output = bam_output_list[ptc_id]
                     # write output to file
-                    outfile.write("{0},{1},{2},{3},{4},{5}.{6}\n".format(",".join(snp.info), exon_length, five_prime_dist, three_prime_dist, max_dist, min_dist, ",".join(bam_output[1:])))
+                    outfile.write("{0},{1},{2},{3},{4},{5}\n".format(",".join(snp.info), exon_length, five_prime_dist, three_prime_dist, max_dist, min_dist))
 
 
 def tabix(bed_file, output_file, vcf, process_number = None):

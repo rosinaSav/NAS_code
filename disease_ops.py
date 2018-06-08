@@ -358,63 +358,12 @@ def count_junction_reads(sample_dir, output_dir, full_counts, location_list):
 
 
 
-def check_ptcs(ptc_file, processed_dir, processed_suffix):
-
-    # create a dictionary of the samples and their corresponding files
-    processed_dirs = [dir for dir in os.listdir(processed_dir) if processed_suffix in dir]
-    processed_filelist = {}
-    for dir in processed_dirs:
-        dir = "{0}/{1}".format(processed_dir, dir)
-        filelist = os.listdir(dir)
-        for file in filelist:
-            if file != ".DS_Store":
-                processed_filelist[file.strip('.bed')[:15]] = "{0}/{1}".format(dir, file)
-
-
-    ptcs = gen.read_many_fields(ptc_file, "\t")
-
-    ptcs_with_samples = []
-
-    for ptc in ptcs:
-        t_sample = ptc[15][:15]
-
-        if t_sample in processed_filelist:
-            ptcs_with_samples.append(ptc)
-
-    for i, ptc in enumerate(ptcs_with_samples):
-
-        if i:
-            transcript = ptc[3].split('.')[0]
-            t_sample = ptc[15][:15]
-            n_sample = ptc[18][:15]
-
-            t_sample_file = processed_filelist[t_sample]
-            t_samples = gen.read_many_fields(t_sample_file, "\t")
-
-
-<<<<<<< HEAD
-            for sample in t_samples:
-                sample_transcript = sample[0].split('.')[0]
-                if transcript == sample_transcript:
-                    incl_count = int(sample[2].split('|')[0])
-                    skip_count = int(sample[1].split('|')[0])
-=======
 def process_raw_counts(input_dir, output_file):
     '''
     Process the raw counts for all exons for each sample.
     input_dir: the directory containing the raw count files.
     '''
->>>>>>> 5b2ee73730f001f8748a2ab82b4ef5904724f0ef
 
-                    if incl_count != 0 and skip_count != 0:
-                        print(ptc)
-                        print(sample)
-
-<<<<<<< HEAD
-                    # for n_sample in n_samples:
-                    #     if n_sample[0] == exon:
-                    #         print(sample, n_sample)
-=======
     temp_filelist = []
 
     for i, file in enumerate(filelist):
@@ -452,4 +401,3 @@ def process_raw_counts(input_dir, output_file):
 
     for file in temp_filelist:
         gen.remove_file(file)
->>>>>>> 5b2ee73730f001f8748a2ab82b4ef5904724f0ef

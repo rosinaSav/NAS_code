@@ -2,9 +2,6 @@ import generic as gen
 import requests
 import json
 
-import requests
-import json
-
 fields = [
     "file_name",
     "cases.submitter_id",

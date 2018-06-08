@@ -37,8 +37,9 @@ nrow(others[others$exon_dist > 3 & others$exon_dist <= 69,]) / nrow(others)
 nrow(disease[disease$exon_dist > 3 & disease$exon_dist <= 69,]) / nrow(disease)
 
 
+wilcox.test(file$exon_dist[file$disease ==1], file$exon_dist[file$disease==0])
 
-
+nrow(file[file$disease ==1,])
 
 # are disease ptcs in genes with more exons?
 # absolute number of exons in disease genes is higher than non disease
@@ -62,3 +63,20 @@ binom.test(x = first_half_disease, n = nrow(file[file$disease == 1,]), p = 0.5, 
 first_half_non_disease = nrow(file[file$gene_left_length < file$gene_right_length & file$disease != 1 ,])
 binom.test(x = first_half_non_disease, n = nrow(file[file$disease != 1,]), p = 0.5, alternative = "g")
 
+
+file <- read.table("results/clinvar/compare_distances.txt", head=T, sep=",")
+file$pdist = file$min_dist/file$exon_length
+
+wilcox.test(file$min_dist[file$clinvar == 1], file$min_dist[file$X1000_genomes == 1])
+
+clinvar <- file[file$clinvar == 1,]
+kgenomes <- file[file$X1000_genomes == 1,]
+
+# clinvar <- clinvar[clinvar$min_dist < quantile(clinvar$min_dist, 0.8), ]
+# kgenomes <- kgenomes[kgenomes$min_dist < quantile(kgenomes$min_dist, 0.8), ]
+
+clinvar = clinvar[clinvar$min_dist < 200,]
+kgenomes = kgenomes[kgenomes$min_dist < 200,]
+
+wilcox.test(clinvar$min_dist, kgenomes$min_dist)
+t.test(clinvar$min_dist, kgenomes$min_dist)

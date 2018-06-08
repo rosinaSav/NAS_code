@@ -258,6 +258,10 @@ neg_control = read_in_simulations("results/clean_run_2/simulation_output/final_o
 perform_tests(NAS_data)
 summary(NAS_data)
 
+
+
+
+
 par(mfrow = c(2, 2))
 p_PSI = get_n_t("PSI_no_PTC", "PSI_het_PTC", neg_control, NAS_data, "PSI-/- - PSI-/+", swap = FALSE)
 p_RPMskip = get_n_t("norm_count_no_PTC", "norm_count_het_PTC", neg_control, NAS_data, "RPMskip-/- - RPMskip-/+", swap = TRUE)
@@ -339,7 +343,7 @@ big_changes_RPMskip_shift = plot_individual_change(NAS_data_shift, "norm_count_w
 overlap = intersect(big_changes_PSI, big_changes_RPMskip)
 overlap_significance(length(overlap), dim(NAS_data)[1], length(big_changes_PSI), length(big_changes_RPMskip), 10000)
 
-overlap
+print(sort(overlap))
 
 expression = read.csv("results/clean_run_2/clean_run_FANTOM_expression_per_transcript.txt", sep = "\t", header = TRUE, stringsAsFactors = FALSE)
 expression_analysis(overlap, NAS_data$exon, expression)

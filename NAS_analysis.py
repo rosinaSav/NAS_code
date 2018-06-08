@@ -188,7 +188,7 @@ def main():
             print("Please run --filter_genome_data and --get_SNPs first...")
             raise Exception
         # need to work out where and what the analysis outputs need to do
-        so.ptc_locations(PTC_file, snp_relative_exon_position_file, final_file, ptc_location_analysis_output_file)
+        so.ptc_locations(PTC_file, snp_relative_exon_position_file, ptc_location_analysis_output_file)
 
 
 if __name__ == "__main__":
