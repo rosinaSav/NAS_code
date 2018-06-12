@@ -1,5 +1,4 @@
 library("ggplot2")
-setwd(getwd())
 
 args = commandArgs(trailingOnly=TRUE)
 
@@ -41,7 +40,8 @@ get_plot <- function(file_path, out_path) {
     geom_vline(xintercept=file$stop_count[file$id == "real"], lty=2, col="red")
   
   # out_path = paste("ese_stops_simulations_output/", set, "/", set, "_", simulations, "_hist.head(id", sep="")
-  ggsave(out_path, plot=plot)
+  # ggsave(out_path, plot=plot)
+  plot
 }
 
 run_plots <- function(simulations) {
@@ -61,11 +61,22 @@ prepare_data <- function(set) {
   }
 }
 
-sample_file <- read.table('results/ese_stops_simulations_output/RBP_motifs_grouped/motif_samples.txt')
-colnames(sample_file) <- c("sample")
+# sample_file <- read.table('results/ese_stops_simulations_output/RBP_motifs_grouped/motif_samples.txt')
+# colnames(sample_file) <- c("sample")
+# 
+# for (set in sample_file$sample) {
+#   file_path = paste("results/ese_stops_simulations_output/RBP_motifs_grouped/", set, "/", set, "_stop_counts_1000.csv", sep="")
+#   out_path = paste("results/ese_stops_simulations_output/RBP_motifs_grouped/plots/", set, "_hist.jpg", sep="")
+#   get_plot(file_path, out_path)
+# }
 
-for (set in sample_file$sample) {
-  file_path = paste("results/ese_stops_simulations_output/RBP_motifs_grouped/", set, "/", set, "_stop_counts_1000.csv", sep="")
-  out_path = paste("results/ese_stops_simulations_output/RBP_motifs_grouped/plots/", set, "_hist.jpg", sep="")
-  get_plot(file_path, out_path)
-}
+
+# P value for INT3
+file_path <- paste("ese_stops_simulations_output/", "INT3", "/", "INT3", "_stop_counts_" , 10000, ".csv", sep="")
+file <- read.csv(file_path, head=T)
+
+simulants = file[file$id != "real",]
+real = file[file$id == "real",]
+
+
+(nrow(simulants[simulants$stop_count < real$stop_count,]) + 1) / (nrow(simulants) + 1)

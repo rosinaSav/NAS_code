@@ -18,9 +18,9 @@ import random
 def main():
 
     description = "Look at disease snps."
-    arguments = ["disease_snps_file", "output_directory", "results_prefix", "intersect_snps", "get_relative_positions", "get_snp_status", "get_info", "simulate_ptc_location", "get_possible_ptc_locations", "required_simulations", "get_overlaps", "intersect_ptcs", "compare_ptcs" ,"get_introns", "compare_distances"]
-    args = gen.parse_arguments(description, arguments, flags = [3,4,5,6,7,8,9,10,11,12,13,14])
-    disease_snps_file, output_directory, results_prefix, intersect_snps, get_relative_positions, get_snp_status, get_info, simulate_ptc_location, get_possible_ptc_locations, required_simulations, get_overlaps, intersect_ptcs, compare_ptcs, get_introns, compare_distances = args.disease_snps_file, args.output_directory, args.results_prefix, args.intersect_snps, args.get_relative_positions, args.get_snp_status, args.get_info, args.simulate_ptc_location, args.get_possible_ptc_locations, args.required_simulations, args.get_overlaps, args.intersect_ptcs, args.compare_ptcs, args.get_introns, args.compare_distances
+    arguments = ["disease_snps_file", "output_directory", "results_prefix", "intersect_snps", "get_relative_positions", "get_snp_status", "get_info", "simulate_ptc_location", "get_possible_ptc_locations", "required_simulations", "get_overlaps", "intersect_ptcs", "compare_ptcs" ,"get_introns", "compare_distances", "distance_intervals"]
+    args = gen.parse_arguments(description, arguments, flags = [3,4,5,6,7,8,9,10,11,12,13,14,15])
+    disease_snps_file, output_directory, results_prefix, intersect_snps, get_relative_positions, get_snp_status, get_info, simulate_ptc_location, get_possible_ptc_locations, required_simulations, get_overlaps, intersect_ptcs, compare_ptcs, get_introns, compare_distances, distance_intervals = args.disease_snps_file, args.output_directory, args.results_prefix, args.intersect_snps, args.get_relative_positions, args.get_snp_status, args.get_info, args.simulate_ptc_location, args.get_possible_ptc_locations, args.required_simulations, args.get_overlaps, args.intersect_ptcs, args.compare_ptcs, args.get_introns, args.compare_distances, args.distance_intervals
 
     # create the output directory if it doesnt already exist
     gen.create_output_directories(output_directory)
@@ -101,7 +101,7 @@ def main():
     cds_bed_file = "{0}_CDS.bed".format(results_prefix)
     intron_bed = "{0}/internal_intron_list.bed".format(output_directory)
     # intron_fasta = "{0}/internal_intron_list.fasta".format(output_directory)
-    if get_introns or not os.path.isfile(intron_bed):
+    if get_introns:
         print("Extracting internal introns from exons...")
         dso.get_introns(cds_bed_file, intron_bed)
         # beo.fasta_from_intervals(intron_bed, intron_fasta, genome_file, force_strand = True, names = True)
@@ -117,6 +117,10 @@ def main():
     compare_distances_file = "{0}/compare_distances.txt".format(output_directory)
     if compare_distances:
         dso.compare_distances(disease_ptcs_file, disease_snps_relative_exon_positions, ptc_file, kgenomes_relative_exon_positions_file, compare_distances_file)
+
+    distance_interval_file = "{0}/distance_intervals.csv".format(output_directory)
+    if distance_intervals:
+        dso.distance_intervals(coding_exons_file, disease_ptcs_file, disease_snps_relative_exon_positions, ptc_file, relative_exon_positions_file, distance_interval_file)
 
 
 

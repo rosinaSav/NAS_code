@@ -421,3 +421,253 @@ def compare_distances(clinvar_ptc_file, clinvar_relative_exon_positions_file, pt
 
                     outlist = gen.stringify([t, e, exon_length, rel_pos, min_dist, exon_end, kgenomes, clinvar])
                     outfile.write("{0}\n".format(",".join(outlist)))
+
+def get_introns(exon_bed, output_file):
+    '''
+    Get the introns between exons in a file
+    '''
+
+    class Define_Exon(object):
+        def __init__(self, exon):
+            self.chr = exon[0]
+            self.start = int(exon[1])
+            self.stop = int(exon[2])
+            self.transcript_id = exon[3].split('.')[0]
+            self.exon_no = int(exon[3].split('.')[1])
+            self.type = exon[4]
+            self.strand = exon[5]
+
+
+    exons = gen.read_many_fields(exon_bed, "\t")
+
+    # get a dictionary of exons split by transcript and number
+    exon_list = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict()))
+    for item in exons:
+        exon = Define_Exon(item)
+        if exon.type == "stop_codon":
+            exon.exon_no = 999999
+        exon_list[exon.transcript_id][exon.exon_no] = item
+
+    # now get the introns and write to file
+    with open(output_file, "w") as outfile:
+        for transcript in exon_list:
+            for exon_no in sorted(exon_list[transcript]):
+                exon = Define_Exon(exon_list[transcript][exon_no])
+                # check that the next exon exists, assuming its id will not be higher than 999999
+                if exon.exon_no + 1 in exon_list[transcript]:
+                    next_exon = Define_Exon(exon_list[exon.transcript_id][exon.exon_no + 1])
+
+                    if exon.strand == "-":
+                        intron_start = next_exon.stop
+                        intron_stop = exon.start
+                    else:
+                        intron_start = exon.stop
+                        intron_stop = next_exon.start
+
+                    outlist = gen.stringify([exon.chr, intron_start, intron_stop, "{0}.{1}-{2}".format(exon.transcript_id, exon.exon_no, next_exon.exon_no), ".", exon.strand])
+                    outfile.write("{0}\n".format("\t".join(outlist)))
+
+def distance_intervals(coding_exons_file, disease_ptcs_file, disease_snps_relative_exon_positions, ptc_file, relative_exon_positions_file, output_file):
+
+    # coding_exons = gen.read_many_fields(coding_exons_file, "\t")
+    # coding_exon_list = collections.defaultdict(lambda: collections.defaultdict())
+    # for i in coding_exons:
+    #     t = i[3].split('.')[0]
+    #     e = int(i[3].split('.')[1])
+    #     coding_exon_list[t][e] = [i[-1], int(i[1]), int(i[2])]
+
+    ptcs = gen.read_many_fields(ptc_file, "\t")
+    ptc_list = {}
+    ptc_positions = []
+    for ptc in ptcs[1:]:
+        ptc_id = ptc[8]
+        ptc_positions.append(int(ptc[7]))
+        ptc_list[ptc_id] = [ptc[3], int(ptc[1]), int(ptc[2]), int(ptc[7])]
+
+    disease_ptcs = gen.read_many_fields(disease_ptcs_file, "\t")
+    disease_ptc_list = {}
+    disease_ptc_positions = []
+    for ptc in disease_ptcs:
+        ptc_id = ptc[8]
+        disease_ptc_positions.append(int(ptc[7]))
+        disease_ptc_list[ptc_id] = [ptc[3], int(ptc[1]), int(ptc[2]), int(ptc[7])]
+
+    overlaps = [i for i in ptc_positions if i in disease_ptc_positions]
+
+    # relative_positions = gen.read_many_fields(relative_exon_positions_file, "\t")
+    # relative_positions_list = {}
+    # for snp in relative_positions:
+    #     snp_id = snp[8]
+    #     relative_positions_list[snp_id] = [snp[3], int(snp[11])]
+    #
+    # non_disease_nt_counts = [0,0,0]
+    # non_disease_ptc_counts = [0,0,0]
+    # non_disease_ptc_counts_end = {}
+    # for end in [5, 3]:
+    #     non_disease_ptc_counts_end = [0,0,0]
+    # non_disease_count = 0
+    # non_disease_sample_list = []
+    #
+    # for ptc_id in ptc_list:
+    #     ptc = ptc_list[ptc_id]
+    #     exon_length = ptc[2] - ptc[1]
+    #     transcript_exon = ptc[0]
+    #     exon_start = ptc[1]
+    #     exon_end = ptc[2]
+    #     snp_pos = ptc[3]
+    #     if snp_pos not in overlaps:
+    #         if ptc_id in relative_positions_list and relative_positions_list[ptc_id][0] == ptc[0]:
+    #             non_disease_count += 1
+    #             rel_pos = relative_positions_list[ptc_id][1]
+    #
+    #             distances = [rel_pos, exon_length - rel_pos]
+    #             min_dist = min(distances)
+    #             if distances.index(min_dist) == 0:
+    #                 end = 5
+    #             else:
+    #                 end = 3
+    #
+    #             if rel_pos <= 3:
+    #                 non_disease_ptc_counts[0] += 1
+    #                 non_disease_ptc_counts_end[end][0] += 1
+    #             elif rel_pos > 3 and rel_pos <= 69:
+    #                 non_disease_ptc_counts[1] += 1
+    #                 non_disease_ptc_counts_end[end][1] += 1
+    #             else:
+    #                 non_disease_ptc_counts[2] += 1
+    #                 non_disease_ptc_counts_end[end][2] += 1
+    #
+    #             if transcript_exon not in non_disease_sample_list:
+    #                 if exon_length >= 138:
+    #                     non_disease_nt_counts[0] += 6
+    #                     non_disease_nt_counts[1] += 132
+    #                     non_disease_nt_counts[2] += (exon_length - 188)
+    #                 elif exon_length > 6 and exon_length < 138:
+    #                     non_disease_nt_counts[0] += 6
+    #                     non_disease_nt_counts[1] += (exon_length - 6)
+    #                 else:
+    #                     non_disease_nt_counts[0] += exon_length
+    #
+    #                 non_disease_sample_list.append(transcript_exon)
+
+
+    disease_relative_positions = gen.read_many_fields(disease_snps_relative_exon_positions, "\t")
+    disease_relative_positions_list = {}
+    for snp in disease_relative_positions:
+        snp_id = snp[8]
+        disease_relative_positions_list[snp_id] = [snp[3], int(snp[11])]
+
+    disease_nt_counts = {}
+    disease_ptc_counts = {}
+    disease_exon_sample_list = []
+    ranges = [5, 3]
+    for i in ranges:
+        disease_nt_counts[i] = [0,0,0]
+        disease_ptc_counts[i] = [0,0,0]
+
+
+
+    for ptc_id in disease_ptc_list:
+        ptc = disease_ptc_list[ptc_id]
+        ptc_pos = ptc[3]
+        if ptc_pos not in overlaps:
+            if ptc_id in disease_relative_positions_list and disease_relative_positions_list[ptc_id][0] == ptc[0]:
+                exon_length = ptc[2] - ptc[1]
+                transcript_exon = ptc[0]
+
+                if transcript_exon not in disease_exon_sample_list:
+                    if exon_length >= 138:
+                        for i in ranges:
+                            disease_nt_counts[i][0] += 3
+                            disease_nt_counts[i][1] += 66
+                            disease_nt_counts[i][2] += (np.divide(exon_length, 2) - 69)
+                    elif exon_length > 6 and exon_length < 138:
+                        for i in ranges:
+                            disease_nt_counts[i][0] += 3
+                            disease_nt_counts[i][1] += (np.divide(exon_length, 2) - 3)
+                    else:
+                        for i in ranges:
+                            disease_nt_counts[i][0] += np.divide(exon_length, 2)
+
+                disease_exon_sample_list.append(transcript_exon)
+
+                rel_pos = disease_relative_positions_list[ptc_id][1]
+                distances = [rel_pos, exon_length - rel_pos]
+                min_dist = min(distances)
+                if distances.index(min_dist) == 0:
+                    end = 5
+                else:
+                    end = 3
+
+                if rel_pos <= 3:
+                    disease_ptc_counts[end][0] += 1
+                elif rel_pos > 3 and rel_pos <= 69:
+                    disease_ptc_counts[end][1] += 1
+                else:
+                    disease_ptc_counts[end][2] += 1
+
+
+                # rel_pos = disease_relative_positions_list[ptc_id][1]
+                # distances = [rel_pos, exon_length - rel_pos]
+                # min_dist = min(distances)
+                # if distances.index(min_dist) == 0:
+                #     end = 5
+                # else:
+                #     end = 3
+
+
+                # if rel_pos <= 3:
+                #     disease_ptc_counts[0] += 1
+                #     disease_ptc_counts_end[end][0] += 1
+                # elif rel_pos > 3 and rel_pos <= 69:
+                #     disease_ptc_counts[1] += 1
+                #     disease_ptc_counts_end[end][1] += 1
+                # else:
+                #     disease_ptc_counts[2] += 1
+                #     disease_ptc_counts_end[end][2] += 1
+                #
+
+
+    print(disease_nt_counts)
+
+
+    # expected_props = []
+    # for i in range(len(non_disease_ptc_counts)):
+    #     expected_props.append(np.divide(non_disease_ptc_counts[i], sum(non_disease_ptc_counts)))
+    #
+    # ranges = ["0 - 3", "4 - 69", "69 - "]
+    # fofe = {}
+    # chisq = []
+    # for i, interval in enumerate(ranges):
+    #     expected = expected_props[i]*sum(disease_ptc_counts)
+    #     observed = disease_ptc_counts[i]
+    #     fofe[interval] = np.divide(observed, expected)
+    #     chisq.append(np.divide((observed - expected)**2, expected))
+    #
+    # with open(output_file, "w") as outfile:
+    #     outfile.write('non_disease\n')
+    #     outfile.write('position,num_bases,num_ptc,ptc_prop\n')
+    #     outfile.write('0 - 3,{0},{1},{2}\n'.format(non_disease_nt_counts[0], non_disease_ptc_counts[0], expected_props[0]))
+    #     outfile.write('4 - 69,{0},{1},{2}\n'.format(non_disease_nt_counts[1], non_disease_ptc_counts[1], expected_props[1]))
+    #     outfile.write('70 -,{0},{1},{2}\n'.format(non_disease_nt_counts[2], non_disease_ptc_counts[2], expected_props[2]))
+    #     outfile.write('\n')
+    #     outfile.write('disease\n')
+    #     outfile.write(',num_bases,expected,observed\n')
+    #     outfile.write(',,(non_disease_prop * num_disease_ptcs),\n')
+    #     outfile.write('0 - 3,{0},{1},{2}\n'.format(disease_nt_counts[0], expected_props[0]*sum(disease_ptc_counts), disease_ptc_counts[0]))
+    #     outfile.write('4 - 69,{0},{1},{2}\n'.format(disease_nt_counts[1], expected_props[1]*sum(disease_ptc_counts), disease_ptc_counts[1]))
+    #     outfile.write('79 -,{0},{1},{2}\n'.format(disease_nt_counts[2], expected_props[2]*sum(disease_ptc_counts), disease_ptc_counts[2]))
+    #     outfile.write('\n')
+    #     outfile.write('Chisq = {0},df = {1}\n'.format(sum(chisq), len(chisq) - 1))
+    #     outfile.write('\n\n')
+    #     outfile.write('fo/fe\n')
+    #     for interval in ranges:
+    #         outfile.write('{0},{1}\n'.format(interval, fofe[interval]))
+    #
+    #
+    #     for end in [5, 3]:
+    #         outfile.write("non_disease {end}'".format(end))
+    #         outfile.write('position,num_ptc,ptc_prop\n')
+    #         outfile.write('0-3,{0},{1}\n'.format(non_disease_ptc_counts_end[end][0], expected_props_end[end][0]))
+    #         outfile.write('4-69,{0},{1}\n'.format(non_disease_ptc_counts_end[end][1], expected_props_end[end][1]))
+    #         outfile.write('70-,{0},{1}\n'.format(non_disease_ptc_counts_end[end][2], expected_props_end[end][2]))

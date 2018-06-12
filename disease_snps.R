@@ -67,6 +67,10 @@ binom.test(x = first_half_non_disease, n = nrow(file[file$disease != 1,]), p = 0
 file <- read.table("results/clinvar/compare_distances.txt", head=T, sep=",")
 file$pdist = file$min_dist/file$exon_length
 
+nrow(file[file$min_dist < 70 & file$min_dist > 3 & file$clinvar == 1,]) /nrow(file[file$clinvar == 1,])
+nrow(file[file$min_dist < 70 & file$min_dist > 3 & file$clinvar == 0,]) /nrow(file[file$clinvar == 0,])
+
+
 wilcox.test(file$min_dist[file$clinvar == 1], file$min_dist[file$X1000_genomes == 1])
 
 clinvar <- file[file$clinvar == 1,]
