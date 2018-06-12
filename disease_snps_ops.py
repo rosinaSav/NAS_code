@@ -7,6 +7,7 @@ import collections
 import re
 import copy
 import numpy as np
+from scipy.stats import chisquare
 
 def get_ptc_overlaps(disease_ptc_file, ptc_file, output_file):
     '''
@@ -467,14 +468,7 @@ def get_introns(exon_bed, output_file):
                     outlist = gen.stringify([exon.chr, intron_start, intron_stop, "{0}.{1}-{2}".format(exon.transcript_id, exon.exon_no, next_exon.exon_no), ".", exon.strand])
                     outfile.write("{0}\n".format("\t".join(outlist)))
 
-def distance_intervals(coding_exons_file, disease_ptcs_file, disease_snps_relative_exon_positions, ptc_file, relative_exon_positions_file, output_file):
-
-    # coding_exons = gen.read_many_fields(coding_exons_file, "\t")
-    # coding_exon_list = collections.defaultdict(lambda: collections.defaultdict())
-    # for i in coding_exons:
-    #     t = i[3].split('.')[0]
-    #     e = int(i[3].split('.')[1])
-    #     coding_exon_list[t][e] = [i[-1], int(i[1]), int(i[2])]
+def clinvar_ptc_locations(disease_ptcs_file, disease_snps_relative_exon_positions, ptc_file, output_file):
 
     ptcs = gen.read_many_fields(ptc_file, "\t")
     ptc_list = {}
@@ -494,63 +488,6 @@ def distance_intervals(coding_exons_file, disease_ptcs_file, disease_snps_relati
 
     overlaps = [i for i in ptc_positions if i in disease_ptc_positions]
 
-    # relative_positions = gen.read_many_fields(relative_exon_positions_file, "\t")
-    # relative_positions_list = {}
-    # for snp in relative_positions:
-    #     snp_id = snp[8]
-    #     relative_positions_list[snp_id] = [snp[3], int(snp[11])]
-    #
-    # non_disease_nt_counts = [0,0,0]
-    # non_disease_ptc_counts = [0,0,0]
-    # non_disease_ptc_counts_end = {}
-    # for end in [5, 3]:
-    #     non_disease_ptc_counts_end = [0,0,0]
-    # non_disease_count = 0
-    # non_disease_sample_list = []
-    #
-    # for ptc_id in ptc_list:
-    #     ptc = ptc_list[ptc_id]
-    #     exon_length = ptc[2] - ptc[1]
-    #     transcript_exon = ptc[0]
-    #     exon_start = ptc[1]
-    #     exon_end = ptc[2]
-    #     snp_pos = ptc[3]
-    #     if snp_pos not in overlaps:
-    #         if ptc_id in relative_positions_list and relative_positions_list[ptc_id][0] == ptc[0]:
-    #             non_disease_count += 1
-    #             rel_pos = relative_positions_list[ptc_id][1]
-    #
-    #             distances = [rel_pos, exon_length - rel_pos]
-    #             min_dist = min(distances)
-    #             if distances.index(min_dist) == 0:
-    #                 end = 5
-    #             else:
-    #                 end = 3
-    #
-    #             if rel_pos <= 3:
-    #                 non_disease_ptc_counts[0] += 1
-    #                 non_disease_ptc_counts_end[end][0] += 1
-    #             elif rel_pos > 3 and rel_pos <= 69:
-    #                 non_disease_ptc_counts[1] += 1
-    #                 non_disease_ptc_counts_end[end][1] += 1
-    #             else:
-    #                 non_disease_ptc_counts[2] += 1
-    #                 non_disease_ptc_counts_end[end][2] += 1
-    #
-    #             if transcript_exon not in non_disease_sample_list:
-    #                 if exon_length >= 138:
-    #                     non_disease_nt_counts[0] += 6
-    #                     non_disease_nt_counts[1] += 132
-    #                     non_disease_nt_counts[2] += (exon_length - 188)
-    #                 elif exon_length > 6 and exon_length < 138:
-    #                     non_disease_nt_counts[0] += 6
-    #                     non_disease_nt_counts[1] += (exon_length - 6)
-    #                 else:
-    #                     non_disease_nt_counts[0] += exon_length
-    #
-    #                 non_disease_sample_list.append(transcript_exon)
-
-
     disease_relative_positions = gen.read_many_fields(disease_snps_relative_exon_positions, "\t")
     disease_relative_positions_list = {}
     for snp in disease_relative_positions:
@@ -564,8 +501,6 @@ def distance_intervals(coding_exons_file, disease_ptcs_file, disease_snps_relati
     for i in ranges:
         disease_nt_counts[i] = [0,0,0]
         disease_ptc_counts[i] = [0,0,0]
-
-
 
     for ptc_id in disease_ptc_list:
         ptc = disease_ptc_list[ptc_id]
@@ -606,68 +541,67 @@ def distance_intervals(coding_exons_file, disease_ptcs_file, disease_snps_relati
                 else:
                     disease_ptc_counts[end][2] += 1
 
+    intervals = ["0-3 bp", "4-69 bp", "70+ bp"]
 
-                # rel_pos = disease_relative_positions_list[ptc_id][1]
-                # distances = [rel_pos, exon_length - rel_pos]
-                # min_dist = min(distances)
-                # if distances.index(min_dist) == 0:
-                #     end = 5
-                # else:
-                #     end = 3
+    total_disease_nts = []
+    [total_disease_nts.extend(disease_nt_counts[end]) for end in disease_nt_counts]
+    total_disease_nts = sum(total_disease_nts)
+    total_disease_ptcs = []
+    [total_disease_ptcs.extend(disease_ptc_counts[end]) for end in disease_ptc_counts]
+    total_disease_ptcs = sum(total_disease_ptcs)
 
+    with open(output_file, "w") as outfile:
+        outfile.write('whole_exons\n')
+        outfile.write('\n \n')
+        outfile.write('region,nt,nt_prop,expected_disease_ptcs,observed_disease_ptcs,fo/fe\n')
+        chisq = []
+        expecteds = []
+        nt_props = []
+        for i, region in enumerate(intervals):
+            region_nts = sum(disease_nt_counts[end][i] for end in disease_nt_counts)
+            region_nts_prop = np.divide(region_nts, total_disease_nts)
+            nt_props.append(region_nts_prop)
+            expected_region_ptcs = region_nts_prop * total_disease_ptcs
+            expecteds.append(expected_region_ptcs)
+            region_ptcs = sum(disease_ptc_counts[end][i] for end in disease_ptc_counts)
+            outfile.write("{0},{1},{2},{3},{4},{5}\n".format(region, region_nts, region_nts_prop, expected_region_ptcs, region_ptcs, np.divide(region_ptcs, expected_region_ptcs)))
+            chisq.append(np.divide((region_ptcs - expected_region_ptcs)**2, expected_region_ptcs))
 
-                # if rel_pos <= 3:
-                #     disease_ptc_counts[0] += 1
-                #     disease_ptc_counts_end[end][0] += 1
-                # elif rel_pos > 3 and rel_pos <= 69:
-                #     disease_ptc_counts[1] += 1
-                #     disease_ptc_counts_end[end][1] += 1
-                # else:
-                #     disease_ptc_counts[2] += 1
-                #     disease_ptc_counts_end[end][2] += 1
-                #
+        observeds = [0,0,0]
+        for end in disease_ptc_counts:
+            for i, count in enumerate(disease_ptc_counts[end]):
+                observeds[i] += count
 
+        chisq_calc = chisquare(observeds, f_exp = expecteds)
 
-    print(disease_nt_counts)
+        outfile.write("total,{0},{1},{2}\n".format(total_disease_nts, sum(nt_props), sum(expecteds)))
+        outfile.write('\n\n')
+        outfile.write('total_ptcs:,{0}\n'.format(total_disease_ptcs))
+        outfile.write('chisq:,{0}\ndf:,{1}\npval:,{2}\n'.format(sum(chisq), len(chisq) - 1, chisq_calc.pvalue))
 
+        for end in ranges:
+            outfile.write("\n \n{0}'\n".format(end))
+            outfile.write('\n \n')
+            outfile.write('region,nt,nt_prop,expected_disease_ptcs,observed_disease_ptcs,fo/fe\n')
+            chisq = []
+            expecteds = []
+            nt_props = []
+            for i, region in enumerate(intervals):
+                region_nts = disease_nt_counts[end][i]
+                region_nts_prop = np.divide(region_nts, np.divide(total_disease_nts, 2))
+                nt_props.append(region_nts_prop)
+                expected_region_ptcs = region_nts_prop * np.divide(total_disease_ptcs, 2)
+                expecteds.append(expected_region_ptcs)
+                region_ptcs = disease_ptc_counts[end][i]
+                outfile.write("{0},{1},{2},{3},{4},{5}\n".format(region, region_nts, region_nts_prop, expected_region_ptcs, region_ptcs, np.divide(region_ptcs, expected_region_ptcs)))
+                chisq.append(np.divide((region_ptcs - expected_region_ptcs)**2, expected_region_ptcs))
 
-    # expected_props = []
-    # for i in range(len(non_disease_ptc_counts)):
-    #     expected_props.append(np.divide(non_disease_ptc_counts[i], sum(non_disease_ptc_counts)))
-    #
-    # ranges = ["0 - 3", "4 - 69", "69 - "]
-    # fofe = {}
-    # chisq = []
-    # for i, interval in enumerate(ranges):
-    #     expected = expected_props[i]*sum(disease_ptc_counts)
-    #     observed = disease_ptc_counts[i]
-    #     fofe[interval] = np.divide(observed, expected)
-    #     chisq.append(np.divide((observed - expected)**2, expected))
-    #
-    # with open(output_file, "w") as outfile:
-    #     outfile.write('non_disease\n')
-    #     outfile.write('position,num_bases,num_ptc,ptc_prop\n')
-    #     outfile.write('0 - 3,{0},{1},{2}\n'.format(non_disease_nt_counts[0], non_disease_ptc_counts[0], expected_props[0]))
-    #     outfile.write('4 - 69,{0},{1},{2}\n'.format(non_disease_nt_counts[1], non_disease_ptc_counts[1], expected_props[1]))
-    #     outfile.write('70 -,{0},{1},{2}\n'.format(non_disease_nt_counts[2], non_disease_ptc_counts[2], expected_props[2]))
-    #     outfile.write('\n')
-    #     outfile.write('disease\n')
-    #     outfile.write(',num_bases,expected,observed\n')
-    #     outfile.write(',,(non_disease_prop * num_disease_ptcs),\n')
-    #     outfile.write('0 - 3,{0},{1},{2}\n'.format(disease_nt_counts[0], expected_props[0]*sum(disease_ptc_counts), disease_ptc_counts[0]))
-    #     outfile.write('4 - 69,{0},{1},{2}\n'.format(disease_nt_counts[1], expected_props[1]*sum(disease_ptc_counts), disease_ptc_counts[1]))
-    #     outfile.write('79 -,{0},{1},{2}\n'.format(disease_nt_counts[2], expected_props[2]*sum(disease_ptc_counts), disease_ptc_counts[2]))
-    #     outfile.write('\n')
-    #     outfile.write('Chisq = {0},df = {1}\n'.format(sum(chisq), len(chisq) - 1))
-    #     outfile.write('\n\n')
-    #     outfile.write('fo/fe\n')
-    #     for interval in ranges:
-    #         outfile.write('{0},{1}\n'.format(interval, fofe[interval]))
-    #
-    #
-    #     for end in [5, 3]:
-    #         outfile.write("non_disease {end}'".format(end))
-    #         outfile.write('position,num_ptc,ptc_prop\n')
-    #         outfile.write('0-3,{0},{1}\n'.format(non_disease_ptc_counts_end[end][0], expected_props_end[end][0]))
-    #         outfile.write('4-69,{0},{1}\n'.format(non_disease_ptc_counts_end[end][1], expected_props_end[end][1]))
-    #         outfile.write('70-,{0},{1}\n'.format(non_disease_ptc_counts_end[end][2], expected_props_end[end][2]))
+            observeds = [0,0,0]
+            for i, count in enumerate(disease_ptc_counts[end]):
+                observeds[i] += count
+            chisq_calc = chisquare(observeds, f_exp = expecteds)
+
+            outfile.write("total,{0},{1},{2}\n".format(sum(disease_nt_counts[end]), sum(nt_props), sum(expecteds)))
+            outfile.write('\n\n')
+            outfile.write('total_ptcs:,{0}\n'.format(sum(disease_ptc_counts[end])))
+            outfile.write('chisq:,{0}\ndf:,{1}\npval:,{2}\n'.format(sum(chisq), len(chisq) - 1, chisq_calc.pvalue))
