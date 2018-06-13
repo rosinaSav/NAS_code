@@ -18,9 +18,13 @@ import random
 def main():
 
     description = "Look at disease snps."
-    arguments = ["disease_snps_file", "output_directory", "results_prefix", "intersect_snps", "get_relative_positions", "get_snp_status", "get_info", "simulate_ptc_location", "get_possible_ptc_locations", "required_simulations", "get_overlaps", "intersect_ptcs", "compare_ptcs" ,"get_introns", "compare_distances", "clinvar_ptc_locations"]
-    args = gen.parse_arguments(description, arguments, flags = [3,4,5,6,7,8,9,10,11,12,13,14,15])
-    disease_snps_file, output_directory, results_prefix, intersect_snps, get_relative_positions, get_snp_status, get_info, simulate_ptc_location, get_possible_ptc_locations, required_simulations, get_overlaps, intersect_ptcs, compare_ptcs, get_introns, compare_distances, clinvar_ptc_locations = args.disease_snps_file, args.output_directory, args.results_prefix, args.intersect_snps, args.get_relative_positions, args.get_snp_status, args.get_info, args.simulate_ptc_location, args.get_possible_ptc_locations, args.required_simulations, args.get_overlaps, args.intersect_ptcs, args.compare_ptcs, args.get_introns, args.compare_distances, args.clinvar_ptc_locations
+    arguments = ["disease_snps_file", "output_directory", "results_prefix", "simulations", "intersect_snps", "get_relative_positions", "get_snp_status", "get_info", "simulate_ptc_location", "get_possible_ptc_locations", "required_simulations", "get_overlaps", "intersect_ptcs", "compare_ptcs" ,"get_introns", "compare_distances", "clinvar_ptc_locations", "location_simulation"]
+    args = gen.parse_arguments(description, arguments, flags = [4,5,6,7,8,9,10,11,12,13,14,15,16,17], ints=[3])
+    disease_snps_file, output_directory, results_prefix, simulations, intersect_snps, get_relative_positions, get_snp_status, get_info, simulate_ptc_location, get_possible_ptc_locations, required_simulations, get_overlaps, intersect_ptcs, compare_ptcs, get_introns, compare_distances, clinvar_ptc_locations, location_simulation = args.disease_snps_file, args.output_directory, args.results_prefix, args.simulations, args.intersect_snps, args.get_relative_positions, args.get_snp_status, args.get_info, args.simulate_ptc_location, args.get_possible_ptc_locations, args.required_simulations, args.get_overlaps, args.intersect_ptcs, args.compare_ptcs, args.get_introns, args.compare_distances, args.clinvar_ptc_locations, args.location_simulation
+
+    if simulations and not isinstance(simulations, int):
+        print("\nERROR: Please provide the correct number for simulations.\n")
+        raise Exception
 
     # create the output directory if it doesnt already exist
     gen.create_output_directories(output_directory)
@@ -122,10 +126,15 @@ def main():
     if clinvar_ptc_locations:
         dso.clinvar_ptc_locations(disease_ptcs_file, disease_snps_relative_exon_positions, ptc_file, clinvar_ptc_locations_file)
 
-    # coding_exons_fasta = "{0}_coding_exons.fasta".format(results_prefix)
-    # clinvar_location_sim = "{0}/clinvar_simulations.csv".format(output_directory)
-    # if clinvar_simulation:
-    #     dso.clinvar_simulation(disease_ptcs_file, disease_snps_relative_exon_positions, ptc_file, coding_exons_fasta, )
+    coding_exons_fasta = "{0}_coding_exons.fasta".format(results_prefix)
+    snp_relative_positions_file = "{0}_SNP_relative_exon_position.bed".format(results_prefix)
+    clinvar_location_simulation_file = "{0}/clinvar_simulations.csv".format(output_directory)
+    kgenomes_location_simulation_file = "{0}/1000_genomes_simulations.csv".format(output_directory)
+    if location_simulation:
+        print('Running simulation on Clinvar PTCs...')
+        dso.clinvar_simulation(disease_ptcs_file, disease_snps_relative_exon_positions, ptc_file, coding_exons_fasta, simulations, clinvar_location_simulation_file, clinvar=True)
+        print('Running simulation on 1000 genomes PTCs...')
+        dso.clinvar_simulation(disease_ptcs_file, snp_relative_positions_file, ptc_file, coding_exons_fasta, simulations, kgenomes_location_simulation_file)
 
 
 if __name__ == "__main__":
