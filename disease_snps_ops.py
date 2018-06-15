@@ -627,7 +627,7 @@ def clinvar_ptc_locations(disease_ptcs_file, disease_snps_relative_exon_position
             outfile.write('total_ptcs:,{0}\n'.format(sum(disease_ptc_counts[end])))
             outfile.write('chisq:,{0}\ndf:,{1}\npval:,{2}\n'.format(sum(chisq), len(chisq) - 1, chisq_calc.pvalue))
 
-def get_coding_exon_nt_positions(coding_exons_list, clean_disease_ptc_list, disease_relative_positions_list):
+def get_coding_exon_nt_positions(coding_exons_list, clean_disease_ptc_list, disease_relative_positions_list, exclude_cpg=None):
     '''
     Get the index of each nt in each coding exon that doest have a ptc
     '''
@@ -652,7 +652,13 @@ def get_coding_exon_nt_positions(coding_exons_list, clean_disease_ptc_list, dise
             exon_seq = list(coding_exons_list[transcript][exon])
             for i, nt in enumerate(exon_seq):
                 if i not in relative_ptc_locations[transcript][exon][nt]:
-                    coding_exon_nt_positions[transcript][exon][nt].append(i)
+                    # if we want to exclude cpg regions
+                    if exclude_cpg and i < len(exon_seq)-1:
+                        if nt == "G" and exon_seq[i+1] != "C" or nt == "C" and exon_seq[i+1] != "G":
+                            coding_exon_nt_positions[transcript][exon][nt].append(i)
+                    else:
+                        coding_exon_nt_positions[transcript][exon][nt].append(i)
+
     return coding_exon_nt_positions
 
 
@@ -681,9 +687,6 @@ def get_real_positions(clean_ptc_list, relative_positions_list, regions):
         else:
             end = 3
 
-        if end == 3 and min_dist <= 2:
-            print(ptc_id, exon_length, rel_pos)
-
         if min_dist <= 2:
             location_counts[regions[0]][end] += 1
         elif min_dist > 2 and min_dist <= 68:
@@ -693,7 +696,7 @@ def get_real_positions(clean_ptc_list, relative_positions_list, regions):
 
     return location_counts
 
-def clinvar_simulation(disease_ptcs_file, relative_exon_positions_file, ptc_file, coding_exons_fasta, simulations, output_file, clinvar=None):
+def clinvar_simulation(disease_ptcs_file, relative_exon_positions_file, ptc_file, coding_exons_fasta, simulations, output_file, exclude_cpg=None, clinvar=None):
     '''
     Simulation mutation locations of PTCs.
     Take the exon in which each PTC is location and randomly pick a site with the
@@ -756,15 +759,15 @@ def clinvar_simulation(disease_ptcs_file, relative_exon_positions_file, ptc_file
     regions = ["0-3 bp", "4-69 bp", "70+ bp"]
     real_positions = get_real_positions(clean_ptc_list, relative_positions_list, regions)
 
-    # simulant_list = list(range(1, simulations+1))
-    # processes = gen.run_in_parallel(simulant_list, ["foo", simulations, clean_ptc_list, relative_positions_list, coding_exons_fasta], simulate_mutations)
-    #
-    # process_list = {}
-    # for process in processes:
-    #     result = process.get()
-    #     process_list = {**process_list, **result}
-    #
-    # write_to_file(real_positions, process_list, regions, output_file)
+    simulant_list = list(range(1, simulations+1))
+    processes = gen.run_in_parallel(simulant_list, ["foo", simulations, clean_ptc_list, relative_positions_list, coding_exons_fasta, exclude_cpg], simulate_mutations)
+
+    process_list = {}
+    for process in processes:
+        result = process.get()
+        process_list = {**process_list, **result}
+
+    write_to_file(real_positions, process_list, regions, output_file)
 
 def write_to_file(real_positions, process_list, regions, output_file):
 
@@ -797,7 +800,7 @@ def write_to_file(real_positions, process_list, regions, output_file):
 
 
 
-def simulate_mutations(simulant_list, simulations, clean_ptc_list, relative_positions_list, coding_exons_fasta):
+def simulate_mutations(simulant_list, simulations, clean_ptc_list, relative_positions_list, coding_exons_fasta, exclude_cpg):
     '''
     Run the simulations
     '''
@@ -811,7 +814,7 @@ def simulate_mutations(simulant_list, simulations, clean_ptc_list, relative_posi
         e = int(name.split('.')[1])
         coding_exons_list[t][e] = coding_exons_seqs[i]
 
-    coding_exon_nt_positions = get_coding_exon_nt_positions(coding_exons_list, clean_ptc_list, relative_positions_list)
+    coding_exon_nt_positions = get_coding_exon_nt_positions(coding_exons_list, clean_ptc_list, relative_positions_list, exclude_cpg)
 
     simulation_outputs = {}
 

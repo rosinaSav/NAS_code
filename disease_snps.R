@@ -86,7 +86,7 @@ wilcox.test(clinvar$min_dist, kgenomes$min_dist)
 t.test(clinvar$min_dist, kgenomes$min_dist)
 
 
-file <- read.csv("results/clinvar/clinvar_simulations.csv", head=T)
+file <- read.csv("results/clinvar/clinvar_simulations_exclude_cpg.csv", head=T)
 real = file[file$sim_id == "real",]
 sim = file[file$sim_id != "real",]
 
@@ -102,7 +102,9 @@ cexon_3_3_z <- (real$X3_0.3.bp - mean(sim$X3_0.3.bp)) / sd(sim$X3_0.3.bp)
 cexon_3_4_69_z <- (real$X3_4.69.bp - mean(sim$X3_4.69.bp)) / sd(sim$X3_4.69.bp)
 cexon_3_70_z <- (real$X3_70..bp - mean(sim$X3_70..bp)) / sd(sim$X3_70..bp)
 
-file <- read.csv("results/clinvar/1000_genomes_simulations.csv", head=T)
+
+
+file <- read.csv("results/clinvar/1000_genomes_simulations_exclude_cpg.csv", head=T)
 real = file[file$sim_id == "real",]
 sim = file[file$sim_id != "real",]
 
@@ -136,8 +138,11 @@ data_start <- melt(start_zs, id=c("group", "disease_status"))
 data_end <- melt(end_zs, id=c("group", "disease_status"))
 
 
+upper = max(call_3_z, call_4_69_z, call_70_z, cexon_3_3_z, cexon_3_4_69_z, cexon_3_70_z, cexon_5_3_z, cexon_5_4_69_z, cexon_5_70_z, nall_3_z, nall_4_69_z, nall_70_z, nexon_3_3_z, nexon_3_4_69_z, nexon_3_70_z, nexon_5_3_z, nexon_5_4_69_z, nexon_5_70_z)
+lower = max(call_3_z, call_4_69_z, call_70_z, cexon_3_3_z, cexon_3_4_69_z, cexon_3_70_z, cexon_5_3_z, cexon_5_4_69_z, cexon_5_70_z, nall_3_z, nall_4_69_z, nall_70_z, nexon_3_3_z, nexon_3_4_69_z, nexon_3_70_z, nexon_5_3_z, nexon_5_4_69_z, nexon_5_70_z)
 
-plot_zs <- function(data, main) {
+
+plot_zs <- function(data, upper, lower, main) {
   
   
   theme_Publication <- function(base_size=14) {
@@ -173,7 +178,7 @@ plot_zs <- function(data, main) {
     geom_bar(stat="identity", position=position_dodge()) + 
     labs(x="Exon nucleotides", y="Z", title=main) +
     scale_fill_manual(values = c("red", "blue")) + 
-    scale_y_continuous(limits=c(-6, 6), breaks=seq(-6, 6, 1)) + 
+    scale_y_continuous(limits=c(lower, upper), breaks=seq(lower, upper, 1)) + 
     geom_hline(yintercept = 1.96, lty=2) +
     geom_hline(yintercept = -1.96, lty=2) +
     theme_Publication() + 
@@ -188,5 +193,5 @@ end <- plot_zs(data_end, "3'")
 library(gridExtra)
 library(grid)
 plot <- grid.arrange(all, start, end)
-ggsave("results/clinvar/simulations.pdf", plot, width=7, height=12)
+ggsave("results/clinvar/simulations_exclude_cgp.pdf", plot, width=7, height=12)
 
