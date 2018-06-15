@@ -133,8 +133,8 @@ def main():
     if location_simulation:
         print('Running simulation on Clinvar PTCs...')
         dso.clinvar_simulation(disease_ptcs_file, disease_snps_relative_exon_positions, ptc_file, coding_exons_fasta, simulations, clinvar_location_simulation_file, clinvar=True)
-        print('Running simulation on 1000 genomes PTCs...')
-        dso.clinvar_simulation(disease_ptcs_file, snp_relative_positions_file, ptc_file, coding_exons_fasta, simulations, kgenomes_location_simulation_file)
+        # print('Running simulation on 1000 genomes PTCs...')
+        # dso.clinvar_simulation(disease_ptcs_file, snp_relative_positions_file, ptc_file, coding_exons_fasta, simulations, kgenomes_location_simulation_file)
 
 
 if __name__ == "__main__":

@@ -477,7 +477,6 @@ def clinvar_ptc_locations(disease_ptcs_file, disease_snps_relative_exon_position
     e.g. if 5% of base pairs are within 0-3 bp of an exon end, the null is that 5% of
     PTCs should occur in this region.
     '''
-
     # Get a list of 1000 genomes ptcs
     ptcs = gen.read_many_fields(ptc_file, "\t")
     ptc_list = {}
@@ -509,15 +508,16 @@ def clinvar_ptc_locations(disease_ptcs_file, disease_snps_relative_exon_position
     disease_nt_counts = {}
     disease_ptc_counts = {}
     disease_exon_sample_list = []
-    ranges = [5, 3]
-    for i in ranges:
-        disease_nt_counts[i] = [0,0,0]
-        disease_ptc_counts[i] = [0,0,0]
+    ends = [5, 3]
+    for end in ends:
+        disease_nt_counts[end] = [0,0,0]
+        disease_ptc_counts[end] = [0,0,0]
 
     # for each of the clinvar ptcs not in the overlap, get the number of bp
     # in each window of the exon, the number of ptcs in that window.
     # only sample the number of bp for each exon once (some exons may have
     # more than 1 ptc and would otherwise contribute 2x)
+
     for ptc_id in disease_ptc_list:
         ptc = disease_ptc_list[ptc_id]
         ptc_pos = ptc[3]
@@ -528,21 +528,21 @@ def clinvar_ptc_locations(disease_ptcs_file, disease_snps_relative_exon_position
 
                 if transcript_exon not in disease_exon_sample_list:
                     if exon_length >= 138:
-                        for i in ranges:
+                        for i in ends:
                             disease_nt_counts[i][0] += 3
                             disease_nt_counts[i][1] += 66
                             disease_nt_counts[i][2] += (np.divide(exon_length, 2) - 69)
                     elif exon_length > 6 and exon_length < 138:
-                        for i in ranges:
+                        for i in ends:
                             disease_nt_counts[i][0] += 3
                             disease_nt_counts[i][1] += (np.divide(exon_length, 2) - 3)
                     else:
-                        for i in ranges:
+                        for i in ends:
                             disease_nt_counts[i][0] += np.divide(exon_length, 2)
 
                 disease_exon_sample_list.append(transcript_exon)
 
-                rel_pos = disease_relative_positions_list[ptc_id][1]
+                rel_pos = int(disease_relative_positions_list[ptc_id][1])
                 distances = [rel_pos, exon_length - rel_pos]
                 min_dist = min(distances)
                 if distances.index(min_dist) == 0:
@@ -550,15 +550,19 @@ def clinvar_ptc_locations(disease_ptcs_file, disease_snps_relative_exon_position
                 else:
                     end = 3
 
-                if rel_pos <= 3:
+                if min_dist <= 2:
+                    print(ptc_id)
                     disease_ptc_counts[end][0] += 1
-                elif rel_pos > 3 and rel_pos <= 69:
+                elif min_dist > 2 and min_dist <= 68:
                     disease_ptc_counts[end][1] += 1
                 else:
                     disease_ptc_counts[end][2] += 1
 
     # write the output and chisq test to file
     intervals = ["0-3 bp", "4-69 bp", "70+ bp"]
+
+    for end in disease_ptc_counts:
+        print(end, disease_ptc_counts[end])
 
     total_disease_nts = []
     [total_disease_nts.extend(disease_nt_counts[end]) for end in disease_nt_counts]
@@ -596,7 +600,7 @@ def clinvar_ptc_locations(disease_ptcs_file, disease_snps_relative_exon_position
         outfile.write('total_ptcs:,{0}\n'.format(total_disease_ptcs))
         outfile.write('chisq:,{0}\ndf:,{1}\npval:,{2}\n'.format(sum(chisq), len(chisq) - 1, chisq_calc.pvalue))
 
-        for end in ranges:
+        for end in ends:
             outfile.write("\n \n{0}'\n".format(end))
             outfile.write('\n \n')
             outfile.write('region,nt,nt_prop,expected_disease_ptcs,observed_disease_ptcs,fo/fe\n')
@@ -677,6 +681,9 @@ def get_real_positions(clean_ptc_list, relative_positions_list, regions):
         else:
             end = 3
 
+        if end == 3 and min_dist <= 2:
+            print(ptc_id, exon_length, rel_pos)
+
         if min_dist <= 2:
             location_counts[regions[0]][end] += 1
         elif min_dist > 2 and min_dist <= 68:
@@ -749,15 +756,15 @@ def clinvar_simulation(disease_ptcs_file, relative_exon_positions_file, ptc_file
     regions = ["0-3 bp", "4-69 bp", "70+ bp"]
     real_positions = get_real_positions(clean_ptc_list, relative_positions_list, regions)
 
-    simulant_list = list(range(1, simulations+1))
-    processes = gen.run_in_parallel(simulant_list, ["foo", simulations, clean_ptc_list, relative_positions_list, coding_exons_fasta], simulate_mutations)
-
-    process_list = {}
-    for process in processes:
-        result = process.get()
-        process_list = {**process_list, **result}
-
-    write_to_file(real_positions, process_list, regions, output_file)
+    # simulant_list = list(range(1, simulations+1))
+    # processes = gen.run_in_parallel(simulant_list, ["foo", simulations, clean_ptc_list, relative_positions_list, coding_exons_fasta], simulate_mutations)
+    #
+    # process_list = {}
+    # for process in processes:
+    #     result = process.get()
+    #     process_list = {**process_list, **result}
+    #
+    # write_to_file(real_positions, process_list, regions, output_file)
 
 def write_to_file(real_positions, process_list, regions, output_file):
 
@@ -822,6 +829,7 @@ def simulate_mutations(simulant_list, simulations, clean_ptc_list, relative_posi
 
         for i, ptc_id in enumerate(clean_ptc_list):
             if ptc_id in relative_positions_list:
+
                 ptc = clean_ptc_list[ptc_id]
                 pos = ptc[3]
                 t = ptc[4]
