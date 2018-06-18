@@ -86,112 +86,128 @@ wilcox.test(clinvar$min_dist, kgenomes$min_dist)
 t.test(clinvar$min_dist, kgenomes$min_dist)
 
 
-file <- read.csv("results/clinvar/clinvar_simulations_exclude_cpg.csv", head=T)
-real = file[file$sim_id == "real",]
-sim = file[file$sim_id != "real",]
-
-call_3_z <- (real$all_0.3.bp - mean(sim$all_0.3.bp)) / sd(sim$all_0.3.bp)
-call_4_69_z <- (real$all_4.69.bp - mean(sim$all_4.69.bp)) / sd(sim$all_4.69.bp)
-call_70_z <- (real$all_70..bp - mean(sim$all_70..bp)) / sd(sim$all_70..bp)
-
-cexon_5_3_z <- (real$X5_0.3.bp - mean(sim$X5_0.3.bp)) / sd(sim$X5_0.3.bp)
-cexon_5_4_69_z <- (real$X5_4.69.bp - mean(sim$X5_4.69.bp)) / sd(sim$X5_4.69.bp)
-cexon_5_70_z <- (real$X5_70..bp - mean(sim$X5_70..bp)) / sd(sim$X5_70..bp)
-
-cexon_3_3_z <- (real$X3_0.3.bp - mean(sim$X3_0.3.bp)) / sd(sim$X3_0.3.bp)
-cexon_3_4_69_z <- (real$X3_4.69.bp - mean(sim$X3_4.69.bp)) / sd(sim$X3_4.69.bp)
-cexon_3_70_z <- (real$X3_70..bp - mean(sim$X3_70..bp)) / sd(sim$X3_70..bp)
 
 
-
-file <- read.csv("results/clinvar/1000_genomes_simulations_exclude_cpg.csv", head=T)
-real = file[file$sim_id == "real",]
-sim = file[file$sim_id != "real",]
-
-nall_3_z <- (real$all_0.3.bp - mean(sim$all_0.3.bp)) / sd(sim$all_0.3.bp)
-nall_4_69_z <- (real$all_4.69.bp - mean(sim$all_4.69.bp)) / sd(sim$all_4.69.bp)
-nall_70_z <- (real$all_70..bp - mean(sim$all_70..bp)) / sd(sim$all_70..bp)
-
-nexon_5_3_z <- (real$X5_0.3.bp - mean(sim$X5_0.3.bp)) / sd(sim$X5_0.3.bp)
-nexon_5_4_69_z <- (real$X5_4.69.bp - mean(sim$X5_4.69.bp)) / sd(sim$X5_4.69.bp)
-nexon_5_70_z <- (real$X5_70..bp - mean(sim$X5_70..bp)) / sd(sim$X5_70..bp)
-
-nexon_3_3_z <- (real$X3_0.3.bp - mean(sim$X3_0.3.bp)) / sd(sim$X3_0.3.bp)
-nexon_3_4_69_z <- (real$X3_4.69.bp - mean(sim$X3_4.69.bp)) / sd(sim$X3_4.69.bp)
-nexon_3_70_z <- (real$X3_70..bp - mean(sim$X3_70..bp)) / sd(sim$X3_70..bp)
-
-all_zs <- c(call_3_z, nall_3_z, call_4_69_z, nall_4_69_z, call_70_z, nall_70_z)
-start_zs <- c(cexon_5_3_z, nexon_5_3_z, cexon_5_4_69_z, nexon_5_4_69_z, cexon_5_70_z, nexon_5_70_z)
-end_zs <- c(cexon_3_3_z, nexon_3_3_z, cexon_3_4_69_z, nexon_3_4_69_z, cexon_3_70_z, nexon_3_70_z)
-
-disease_status <- c("ClinVar", "1000 Genomes", "ClinVar", "1000 Genomes", "ClinVar", "1000 Genomes")
-group <- c("0-3","0-3", "4-69", "4-69", "70+", "70+")
-
-library(ggplot2)
-library(reshape2)
-all <- data.frame(all_zs, disease_status, group)
-start <- data.frame(start_zs, disease_status, group)
-end <- data.frame(end_zs, disease_status, group)
-
-data_all <- melt(all, id=c("group", "disease_status"))
-data_start <- melt(start_zs, id=c("group", "disease_status"))
-data_end <- melt(end_zs, id=c("group", "disease_status"))
-
-
-upper = max(call_3_z, call_4_69_z, call_70_z, cexon_3_3_z, cexon_3_4_69_z, cexon_3_70_z, cexon_5_3_z, cexon_5_4_69_z, cexon_5_70_z, nall_3_z, nall_4_69_z, nall_70_z, nexon_3_3_z, nexon_3_4_69_z, nexon_3_70_z, nexon_5_3_z, nexon_5_4_69_z, nexon_5_70_z)
-lower = max(call_3_z, call_4_69_z, call_70_z, cexon_3_3_z, cexon_3_4_69_z, cexon_3_70_z, cexon_5_3_z, cexon_5_4_69_z, cexon_5_70_z, nall_3_z, nall_4_69_z, nall_70_z, nexon_3_3_z, nexon_3_4_69_z, nexon_3_70_z, nexon_5_3_z, nexon_5_4_69_z, nexon_5_70_z)
-
-
-plot_zs <- function(data, upper, lower, main) {
+compare_zs <- function(file1, file2, output_file) {
+  file <- read.csv(file1, head=T)
+  real = file[file$sim_id == "real",]
+  sim = file[file$sim_id != "real",]
+  
+  call_3_z <- (real$all_0.3.bp - mean(sim$all_0.3.bp)) / sd(sim$all_0.3.bp)
+  call_4_69_z <- (real$all_4.69.bp - mean(sim$all_4.69.bp)) / sd(sim$all_4.69.bp)
+  call_70_z <- (real$all_70..bp - mean(sim$all_70..bp)) / sd(sim$all_70..bp)
+  
+  cexon_5_3_z <- (real$X5_0.3.bp - mean(sim$X5_0.3.bp)) / sd(sim$X5_0.3.bp)
+  cexon_5_4_69_z <- (real$X5_4.69.bp - mean(sim$X5_4.69.bp)) / sd(sim$X5_4.69.bp)
+  cexon_5_70_z <- (real$X5_70..bp - mean(sim$X5_70..bp)) / sd(sim$X5_70..bp)
+  
+  cexon_3_3_z <- (real$X3_0.3.bp - mean(sim$X3_0.3.bp)) / sd(sim$X3_0.3.bp)
+  cexon_3_4_69_z <- (real$X3_4.69.bp - mean(sim$X3_4.69.bp)) / sd(sim$X3_4.69.bp)
+  cexon_3_70_z <- (real$X3_70..bp - mean(sim$X3_70..bp)) / sd(sim$X3_70..bp)
   
   
-  theme_Publication <- function(base_size=14) {
-    library(grid)
-    library(ggthemes)
-    (theme_foundation(base_size=base_size)
-      + theme(plot.title = element_text(face = "bold", size = 12, hjust = 0.5),
-              text = element_text(),
-              panel.background = element_rect(colour = NA),
-              plot.background = element_rect(colour = NA),
-              panel.border = element_rect(colour = NA),
-              axis.title = element_text(face = "bold",size = rel(0.8)),
-              axis.title.y = element_text(angle=90,vjust =2),
-              axis.title.x = element_text(vjust = -0.2),
-              axis.text.x = element_text(size=rel(1)),
-              axis.line = element_line(colour="black"),
-              axis.ticks = element_line(),
-              panel.grid.major = element_line(colour="#f0f0f0"),
-              panel.grid.minor = element_blank(),
-              legend.key = element_rect(colour = NA),
-              legend.position = "bottom",
-              legend.direction = "horizontal",
-              legend.key.size= unit(0.2, "cm"),
-              # legend.margin = unit(0, "cm"),
-              legend.title = element_text(face="italic"),
-              plot.margin=unit(c(10,5,5,5),"mm"),
-              strip.background=element_rect(colour="#f0f0f0",fill="#f0f0f0"),
-              strip.text = element_text(face="bold")
-      ))
+  
+  file <- read.csv(file2, head=T)
+  real = file[file$sim_id == "real",]
+  sim = file[file$sim_id != "real",]
+  
+  nall_3_z <- (real$all_0.3.bp - mean(sim$all_0.3.bp)) / sd(sim$all_0.3.bp)
+  nall_4_69_z <- (real$all_4.69.bp - mean(sim$all_4.69.bp)) / sd(sim$all_4.69.bp)
+  nall_70_z <- (real$all_70..bp - mean(sim$all_70..bp)) / sd(sim$all_70..bp)
+  
+  nexon_5_3_z <- (real$X5_0.3.bp - mean(sim$X5_0.3.bp)) / sd(sim$X5_0.3.bp)
+  nexon_5_4_69_z <- (real$X5_4.69.bp - mean(sim$X5_4.69.bp)) / sd(sim$X5_4.69.bp)
+  nexon_5_70_z <- (real$X5_70..bp - mean(sim$X5_70..bp)) / sd(sim$X5_70..bp)
+  
+  nexon_3_3_z <- (real$X3_0.3.bp - mean(sim$X3_0.3.bp)) / sd(sim$X3_0.3.bp)
+  nexon_3_4_69_z <- (real$X3_4.69.bp - mean(sim$X3_4.69.bp)) / sd(sim$X3_4.69.bp)
+  nexon_3_70_z <- (real$X3_70..bp - mean(sim$X3_70..bp)) / sd(sim$X3_70..bp)
+  
+  all_zs <- c(call_3_z, nall_3_z, call_4_69_z, nall_4_69_z, call_70_z, nall_70_z)
+  start_zs <- c(cexon_5_3_z, nexon_5_3_z, cexon_5_4_69_z, nexon_5_4_69_z, cexon_5_70_z, nexon_5_70_z)
+  end_zs <- c(cexon_3_3_z, nexon_3_3_z, cexon_3_4_69_z, nexon_3_4_69_z, cexon_3_70_z, nexon_3_70_z)
+  
+  disease_status <- c("ClinVar", "1000 Genomes", "ClinVar", "1000 Genomes", "ClinVar", "1000 Genomes")
+  group <- c("0-3","0-3", "4-69", "4-69", "70+", "70+")
+  
+  library(ggplot2)
+  library(reshape2)
+  all <- data.frame(all_zs, disease_status, group)
+  start <- data.frame(start_zs, disease_status, group)
+  end <- data.frame(end_zs, disease_status, group)
+  
+  data_all <- melt(all, id=c("group", "disease_status"))
+  data_start <- melt(start_zs, id=c("group", "disease_status"))
+  data_end <- melt(end_zs, id=c("group", "disease_status"))
+  
+  
+  upper = ceiling(max(3.5, max(call_3_z, call_4_69_z, call_70_z, cexon_3_3_z, cexon_3_4_69_z, cexon_3_70_z, cexon_5_3_z, cexon_5_4_69_z, cexon_5_70_z, nall_3_z, nall_4_69_z, nall_70_z, nexon_3_3_z, nexon_3_4_69_z, nexon_3_70_z, nexon_5_3_z, nexon_5_4_69_z, nexon_5_70_z)))
+  lower = floor(min(-3.5, min(call_3_z, call_4_69_z, call_70_z, cexon_3_3_z, cexon_3_4_69_z, cexon_3_70_z, cexon_5_3_z, cexon_5_4_69_z, cexon_5_70_z, nall_3_z, nall_4_69_z, nall_70_z, nexon_3_3_z, nexon_3_4_69_z, nexon_3_70_z, nexon_5_3_z, nexon_5_4_69_z, nexon_5_70_z)))
+  
+  
+  plot_zs <- function(data, upper, lower, main) {
+    
+    
+    theme_Publication <- function(base_size=14) {
+      library(grid)
+      library(ggthemes)
+      (theme_foundation(base_size=base_size)
+        + theme(plot.title = element_text(face = "bold", size = 12, hjust = 0.5),
+                text = element_text(),
+                panel.background = element_rect(colour = NA),
+                plot.background = element_rect(colour = NA),
+                panel.border = element_rect(colour = NA),
+                axis.title = element_text(face = "bold",size = rel(0.8)),
+                axis.title.y = element_text(angle=90,vjust =2),
+                axis.title.x = element_text(vjust = -0.2),
+                axis.text.x = element_text(size=rel(1)),
+                axis.line = element_line(colour="black"),
+                axis.ticks = element_line(),
+                panel.grid.major = element_line(colour="#f0f0f0"),
+                panel.grid.minor = element_blank(),
+                legend.key = element_rect(colour = NA),
+                legend.position = "bottom",
+                legend.direction = "horizontal",
+                legend.key.size= unit(0.2, "cm"),
+                # legend.margin = unit(0, "cm"),
+                legend.title = element_text(face="italic"),
+                plot.margin=unit(c(10,5,5,5),"mm"),
+                strip.background=element_rect(colour="#f0f0f0",fill="#f0f0f0"),
+                strip.text = element_text(face="bold")
+        ))
+    }
+    
+    plot <- ggplot(data, aes(x=group, fill=disease_status, y=value)) +   
+      geom_bar(stat="identity", position=position_dodge()) + 
+      labs(x="Region", y="Z", title=main) +
+      scale_fill_manual(values = c("red", "blue")) + 
+      scale_y_continuous(limits=c(lower, upper), breaks=seq(lower, upper, 1)) + 
+      geom_hline(yintercept = 1.96, lty=2) +
+      geom_hline(yintercept = -1.96, lty=2) +
+      geom_hline(yintercept = 0, lty=1) +
+      theme_Publication() + 
+      theme(legend.title=element_blank())
+    return(plot)
   }
   
-  plot <- ggplot(data, aes(x=group, fill=disease_status, y=value)) +   
-    geom_bar(stat="identity", position=position_dodge()) + 
-    labs(x="Exon nucleotides", y="Z", title=main) +
-    scale_fill_manual(values = c("red", "blue")) + 
-    scale_y_continuous(limits=c(lower, upper), breaks=seq(lower, upper, 1)) + 
-    geom_hline(yintercept = 1.96, lty=2) +
-    geom_hline(yintercept = -1.96, lty=2) +
-    theme_Publication() + 
-    theme(legend.title=element_blank())
-  return(plot)
+  
+  all <- plot_zs(data_all, upper, lower, "Full Exon")
+  start <- plot_zs(data_start, upper, lower, "5'")
+  end <- plot_zs(data_end, upper, lower, "3'")
+  
+  library(gridExtra)
+  library(grid)
+  plot <- grid.arrange(all, start, end)
+  ggsave(output_file, plot, width=7, height=12)
 }
 
-all <- plot_zs(data_all, "Full Exon")
-start <- plot_zs(data_start, "5'")
-end <- plot_zs(data_end, "3'")
+file1 <- "results/clinvar/clinvar_simulations.csv"
+file2 <- "results/clinvar/1000_genomes_simulations.csv"
+output <- "results/clinvar/simulations.pdf"
+compare_zs(file1, file2, output)
 
-library(gridExtra)
-library(grid)
-plot <- grid.arrange(all, start, end)
-ggsave("results/clinvar/simulations_exclude_cgp.pdf", plot, width=7, height=12)
+file1 <- "results/clinvar/clinvar_simulations_ese_overlaps.csv"
+file2 <- "results/clinvar/1000_genomes_simulations_ese_overlaps.csv"
+output <- "results/clinvar/simulations_ese_overlaps.jpg"
+compare_zs(file1, file2, output)
 

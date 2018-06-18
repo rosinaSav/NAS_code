@@ -696,7 +696,76 @@ def get_real_positions(clean_ptc_list, relative_positions_list, regions):
 
     return location_counts
 
-def clinvar_simulation(disease_ptcs_file, relative_exon_positions_file, ptc_file, coding_exons_fasta, simulations, output_file, exclude_cpg=None, clinvar=None):
+def get_possible_eses(exon_seq, rel_pos):
+
+    possible_eses = []
+    if rel_pos - 5 >= 0:
+        possible_eses.append(exon_seq[rel_pos-5:rel_pos+1])
+    if rel_pos - 4 >= 0 and rel_pos + 1 <= len(exon_seq):
+        possible_eses.append(exon_seq[rel_pos-4:rel_pos+2])
+    if rel_pos - 3 >= 0 and rel_pos + 2 <= len(exon_seq):
+        possible_eses.append(exon_seq[rel_pos-3:rel_pos+3])
+    if rel_pos - 2 >= 0 and rel_pos + 3 <= len(exon_seq):
+        possible_eses.append(exon_seq[rel_pos-2:rel_pos+4])
+    if rel_pos - 1 >= 0 and rel_pos + 4 <= len(exon_seq):
+        possible_eses.append(exon_seq[rel_pos-1:rel_pos+5])
+    if rel_pos >= 0 and rel_pos + 5 <= len(exon_seq):
+        possible_eses.append(exon_seq[rel_pos:rel_pos+6])
+
+    return possible_eses
+
+def get_real_ese_overlap(clean_ptc_list, relative_positions_list, regions, coding_exons, ese_list):
+
+    ese_overlaps = {}
+    ends = [5,3]
+    for region in regions:
+        ese_overlaps[region] = {}
+        for end in ends:
+            ese_overlaps[region][end] = 0
+
+    for ptc_id in clean_ptc_list:
+        ptc = clean_ptc_list[ptc_id]
+        rel_pos_info = relative_positions_list[ptc_id]
+        transcript = ptc[4]
+        exon = ptc[5]
+        exon_seq = coding_exons[transcript][exon]
+        rel_pos = rel_pos_info[1]
+        exon_length = len(exon_seq)
+
+        distances = [rel_pos, exon_length - rel_pos]
+        min_dist = min(distances)
+        if distances.index(min_dist) == 0:
+            end = 5
+        else:
+            end = 3
+
+        possible_eses = get_possible_eses(exon_seq, rel_pos)
+        ese_overlap = list(set(ese_list) & set(possible_eses))
+
+        if min_dist <= 2 and len(ese_overlap):
+            ese_overlaps[regions[0]][end] += 1
+        elif min_dist > 2 and min_dist <= 68 and len(ese_overlap):
+            ese_overlaps[regions[1]][end] += 1
+        elif len(ese_overlap):
+            ese_overlaps[regions[2]][end] += 1
+
+    return ese_overlaps
+
+def get_coding_exons(coding_exons_fasta):
+
+    coding_exons = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict()))
+    exon_names, exon_seqs = gen.read_fasta(coding_exons_fasta)
+
+    for i, name in enumerate(exon_names):
+        transcript = name.split('(')[0].split('.')[0]
+        exon = int(name.split('(')[0].split('.')[1])
+        seq = exon_seqs[i]
+        coding_exons[transcript][exon] = seq
+
+    return coding_exons
+
+
+def clinvar_simulation(disease_ptcs_file, relative_exon_positions_file, ptc_file, coding_exons_fasta, simulations, output_file, ese_overlap_output_file, ese_file=None, exclude_cpg=None, clinvar=None):
     '''
     Simulation mutation locations of PTCs.
     Take the exon in which each PTC is location and randomly pick a site with the
@@ -756,18 +825,25 @@ def clinvar_simulation(disease_ptcs_file, relative_exon_positions_file, ptc_file
         snp_id = snp[8]
         relative_positions_list[snp_id] = [snp[3], int(snp[11])]
 
+    ese_list = [ese[0] for ese in gen.read_many_fields(ese_file, "\t") if ese[0][0] != "#"]
+    coding_exons = get_coding_exons(coding_exons_fasta)
+
     regions = ["0-3 bp", "4-69 bp", "70+ bp"]
     real_positions = get_real_positions(clean_ptc_list, relative_positions_list, regions)
+    real_ese_overlap = get_real_ese_overlap(clean_ptc_list, relative_positions_list, regions, coding_exons, ese_list)
 
     simulant_list = list(range(1, simulations+1))
-    processes = gen.run_in_parallel(simulant_list, ["foo", simulations, clean_ptc_list, relative_positions_list, coding_exons_fasta, exclude_cpg], simulate_mutations)
+    processes = gen.run_in_parallel(simulant_list, ["foo", simulations, clean_ptc_list, relative_positions_list, coding_exons_fasta, ese_list, exclude_cpg], simulate_mutations)
 
-    process_list = {}
+    position_list = {}
+    ese_overlap_list = {}
     for process in processes:
         result = process.get()
-        process_list = {**process_list, **result}
+        position_list = {**position_list, **result[0]}
+        ese_overlap_list = {**ese_overlap_list, **result[1]}
 
-    write_to_file(real_positions, process_list, regions, output_file)
+    write_to_file(real_positions, position_list, regions, output_file)
+    write_to_file(real_ese_overlap, ese_overlap_list, regions, ese_overlap_output_file)
 
 def write_to_file(real_positions, process_list, regions, output_file):
 
@@ -800,10 +876,12 @@ def write_to_file(real_positions, process_list, regions, output_file):
 
 
 
-def simulate_mutations(simulant_list, simulations, clean_ptc_list, relative_positions_list, coding_exons_fasta, exclude_cpg):
+def simulate_mutations(simulant_list, simulations, clean_ptc_list, relative_positions_list, coding_exons_fasta, ese_list, exclude_cpg):
     '''
     Run the simulations
     '''
+
+    coding_exons = get_coding_exons(coding_exons_fasta)
 
     # This needs to be done in here for parallelisation
     coding_exons_names, coding_exons_seqs = gen.read_fasta(coding_exons_fasta)
@@ -817,18 +895,22 @@ def simulate_mutations(simulant_list, simulations, clean_ptc_list, relative_posi
     coding_exon_nt_positions = get_coding_exon_nt_positions(coding_exons_list, clean_ptc_list, relative_positions_list, exclude_cpg)
 
     simulation_outputs = {}
+    simulation_outputs_ese_overlaps = {}
 
     for simulation in simulant_list:
         np.random.seed()
         print("Running simulation {0}/{1}".format(simulation, simulations))
 
         location_counts = {}
+        ese_overlaps = {}
         regions = ["0-3 bp", "4-69 bp", "70+ bp"]
         ends = [5,3]
         for region in regions:
             location_counts[region] = {}
+            ese_overlaps[region] = {}
             for end in ends:
                 location_counts[region][end] = 0
+                ese_overlaps[region][end] = 0
 
         for i, ptc_id in enumerate(clean_ptc_list):
             if ptc_id in relative_positions_list:
@@ -848,24 +930,37 @@ def simulate_mutations(simulant_list, simulations, clean_ptc_list, relative_posi
                 positions = coding_exon_nt_positions[t][e][ref_allele]
 
                 if len(positions):
-                    choice = np.random.choice(positions, 1)[0]
+                    simulant_position = np.random.choice(positions, 1)[0]
                 else:
                     simulant_position = rel_pos
 
-                distances = [choice, exon_length - choice]
+                distances = [simulant_position, exon_length - simulant_position]
                 min_dist = min(distances)
                 if distances.index(min_dist) == 0:
                     end = 5
                 else:
                     end = 3
 
+                exon_seq = coding_exons[t][e]
+                possible_eses = get_possible_eses(exon_seq, simulant_position)
+                overlaps = list(set(ese_list) & set(possible_eses))
+
                 if min_dist <= 2:
                     location_counts[regions[0]][end] += 1
+                    if len(overlaps):
+                        ese_overlaps[regions[0]][end] += 1
                 elif min_dist > 2 and min_dist <= 68:
                     location_counts[regions[1]][end] += 1
+                    if len(overlaps):
+                        ese_overlaps[regions[1]][end] += 1
                 else:
                     location_counts[regions[2]][end] += 1
+                    if len(overlaps):
+                        ese_overlaps[regions[2]][end] += 1
+
 
         simulation_outputs[simulation] = location_counts
+        simulation_outputs_ese_overlaps[simulation] = ese_overlaps
 
-    return simulation_outputs
+
+    return simulation_outputs, simulation_outputs_ese_overlaps
