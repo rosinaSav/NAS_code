@@ -134,7 +134,9 @@ def main():
     kgenomes_location_simulation_ese_overlap_file = "{0}/1000_genomes_simulations_ese_overlaps.csv".format(output_directory)
     if exclude_cpg:
         clinvar_location_simulation_file = "{0}/clinvar_simulations_exclude_cpg.csv".format(output_directory)
+        clinvar_location_simulation_ese_overlap_file = "{0}/clinvar_simulations_ese_overlaps_exclude_cpg.csv".format(output_directory)
         kgenomes_location_simulation_file = "{0}/1000_genomes_simulations_exclude_cpg.csv".format(output_directory)
+        kgenomes_location_simulation_ese_overlap_file = "{0}/1000_genomes_simulations_ese_overlaps_exclude_cpg.csv".format(output_directory)
 
     if location_simulation:
         print('Running simulation on Clinvar PTCs...')
