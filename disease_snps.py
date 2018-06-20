@@ -144,11 +144,16 @@ def main():
         print('Running simulation on 1000 genomes PTCs...')
         dso.clinvar_simulation(disease_ptcs_file, snp_relative_positions_file, ptc_file, coding_exons_fasta, simulations, kgenomes_location_simulation_file, kgenomes_location_simulation_ese_overlap_file, ese_file, exclude_cpg)
 
-    ese_hit_simulation_file = "{0}/ese_hit_simulation_4_69.csv".format(output_directory)
+    clinvar_ese_hit_simulation_file = "{0}/clinvar_ese_hit_simulation_4_69.csv".format(output_directory)
+    kgenomes_ese_hit_simulation_file = "{0}/100_genomes_ese_hit_simulation_4_69.csv".format(output_directory)
     window_start = 4
     window_end = 69
     if ese_hit_simulation:
-        dso.ese_hit_simulation(disease_ptcs_file, disease_snps_relative_exon_positions, ptc_file, coding_exons_fasta, simulations, ese_hit_simulation_file, ese_file, window_start, window_end, exclude_cpg, clinvar=True)
+        print("Simulating ESE hits on the {0}-{1} region...".format(window_start, window_end))
+        print("ClinVar...")
+        dso.ese_hit_simulation(disease_ptcs_file, disease_snps_relative_exon_positions, ptc_file, coding_exons_fasta, simulations, clinvar_ese_hit_simulation_file, ese_file, window_start, window_end, exclude_cpg, clinvar=True)
+        print("1000 genomes...")
+        dso.ese_hit_simulation(disease_ptcs_file, snp_relative_positions_file, ptc_file, coding_exons_fasta, simulations, kgenomes_ese_hit_simulation_file, ese_file, window_start, window_end, exclude_cpg)
 
 if __name__ == "__main__":
     main()
