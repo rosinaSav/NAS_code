@@ -211,3 +211,41 @@ file2 <- "results/clinvar/1000_genomes_simulations_ese_overlaps.csv"
 output <- "results/clinvar/simulations_ese_overlaps.jpg"
 compare_zs(file1, file2, output)
 
+
+# plot the z scores for the number of hits on an ese compared to randomly simulated
+# positions in the 4-69 bp window at exon ends
+clinvar_ese_hit <- read.csv("results/clinvar/clinvar_ese_hit_simulation_4_69.csv", head=T)
+real <- clinvar_ese_hit[clinvar_ese_hit$simulation == "real",]
+sims <- clinvar_ese_hit[clinvar_ese_hit$simulation != "real",]
+cz5 <- (real$X5_ese_hit_count - mean(sims$X5_ese_hit_count)) / sd(sims$X5_ese_hit_count)
+cz3 <- (real$X3_ese_hit_count - mean(sims$X3_ese_hit_count)) / sd(sims$X3_ese_hit_count)
+clinvar_ese_hit <- read.csv("results/clinvar/1000_genomes_ese_hit_simulation_4_69.csv", head=T)
+real <- clinvar_ese_hit[clinvar_ese_hit$simulation == "real",]
+sims <- clinvar_ese_hit[clinvar_ese_hit$simulation != "real",]
+gz5 <- (real$X5_ese_hit_count - mean(sims$X5_ese_hit_count)) / sd(sims$X5_ese_hit_count)
+gz3 <- (real$X3_ese_hit_count - mean(sims$X3_ese_hit_count)) / sd(sims$X3_ese_hit_count)
+
+disease_status <- c("ClinVar", "1000 Genomes", "ClinVar", "1000 Genomes")
+group <- c("5'","5'", "3'", "3'")
+zs <- c(cz5, gz5, cz3, gz3)
+all <- data.frame(zs, disease_status, group)
+pvals <- paste("p = ", signif(2*pnorm(-abs(zs)), digits=3), sep="")
+
+
+library(reshape2)
+data_all <- melt(all, id=c("group", "disease_status"))
+data_all$group <- factor(data_all$group, levels = c("5'", "3'"))
+
+lower = floor(min(zs))
+upper = ceiling(max(zs))
+ggplot(data_all, aes(x=group, fill=disease_status, y=value)) +   
+  geom_bar(stat="identity", position=position_dodge()) + 
+  labs(x="Exon end", y="Z", title="PTC ESE hits in 4-69 bp region") +
+  scale_fill_manual(values = c("red", "blue")) + 
+  scale_y_continuous(limits=c(lower, upper), breaks=seq(lower, upper, 1)) + 
+  geom_hline(yintercept = 1.96, lty=2) +
+  geom_hline(yintercept = 0, lty=1) +
+  geom_text(aes(label=pvals), position=position_dodge(width=0.9), vjust=-0.45, cex=3) +
+  theme_Publication() + 
+  theme(legend.title=element_blank())
+
