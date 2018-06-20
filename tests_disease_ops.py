@@ -71,3 +71,25 @@ class Test_disease_ops(unittest.TestCase):
         expected2 = gen.read_many_fields(expected2, "\t")
         self.assertEqual(observed1, expected1)
         self.assertEqual(observed2, expected2)
+
+    def test_get_ptcs_in_window(self):
+        ptc_file = "test_data/disease_ops/test_get_ptcs_in_window/ptc_list.txt"
+        relative_positions_file = "test_data/disease_ops/test_get_ptcs_in_window/relative_positions.txt"
+        ptcs = gen.read_many_fields(ptc_file, "\t")
+        relative_positions = gen.read_many_fields(relative_positions_file, "\t")
+        ptc_list = {}
+        relative_positions_list = {}
+        for i, ptc in enumerate(ptcs):
+            ptc_list[i] = ptc
+            relative_positions_list[i] = relative_positions[i]
+        expected_file = "test_data/disease_ops/test_get_ptcs_in_window/expected.txt"
+        expected_list = gen.read_many_fields(expected_file, "\t")
+        expected = {}
+        ends = [5,3]
+        for i in ends:
+            expected[i] = {}
+        for entry in expected_list:
+            if entry[8] in ends:
+                expected[entry[8]][entry[9]] = entry[:8]
+        observed = get_ptcs_in_window(ptc_list, relative_positions_list, 3, 69)
+        self.assertEqual(observed, expected)
