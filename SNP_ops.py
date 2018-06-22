@@ -15,6 +15,7 @@ import collections
 import re
 import itertools
 import copy
+import shutil
 
 def filter_by_snp_type(input_file, output_file, snp_type, set_seed=None):
     '''
@@ -963,8 +964,6 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
     if downsample_by:
         samples = np.random.choice(samples, size = int(len(samples)/downsample_by), replace = False)
 
-    print(len(samples))
-
     #turn list into comma-separated string
     samples = ",".join(samples)
 
@@ -978,7 +977,6 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
         counter = 0
         #loop over lines in bed file
         for line_no, line in enumerate(file):
-
             # use for debugging
             if line_no:
             # if line_no < 2000:
@@ -994,8 +992,10 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
                     start = int(line[1]) + 1
                     end = line[2]
                     trans = line[3]
+
                     #get the vcf file for the right chromosome, making sure not to get the index file instead
                     current_vcf = ["{0}/{1}".format(vcf_folder, i) for i in vcf_files if "chr{0}.".format(chrom) in i and ".tbi" not in i]
+
                     #check that you only got a single file
                     if len(current_vcf) != 1:
                         print("Ambiguous or missing files in VCF folder!")
@@ -1192,3 +1192,61 @@ def intersect_vcf_to_bed(bed_file, vcf_file, output_file, change_names = None):
 
     if change_names:
         gen.remove_file(temp_file)
+
+def process_vcfs(vcf_folder, output_folder):
+    '''
+    Used to process vcf files downloaded from Texas Biobank to the format
+    required for the NAS_analysis pipeline.
+    '''
+
+    temp_dir = "temp_vcf_dir"
+    gen.create_output_directories(temp_dir)
+
+    # get a list of all the vcf files
+    vcf_files = ["{0}/{1}".format(vcf_folder, file) for file in os.listdir(vcf_folder) if file[-4:] == ".vcf"]
+    temp_vcf_gz_files = []
+    # zip each vcf and add to list
+    for file in vcf_files:
+        temp_output_file = "{0}/{1}.gz".format(temp_dir, file.split('/')[-1])
+        temp_vcf_gz_files.append(temp_output_file)
+        gen.run_process(["bgzip", "-c", file], file_for_output = temp_output_file)
+    # generate index file for each temp vcf file
+    for file in temp_vcf_gz_files:
+        gen.run_process(["tabix", "-p", "vcf", file])
+
+    # merge bam files
+    merge_file = "{0}/vcf_merged.vcf".format(temp_dir)
+    merge_file_gz = "{0}.gz".format(merge_file)
+    args = ["vcf-merge"]
+    args.extend(temp_vcf_gz_files)
+    gen.run_process(args, file_for_output=merge_file)
+    # zip
+    gen.run_process(["bgzip", "-c", merge_file], file_for_output = merge_file_gz)
+    # generate index
+    gen.run_process(["tabix", "-p", "vcf", merge_file_gz])
+
+    # get all the chromosomes (exlcuding x, y) from the merge file
+    first_column = list(set(gen.run_process(["awk", "{print $1}", merge_file]).split('\n')))
+    chroms = sorted([int(re.findall('^-?\d+\.?\d*', i)[0]) for i in first_column if len(re.findall('^-?\d+\.?\d*', i))])
+
+    chr_split_files = []
+    # now extract by chromosome
+    for chrom in chroms:
+        split_chr_file = "{0}/processed_chr{1}.vcf".format(temp_dir, chrom)
+        split_chr_file_gz = "{0}.gz".format(split_chr_file)
+        args = ["tabix", "-h", merge_file_gz, "{0}".format(chrom)]
+        gen.run_process(args, file_for_output = split_chr_file)
+        # zip
+        gen.run_process(["bgzip", "-c", split_chr_file], file_for_output = split_chr_file_gz)
+        # generate index
+        gen.run_process(["tabix", "-p", "vcf", split_chr_file_gz])
+        chr_split_files.append(split_chr_file_gz)
+        chr_split_files.append("{0}.tbi".format(split_chr_file_gz))
+
+    # move files to output folder
+    for file in chr_split_files:
+        outfile = "{0}/{1}".format(output_folder, file.split('/')[-1])
+        gen.run_process(["cp", file, outfile])
+
+    # clean up temp folder
+    shutil.rmtree(temp_dir)
