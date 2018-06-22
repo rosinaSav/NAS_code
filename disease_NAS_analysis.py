@@ -25,7 +25,7 @@ def main():
         ],
         flags = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
     )
-    gtf, genome_fasta, bams_folder, vcf_folder, panel_file, out_prefix, results_prefix, bam_analysis_folder, motif_file, process_vcfs, get_SNPs, process_bams, simulate_ptc_snps, motif_complement, overwrite_intersect, use_old_sims, out_of_frame, ignore_determine_snp_type, ignore_psi_calculation, ptc_location_analysis = args.gtf, args.genome_fasta, args.bams_folder, args.vcf_folder, args.panel_file, args.out_prefix, args.results_prefix, args.bam_analysis_folder, args.motif_file, args.process_vcfs, args.get_SNPs, args.process_bams, args.simulate_ptc_snps, args.motif_complement, args.overwrite_intersect, args.use_old_sims, args.out_of_frame, args.ignore_determine_snp_type, args.ignore_psi_calculation
+    gtf, genome_fasta, bams_folder, vcf_folder, panel_file, out_prefix, results_prefix, bam_analysis_folder, motif_file, process_vcfs, get_SNPs, process_bams, simulate_ptc_snps, motif_complement, overwrite_intersect, use_old_sims, out_of_frame, ignore_determine_snp_type, ignore_psi_calculation = args.gtf, args.genome_fasta, args.bams_folder, args.vcf_folder, args.panel_file, args.out_prefix, args.results_prefix, args.bam_analysis_folder, args.motif_file, args.process_vcfs, args.get_SNPs, args.process_bams, args.simulate_ptc_snps, args.motif_complement, args.overwrite_intersect, args.use_old_sims, args.out_of_frame, args.ignore_determine_snp_type, args.ignore_psi_calculation
 
     start = time.time()
 
@@ -147,6 +147,6 @@ def main():
     # else:
     #     print("Calculating PSI...")
     #     bmo.compare_PSI(PTC_file, bam_analysis_folder, final_file)
-    
+
 if __name__ == "__main__":
     main()
