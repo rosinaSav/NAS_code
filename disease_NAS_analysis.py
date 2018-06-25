@@ -40,7 +40,7 @@ def main():
     exon_bed = "{0}_exons.bed".format(results_prefix)
     filtered_exon_bed = "{0}_filtered_exons.bed".format(results_prefix)
     exon_junctions_file = "{0}_exon_junctions.bed".format(results_prefix)
-    coding_exon_bed = "{0}_coding_exons.extracted.bed".format(results_prefix)
+    coding_exon_bed = "{0}_coding_exons.bed".format(results_prefix)
 
     # dont need to go the genome filtering, we have this from the clean run data
 
