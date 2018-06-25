@@ -6,6 +6,15 @@ import unittest
 
 class Test_SNP_ops(unittest.TestCase):
 
+    def test_clean_alleles(self):
+        input = "test_data/snp_ops/test_clean_alleles/input.vcf"
+        expected = "test_data/snp_ops/test_clean_alleles/expected.vcf"
+        observed = "test_data/snp_ops/test_clean_alleles/observed.vcf"
+        clean_alleles(input, observed)
+        expected = gen.read_many_fields(expected, "\t")
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(observed, expected)
+
     def test_filter_by_snp_type(self):
         input_snps = "test_data/snp_ops/test_filter_by_snp_type/input_snps.bed"
         expected = "test_data/snp_ops/test_filter_by_snp_type/expected_snps.bed"

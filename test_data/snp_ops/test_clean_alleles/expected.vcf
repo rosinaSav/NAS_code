@@ -1,0 +1,13 @@
+##fileformat=VCFv4.2
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=VR,Number=1,Type=Integer,Description="Variant Reads">
+##FORMAT=<ID=RR,Number=1,Type=Integer,Description="Reference Reads">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Depth">
+##FORMAT=<ID=GQ,Number=1,Type=String,Description="Genotype Quality">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	sample1	sample2
+1	897325	.	G	C	60.00	PASS	AC=4;AN=4;SF=0,1,2,3,4,5,6,7,8,9,10,11,12,13	GT:VR:RR:DP:GQ	1|1	0|1
+1	906272	.	A	C	60.00	PASS	AC=2;AN=4;SF=1,2,3,7,8,12	GT:VR:GQ:DP:RR	0|1	0|1
+1	909238	.	G	C	60.00	PASS	AC=4;AN=4;SF=0,1,2,3,5,6,7,8,9,11,12,13	GT:RR:DP:GQ:VR	1|1	1|1
+1	909309	.	T	C	60.00	PASS	AC=2;AN=4;SF=0,5,6,7,8,9,11,13	GT:VR:GQ:DP:RR	0|1	0|1
+1	914333	.	C	G	60.00	PASS	AC=2;AN=4;SF=0,1,2,3,4,5,6,7,8,9,10,11,12,13	GT:GQ:DP:RR:VR	0|1	0|0
+1	914876	.	T	C	60.00	PASS	AC=2;AN=4;SF=0,1,2,3,4,5,6,7,8,9,10,11,12,13	GT:RR:DP:GQ:VR	0|0	0|1

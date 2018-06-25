@@ -40,7 +40,7 @@ def main():
     exon_bed = "{0}_exons.bed".format(results_prefix)
     filtered_exon_bed = "{0}_filtered_exons.bed".format(results_prefix)
     exon_junctions_file = "{0}_exon_junctions.bed".format(results_prefix)
-    coding_exon_bed = "{0}_coding_exons.bed".format(results_prefix)
+    coding_exon_bed = "{0}_coding_exons.extracted.bed".format(results_prefix)
 
     # dont need to go the genome filtering, we have this from the clean run data
 
@@ -98,7 +98,7 @@ def main():
         pass
     else:
         print("Determining SNP type...")
-        so.get_snp_change_status(SNP_file, CDS_fasta, PTC_file, syn_nonsyn_file, out_of_frame = out_of_frame, ref_check = True, headers=True)
+        so.get_snp_change_status(SNP_file, CDS_fasta, PTC_file, syn_nonsyn_file, out_of_frame = out_of_frame, ref_check = False, headers=True)
         gen.get_time(start)
 
     #filter the exon junctions file to only leave those junctions that flank exons retained in the previous step.

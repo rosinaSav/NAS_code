@@ -570,7 +570,6 @@ def get_snp_change_status(snp_cds_relative_positions, cds_fasta, ptcs_output_fil
                         cds_base = cds_seqs[cds_names.index(cds_id)][snp_index]
 
                         # temp_ref_base = copy.deepcopy(ref_base)
-
                         if ref_pass:
                             for var_base in unique_mutations:
                                 # var_base = var_base[0]
@@ -739,7 +738,7 @@ def get_snp_positions(sample_file, output_file, full_bed, intersect_file, out_pr
     #so you'd know which sample is which
     header_line = "echrom\testart\teend\teID\tfeature\tstrand\t#schr\tspos\tsID\taa\tma\trel_pos\tstatus\tinfo\tformat"
     samples_header = gen.run_process(["grep", "CHROM", "{0}_uncompressed.txt".format(sample_file)])
-    samples_header = re.search("(?<=FORMAT)[\tA-Z0-9]*", samples_header).group(0)
+    samples_header = re.search("(?<=FORMAT)[\tA-Z0-9\-]*", samples_header).group(0)
     header_line = header_line + samples_header + "\toverlap_count\n"
     temp_file = "temp_data/temp{0}.txt".format(random.random())
     temp_file2 = "temp_data/temp{0}.txt".format(random.random())
@@ -1015,6 +1014,8 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
                     sample_files.append(sample_output_file)
                     #filter the file you made with all the SNPs to only leave the SNPs that appear in your samples
                     gen.run_process(["vcf-subset", "-c", samples, temp_output_file], file_for_output = sample_output_file)
+                    # uncomment for debug line
+                    # gen.run_process(["cp", sample_output_file, "temp_data/{0}:{1}-{2}_temp_sample_tabix.txt".format(chrom, start, end)])
                     gen.remove_file(temp_output_file)
 
     # you want to concatenate the sample files you made (one file per bed interval) but you can't in one go cause there's too many
@@ -1047,9 +1048,10 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
     #once everything is concatenated, sort the SNPs, prefix "chr" if needed, make a compressed version of the file and make an index for tabix
     print('Sort SNPs, prefix and compress for tabix...')
     gen.run_process(["vcf-sort", current_concat_file], file_for_output = sort_file)
+
     if chr_prefix or remove_empty:
         allele_regex = re.compile("[0-9]+\|[0-9]+")
-        temp_file = "temp_data/temp{0}.txt".format(random.random())
+        temp_file = "temp_data/temp_sorted{0}.txt".format(random.random())
         with open(sort_file) as infile, open(temp_file, "w") as outfile:
             for line in infile:
                 dont_write = False
@@ -1060,11 +1062,13 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
                         alleles = "".join(re.findall(allele_regex, line))
                         alleles_ones = [i for i in alleles if i != "0" and i != "|"]
                         alleles_zeroes = [i for i in alleles if i != "1" and i != "|"]
+
                         if not alleles_ones or not alleles_zeroes:
                             dont_write = True
                 if not dont_write:
                     outfile.write(line)
-        gen.run_process(["mv", temp_file, sort_file])
+        concat_files.append(temp_file)
+        gen.run_process(["cp", temp_file, sort_file])
     gen.run_process(["bgzip", "-c", sort_file], file_for_output = output_file_name)
     print('Run tabix...')
     gen.run_process(["tabix", "-f", "-p", "vcf", output_file_name])
@@ -1214,7 +1218,7 @@ def process_vcfs(vcf_folder, output_folder):
     for file in temp_vcf_gz_files:
         gen.run_process(["tabix", "-p", "vcf", file])
 
-    # merge bam files
+    # merge vcf files
     merge_file = "{0}/vcf_merged.vcf".format(temp_dir)
     merge_file_gz = "{0}.gz".format(merge_file)
     args = ["vcf-merge"]
@@ -1233,9 +1237,17 @@ def process_vcfs(vcf_folder, output_folder):
     # now extract by chromosome
     for chrom in chroms:
         split_chr_file = "{0}/processed_chr{1}.vcf".format(temp_dir, chrom)
+        split_chr_file_clean = "{0}/processed_chr{1}.vcf".format(temp_dir, chrom)
         split_chr_file_gz = "{0}.gz".format(split_chr_file)
         args = ["tabix", "-h", merge_file_gz, "{0}".format(chrom)]
         gen.run_process(args, file_for_output = split_chr_file)
+
+        # need to clean the alleles otherwise we will run into problems with tabix samples wrapper
+        temp_file = "temp_data/temp_clean_vcf{0}.vcf".format(random.random())
+        clean_alleles(split_chr_file, temp_file)
+        gen.remove_file(split_chr_file)
+        gen.run_process(["mv", temp_file, split_chr_file])
+
         # zip
         gen.run_process(["bgzip", "-c", split_chr_file], file_for_output = split_chr_file_gz)
         # generate index
@@ -1250,3 +1262,28 @@ def process_vcfs(vcf_folder, output_folder):
 
     # clean up temp folder
     shutil.rmtree(temp_dir)
+
+
+def clean_alleles(vcf_file, output_file):
+    '''
+    Clean the alleles of other information provided.
+    Changed 'unphased reads /' to phased reads '|' delimiter
+    '''
+
+    vcf_lines = gen.read_many_fields(vcf_file, "\t")
+    with open(output_file, "w") as outfile:
+        for line in vcf_lines:
+            if line[0][0] != "#":
+                if line[6] == "PASS":
+                    info = line[:9]
+                    samples = line[9:]
+                    for sample in samples:
+                        sample_splits = sample.split(':')
+                        if sample_splits[0] != ".":
+                            allele_info = "|".join(sample_splits[0].split('/'))
+                        else:
+                            allele_info = "0|0"
+                        info.append(allele_info)
+                    outfile.write("{0}\n".format("\t".join(info)))
+            else:
+                outfile.write("{0}\n".format("\t".join(line)))
