@@ -144,10 +144,10 @@ def main():
         print('Running simulation on 1000 genomes PTCs...')
         dso.clinvar_simulation(disease_ptcs_file, snp_relative_positions_file, ptc_file, coding_exons_fasta, simulations, kgenomes_location_simulation_file, kgenomes_location_simulation_ese_overlap_file, ese_file, exclude_cpg)
 
-    clinvar_ese_hit_simulation_file = "{0}/clinvar_ese_hit_simulation_4_69.csv".format(output_directory)
-    kgenomes_ese_hit_simulation_file = "{0}/1000_genomes_ese_hit_simulation_4_69.csv".format(output_directory)
-    window_start = 4
+    window_start = 3
     window_end = 69
+    clinvar_ese_hit_simulation_file = "{0}/clinvar_ese_hit_simulation_{1}_{2}.csv".format(output_directory, window_start, window_end)
+    kgenomes_ese_hit_simulation_file = "{0}/1000_genomes_ese_hit_simulation_{1}_{2}.csv".format(output_directory, window_start, window_end)
     if ese_hit_simulation:
         print("Simulating ESE hits on the {0}-{1} region...".format(window_start, window_end))
         print("ClinVar...")

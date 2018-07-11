@@ -687,9 +687,9 @@ def get_real_positions(clean_ptc_list, relative_positions_list, regions):
         else:
             end = 3
 
-        if min_dist <= 2:
+        if min_dist <= 1:
             location_counts[regions[0]][end] += 1
-        elif min_dist > 2 and min_dist <= 68:
+        elif min_dist > 1 and min_dist <= 68:
             location_counts[regions[1]][end] += 1
         else:
             location_counts[regions[2]][end] += 1
@@ -742,9 +742,9 @@ def get_real_ese_overlap(clean_ptc_list, relative_positions_list, regions, codin
         possible_eses = get_possible_eses(exon_seq, rel_pos)
         ese_overlap = list(set(ese_list) & set(possible_eses))
 
-        if min_dist <= 2 and len(ese_overlap):
+        if min_dist <= 1 and len(ese_overlap):
             ese_overlaps[regions[0]][end] += 1
-        elif min_dist > 2 and min_dist <= 68 and len(ese_overlap):
+        elif min_dist > 1 and min_dist <= 68 and len(ese_overlap):
             ese_overlaps[regions[1]][end] += 1
         elif len(ese_overlap):
             ese_overlaps[regions[2]][end] += 1
@@ -790,7 +790,7 @@ def clinvar_simulation(disease_ptcs_file, relative_exon_positions_file, ptc_file
     ese_list = [ese[0] for ese in gen.read_many_fields(ese_file, "\t") if ese[0][0] != "#"]
     coding_exons = get_coding_exons(coding_exons_fasta)
 
-    regions = ["0-3 bp", "4-69 bp", "70+ bp"]
+    regions = ["0-2 bp", "3-69 bp", "70+ bp"]
     real_positions = get_real_positions(clean_ptc_list, relative_positions_list, regions)
     real_ese_overlap = get_real_ese_overlap(clean_ptc_list, relative_positions_list, regions, coding_exons, ese_list)
 
@@ -865,7 +865,7 @@ def simulate_mutations(simulant_list, simulations, clean_ptc_list, relative_posi
 
         location_counts = {}
         ese_overlaps = {}
-        regions = ["0-3 bp", "4-69 bp", "70+ bp"]
+        regions = ["0-2 bp", "3-69 bp", "70+ bp"]
         ends = [5,3]
         for region in regions:
             location_counts[region] = {}
@@ -907,11 +907,11 @@ def simulate_mutations(simulant_list, simulations, clean_ptc_list, relative_posi
                 possible_eses = get_possible_eses(exon_seq, simulant_position)
                 overlaps = list(set(ese_list) & set(possible_eses))
 
-                if min_dist <= 2:
+                if min_dist <= 1:
                     location_counts[regions[0]][end] += 1
                     if len(overlaps):
                         ese_overlaps[regions[0]][end] += 1
-                elif min_dist > 2 and min_dist <= 68:
+                elif min_dist > 1 and min_dist <= 68:
                     location_counts[regions[1]][end] += 1
                     if len(overlaps):
                         ese_overlaps[regions[1]][end] += 1

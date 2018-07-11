@@ -29,7 +29,7 @@ expression_analysis_core = function(overlap, all_exons, column, expression) {
   print(wilcox.test(overlap_data, all_data, alt = "t")$p.value)
 }
 
-get_n_t =  function(feature1, feature2, neg_control, NAS_data, title, swap = FALSE, big_only = FALSE, return_p = TRUE) {
+get_n_t =  function(feature1, feature2, neg_control, NAS_data, title, swap = FALSE, big_only = FALSE, return_p = TRUE, return_plot = FALSE) {
   threshold = 0
   y_pos = 60
   if (big_only != FALSE) {
@@ -52,14 +52,16 @@ get_n_t =  function(feature1, feature2, neg_control, NAS_data, title, swap = FAL
       n_t[index] = n/t      
     }
   }  
-  hist(n_t, col = "RoyalBlue", breaks = 20, main = title, xlab = "Proportion of simulants that show an effect smaller or equal to true effect.")
+  plot <- hist(n_t, col = "RoyalBlue", breaks = 20, main = title, xlab = "Proportion of simulants that show an effect smaller or equal to true effect.")
+  plot
   abline(v = 0.5, lty = 2, lwd = 2)
   p = binom.test(sum((n_t > 0.5) & (!is.na(n_t))), sum(!is.na(n_t)), alternative = "g")$p.value
   text(0.7, y_pos, label = paste("p ~ ", round(p, 3), sep = ""), cex = 2)
   if (return_p == TRUE) {
     return(p)
-  }
-  else {
+  } else if (return_plot == TRUE) {
+    return(plot)
+  } else {
     return(n_t)
   }
 }
@@ -137,7 +139,7 @@ plot_diff_RPM_hists_homo = function(NAS_data, title) {
   }
 }
 
-plot_individual_change = function(NAS_data, w_PTC_name, het_PTC_name, no_PTC_name, title, ylab, threshold, max_value, reverse = FALSE) {
+plot_individual_change = function(NAS_data, w_PTC_name, het_PTC_name, no_PTC_name, title, ylab, threshold, max_value, reverse = FALSE, big_changes_binom_test = FALSE) {
   big_changes = vector()
   colours = c("#000000", "#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000", "#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
   plot.new()
@@ -209,8 +211,14 @@ plot_individual_change = function(NAS_data, w_PTC_name, het_PTC_name, no_PTC_nam
   else {
     alternative = "greater"
   }
-  print(binom.test(x = coin_toss_greater, n = coin_toss_total, p = 0.5, alternative = alternative))
-  return(big_changes)
+  
+  btest <- binom.test(x = coin_toss_greater, n = coin_toss_total, p = 0.5, alternative = alternative)
+
+  if(big_changes_binom_test) {
+    return(btest)
+  } else {
+    return(big_changes) 
+  }
 }
 
 prepare_dataset = function(datafile) {
@@ -253,23 +261,71 @@ chosen_colour = "RoyalBlue"
 
 #PSI
 NAS_data = prepare_dataset("results/clean_run_2/clean_run__analysis_final_output.txt")
-NAS_dat_shift = prepare_dataset("results/clean_run_2/clean_run_out_of_frame__analysis_final_output.txt")
+NAS_data_shift = prepare_dataset("results/clean_run_2/clean_run_out_of_frame__analysis_final_output.txt")
 neg_control = read_in_simulations("results/clean_run_2/simulation_output/final_output_simulation_", 100, NAS_data$id, colnames(NAS_data))
+
+# perform tests between genotypes
 perform_tests(NAS_data)
+
+# summary of data
 summary(NAS_data)
 
+# ask whether there is a significant difference between PSI for non-PTC homozygotes and PTC heterozygotes
+wilcox.test(NAS_data$PSI_het_PTC, NAS_data$PSI_no_PTC, paired=T)
+wilcox.test(NAS_data$PSI_het_PTC, NAS_data$PSI_no_PTC, paired=T, alternative = "less")
+wilcox.test(NAS_data$PSI_het_PTC, NAS_data$PSI_no_PTC, paired=T, alternative = "greater")
 
+# ask whether there is a significant difference between RPMinclude for het PTC and homo no PTC
+wilcox.test(NAS_data$norm_count_het_PTC_incl, NAS_data$norm_count_no_PTC, paired=T, alternative = "greater")
+pdf('results/graphs/rpminclude_het_ptc_homo_no_ptc.pdf', width=10)
+boxplot(NAS_data$norm_count_het_PTC_incl, NAS_data$norm_count_no_PTC_incl, ylim=c(0, 5), labels = c("PTC -/+", "PTC-/-"))
+dev.off()
+
+# ask whether there is a significant difference between RPMskip for her PTC and homo no PTC
+wilcox.test(NAS_data$norm_count_het_PTC, NAS_data$norm_count_no_PTC, paired=T, alternative="greater")
+
+
+# big changes
+big_changes_PSI = plot_individual_change(NAS_data, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "Exons with >5% change between any two categories", "PSI", 5, 100, big_changes_binom_test = TRUE)
+
+# shifted
+big_changes_PSI_shift = plot_individual_change(NAS_data_shift, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "Exons with >5% change between any two categories", "PSI", 5, 100, big_changes_binom_test = TRUE)
+big_changes_RPMskip_shift = plot_individual_change(NAS_data_shift, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "Exons with >0.025 change between any two categories", "RPMskip", 0.025, 5, reverse = TRUE, big_changes_binom_test = TRUE)
+big_changes_RPMskip_shift
+
+# plot showing the p values for each percentage cutoff
+pvals <- c()
+for (i in seq(0, 10, 0.1)) {
+  changes_PSI_binom_test = plot_individual_change(NAS_data, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "", "PSI", i, 100, big_changes_binom_test = TRUE)
+  pvals <- c(pvals, changes_PSI_binom_test$p.value)
+}
+
+max(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC)
+x <- seq(0, 10, 0.1)
+y <- log(pvals)
+
+pdf("results/graphs/psi_difference_binomial_test_p_values.pdf", width=10)
+plot.new()
+plot.window(c(0,10), c(min(y), 0))
+title(xlab = "abs(PSI-/- - PSI-/+)", ylab = "Bionmial test log (p value)") 
+axis(1, at = seq(0, 10, by = 1), labels = seq(0, 10, by = 1))
+axis(2, at = seq(floor(min(y)), 0, 1), labels = seq(floor(min(y)), 0, 1))
+points(x, y, pch=16, cex=0.8, col=ifelse(y < log(0.05), "blue", "red"))
+abline(h = log(0.05), lty=2)
+dev.off()
 
 
 
 par(mfrow = c(2, 2))
+# compare psi between each ptc and its pseudo-ptc 
 p_PSI = get_n_t("PSI_no_PTC", "PSI_het_PTC", neg_control, NAS_data, "PSI-/- - PSI-/+", swap = FALSE)
 p_RPMskip = get_n_t("norm_count_no_PTC", "norm_count_het_PTC", neg_control, NAS_data, "RPMskip-/- - RPMskip-/+", swap = TRUE)
 p_PSI_big = get_n_t("PSI_no_PTC", "PSI_het_PTC", neg_control, NAS_data, "PSI-/- - PSI-/+ (5+)", swap = FALSE, big_only = 5)
 p_RPMskip_big = get_n_t("norm_count_no_PTC", "norm_count_het_PTC", neg_control, NAS_data, "RPMskip-/- - RPMskip-/+ (0.05+)", swap = TRUE, big_only = 0.025)
 
-get_n_t_visual("PSI_no_PTC", "PSI_het_PTC", neg_control, NAS_data, swap = FALSE)
-get_n_t_visual("norm_count_no_PTC", "norm_count_het_PTC", neg_control, NAS_data, swap = TRUE)
+pdf('results/graphs/missense_sim.pdf', width=7, height=4)
+get_n_t("PSI_no_PTC", "PSI_het_PTC", neg_control, NAS_data, "PSI-/- - PSI-/+", swap = FALSE, return_p = FALSE, return_plot=TRUE)
+dev.off()
 
 par(mfrow = c(1, 3))
 hist(NAS_data$PSI_no_PTC, main = "PTC-/-", xlab = "PSI", col = chosen_colour, breaks = 20)
@@ -294,12 +350,24 @@ for (sim in 1:30) {
 }
 dev.off()
 
+
 par(mfrow = c(1,2))
-hist(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC, breaks = 100, col = chosen_colour, main = "Is PSI higher for PTC-/PTC- than for PTC-/PTC+?", xlab = "PSI(-/-) - PSI(-/+)")
+
+pdf('results/graphs/psi_het_minus_psi_no.pdf', height=4, width=7)
+# hist(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC, breaks = seq(floor(min(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC)), ceiling(max(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC)), 1), col = chosen_colour, main = "Is PSI higher for PTC-/PTC- than for PTC-/PTC+?", xlab = "PSI(-/-) - PSI(-/+)")
+hist(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC, breaks = seq(floor(min(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC)), ceiling(max(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC)), 1), col = chosen_colour, main = "", xlab = "PSI(-/-) - PSI(-/+)")
+abline(v=0, lty=2, lwd=2)
+dev.off()
+
+hist(NAS_data$norm_count_no_PTC - NAS_data$norm_count_het_PTC, breaks = seq(floor(min(NAS_data$norm_count_no_PTC - NAS_data$norm_count_het_PTC)), ceiling(max(NAS_data$norm_count_no_PTC - NAS_data$norm_count_het_PTC)), 1), col = chosen_colour, main = "Is PSI higher for PTC-/PTC- than for PTC-/PTC+?", xlab = "PSI(-/-) - PSI(-/+)", reverse=TRUE)
+
+
 hist(NAS_data$PSI_het_PTC - NAS_data$PSI_w_PTC, breaks = 100, col = chosen_colour, main = "Is PSI higher for PTC-/PTC+ than for PTC+/PTC+?", xlab = "PSI(-/+) - PSI(+/+)")
 
 graphics.off()
 big_changes_PSI = plot_individual_change(NAS_data, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "Exons with >5% change between any two categories", "PSI", 5, 100)
+
+
 big_changes_PSI_shift = plot_individual_change(NAS_data_shift, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "Exons with >5% change between any two categories", "PSI", 5, 100)
 
 #RPMskip
@@ -335,6 +403,8 @@ dev.off()
 
 graphics.off()
 big_changes_RPMskip = plot_individual_change(NAS_data, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "Exons with >0.025 change between any two categories", "RPMskip", 0.025, 5, reverse = TRUE)
+big_changes_RPMskip = plot_individual_change(NAS_data, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "Exons with >0.025 change between any two categories", "RPMskip", 0.025, 5, reverse = TRUE, big_changes_binom_test = TRUE)
+big_changes_RPMskip
 big_changes_RPMskip_shift = plot_individual_change(NAS_data_shift, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "Exons with >0.025 change between any two categories", "RPMskip", 0.025, 5, reverse = TRUE)
 
 #analysis of the exons that show a big change
@@ -383,6 +453,7 @@ plot_individual_change(NAS_no_ESEs_data, "norm_count_w_PTC", "norm_count_het_PTC
 par(mfrow = c(1,1))
 hist(NAS_data$norm_count_no_PTC_incl - NAS_data$norm_count_het_PTC_incl, breaks = 100, col = chosen_colour, main = "Is RPM(incl) higher for PTC-/PTC- than for PTC-/PTC+?", xlab = "RPMincl(-/-) - RPMincl(-/+)")
 wilcox.test(NAS_data$norm_count_no_PTC_incl, NAS_data$norm_count_het_PTC_incl, alternative = "greater", paired = TRUE)
+
 
 # ESE overlap simulations
 snp_sim_file <- read.csv('results/clean_run_2/ese_overlap_simulation/snp_simulation/ese_overlap_snp_simulation.csv', head=T)

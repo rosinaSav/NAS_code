@@ -201,10 +201,45 @@ compare_zs <- function(file1, file2, output_file) {
   ggsave(output_file, plot, width=7, height=12)
 }
 
+get_zs <- function(file_path) {
+  file <- read.csv(file_path, head=T)
+  real = file[file$sim_id == "real",]
+  sim = file[file$sim_id != "real",]
+  
+  call_0_2_z <- (real$all_0.2.bp - mean(sim$all_0.2.bp)) / sd(sim$all_0.2.bp)
+  call_3_69_z <- (real$all_3.69.bp - mean(sim$all_3.69.bp)) / sd(sim$all_3.69.bp)
+  call_70_z <- (real$all_70..bp - mean(sim$all_70..bp)) / sd(sim$all_70..bp)
+  
+  # cexon_5_3_z <- (real$X5_0.2.bp - mean(sim$X5_0.2.bp)) / sd(sim$X5_0.2.bp)
+  # cexon_5_4_69_z <- (real$X5_3.69.bp - mean(sim$X5_3.69.bp)) / sd(sim$X5_3.69.bp)
+  # cexon_5_70_z <- (real$X5_70..bp - mean(sim$X5_70..bp)) / sd(sim$X5_70..bp)
+  # 
+  # cexon_3_3_z <- (real$X3_0.2.bp - mean(sim$X3_0.2.bp)) / sd(sim$X3_0.2.bp)
+  # cexon_3_4_69_z <- (real$X3_3.69.bp - mean(sim$X3_3.69.bp)) / sd(sim$X3_3.69.bp)
+  # cexon_3_70_z <- (real$X3_70..bp - mean(sim$X3_70..bp)) / sd(sim$X3_70..bp)
+  # 
+  print("Z score 0-2bp")
+  print(call_0_2_z)
+  print(p_from_z(call_0_2_z))
+  print("Z score 3-69bp")
+  print(call_3_69_z)
+  print(p_from_z(call_3_69_z))
+  print("Z score 70+bp")
+  print(call_70_z)
+  print(p_from_z(call_70_z))
+  
+}
+
+p_from_z <- function(z) {
+  return(2*pnorm(-abs(z)))
+}
+
 file1 <- "results/clinvar/clinvar_simulations.csv"
 file2 <- "results/clinvar/1000_genomes_simulations.csv"
 output <- "results/clinvar/simulations.pdf"
 compare_zs(file1, file2, output)
+get_zs(file1)
+
 
 file1 <- "results/clinvar/clinvar_simulations_ese_overlaps.csv"
 file2 <- "results/clinvar/1000_genomes_simulations_ese_overlaps.csv"
@@ -213,7 +248,7 @@ compare_zs(file1, file2, output)
 
 
 # plot the z scores for the number of hits on an ese compared to randomly simulated
-# positions in the 4-69 bp window at exon ends
+# positions in the 3-69 bp window at exon ends
 clinvar_ese_hit <- read.csv("results/clinvar/clinvar_ese_hit_simulation_4_69.csv", head=T)
 real <- clinvar_ese_hit[clinvar_ese_hit$simulation == "real",]
 sims <- clinvar_ese_hit[clinvar_ese_hit$simulation != "real",]
