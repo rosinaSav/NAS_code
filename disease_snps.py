@@ -126,15 +126,25 @@ def main():
     if clinvar_ptc_locations:
         dso.clinvar_ptc_locations(disease_ptcs_file, disease_snps_relative_exon_positions, ptc_file, clinvar_ptc_locations_file)
 
+    ese_file_name = ese_file.split('/')[-1].split('.')[0]
+
     coding_exons_fasta = "{0}_coding_exons.fasta".format(results_prefix)
     snp_relative_positions_file = "{0}_SNP_relative_exon_position.bed".format(results_prefix)
     clinvar_location_simulation_file = "{0}/clinvar_simulations.csv".format(output_directory)
-    clinvar_location_simulation_ese_overlap_file = "{0}/clinvar_simulations_ese_overlaps.csv".format(output_directory)
+    if "INT3" not in ese_file_name:
+        clinvar_location_simulation_ese_overlap_file = "{0}/clinvar_simulations_{1}_overlaps.csv".format(output_directory, ese_file_name)
+    else:
+        clinvar_location_simulation_ese_overlap_file = "{0}/clinvar_simulations_ese_overlaps.csv".format(output_directory)
     kgenomes_location_simulation_file = "{0}/1000_genomes_simulations.csv".format(output_directory)
     kgenomes_location_simulation_ese_overlap_file = "{0}/1000_genomes_simulations_ese_overlaps.csv".format(output_directory)
+
     if exclude_cpg:
         clinvar_location_simulation_file = "{0}/clinvar_simulations_exclude_cpg.csv".format(output_directory)
-        clinvar_location_simulation_ese_overlap_file = "{0}/clinvar_simulations_ese_overlaps_exclude_cpg.csv".format(output_directory)
+        if "INT3" not in ese_file_name:
+            clinvar_location_simulation_ese_overlap_file = "{0}/clinvar_simulations_{1}_overlaps_exclude_cpg.csv".format(output_directory, ese_file_name)
+        else:
+            clinvar_location_simulation_ese_overlap_file = "{0}/clinvar_simulations_ese_overlaps_exclude_cpg.csv".format(output_directory)
+
         kgenomes_location_simulation_file = "{0}/1000_genomes_simulations_exclude_cpg.csv".format(output_directory)
         kgenomes_location_simulation_ese_overlap_file = "{0}/1000_genomes_simulations_ese_overlaps_exclude_cpg.csv".format(output_directory)
 
@@ -146,7 +156,11 @@ def main():
 
     window_start = 3
     window_end = 69
-    clinvar_ese_hit_simulation_file = "{0}/clinvar_ese_hit_simulation_{1}_{2}.csv".format(output_directory, window_start, window_end)
+    if "INT3" not in ese_file_name:
+        clinvar_ese_hit_simulation_file = "{0}/clinvar_{1}_hit_simulation_{2}_{3}.csv".format(output_directory, ese_file_name, window_start, window_end)
+    else:
+        clinvar_ese_hit_simulation_file = "{0}/clinvar_ese_hit_simulation_{1}_{2}.csv".format(output_directory, window_start, window_end)
+
     kgenomes_ese_hit_simulation_file = "{0}/1000_genomes_ese_hit_simulation_{1}_{2}.csv".format(output_directory, window_start, window_end)
     if ese_hit_simulation:
         print("Simulating ESE hits on the {0}-{1} region...".format(window_start, window_end))

@@ -249,9 +249,11 @@ compare_zs(file1, file2, output)
 
 # plot the z scores for the number of hits on an ese compared to randomly simulated
 # positions in the 3-69 bp window at exon ends
-clinvar_ese_hit <- read.csv("results/clinvar/clinvar_ese_hit_simulation_4_69.csv", head=T)
+clinvar_ese_hit <- read.csv("results/clinvar/clinvar_ese_hit_simulation_3_69.csv", head=T)
 real <- clinvar_ese_hit[clinvar_ese_hit$simulation == "real",]
 sims <- clinvar_ese_hit[clinvar_ese_hit$simulation != "real",]
+czall <- (real$both_ese_hit_count - mean(sims$both_ese_hit_count)) / sd(sims$both_ese_hit_count)
+p_from_z(czall)
 cz5 <- (real$X5_ese_hit_count - mean(sims$X5_ese_hit_count)) / sd(sims$X5_ese_hit_count)
 cz3 <- (real$X3_ese_hit_count - mean(sims$X3_ese_hit_count)) / sd(sims$X3_ese_hit_count)
 clinvar_ese_hit <- read.csv("results/clinvar/1000_genomes_ese_hit_simulation_4_69.csv", head=T)

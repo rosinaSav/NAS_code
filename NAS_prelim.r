@@ -267,8 +267,14 @@ neg_control = read_in_simulations("results/clean_run_2/simulation_output/final_o
 # perform tests between genotypes
 perform_tests(NAS_data)
 
+# samples with a PTC+/+ sample
+nrow(NAS_data[NAS_data$PSI_w_PTC != 'NaN',])
+
 # summary of data
 summary(NAS_data)
+
+median(NAS_data$PSI_het_PTC)
+median(NAS_data$PSI_no_PTC)
 
 # ask whether there is a significant difference between PSI for non-PTC homozygotes and PTC heterozygotes
 wilcox.test(NAS_data$PSI_het_PTC, NAS_data$PSI_no_PTC, paired=T)
