@@ -234,6 +234,84 @@ p_from_z <- function(z) {
   return(2*pnorm(-abs(z)))
 }
 
+
+
+
+
+plot <- function(filelist, groups, output_path) {
+  
+  ###
+  # Plot the Z scores for the regions for motif sets.
+  ###
+  
+  library(dplyr)
+  library(reshape2)
+  library(ggplot2)
+  
+  zs0_2 <- c()
+  zs3_69 <- c()
+  zs70 <- c()
+  
+  for (filepath in filelist) {
+    
+    file <- read.csv(filepath, header=T)
+    real <- filter(file, sim_id == "real")
+    sims <- file[file$sim_id != "real",]
+    z0_2 <- (real$all_0.2.bp - mean(sims$all_0.2.bp)) / sd(sims$all_0.2.bp)
+    z3_69 <- (real$all_3.69.bp - mean(sims$all_3.69.bp)) / sd(sims$all_3.69.bp)
+    z70 <- (real$all_70..bp - mean(sims$all_70..bp)) / sd(sims$all_70..bp)
+    zs0_2 <- c(zs0_2, z0_2)
+    zs3_69 <- c(zs3_69, z3_69)
+    zs70 <- c(zs70, z70)
+  }
+  
+  data <- data.frame(groups, zs0_2, zs3_69, zs70)
+  colnames(data) <- c("motif_set", "z0.2", "z3.69", "z70")
+  meltdata <- melt(data)
+  
+  upper <- ceiling(max(meltdata$value))
+  lower <- floor(min(meltdata$value))
+  
+  plot <- ggplot(meltdata, aes(x=variable, fill=motif_set, y=value)) +   
+    geom_bar(stat="identity", position=position_dodge()) + 
+    labs(x="Exon Region (nucleotides)", y="Z") +
+    scale_fill_manual(values = c("#E69F00", "#56B4E9", "#009E73")) +
+    scale_y_continuous(limits=c(lower, upper), breaks=seq(lower, upper, 1)) +
+    scale_x_discrete(labels = c("0-2", "3-69", "70+")) +
+    geom_hline(yintercept = 1.96, lty=2) +
+    geom_hline(yintercept = -1.96, lty=2) +
+    geom_hline(yintercept = 0, lty=1) +
+    # geom_text(aes(label=pvals), position=position_dodge(width=0.9), vjust=-0.45, cex=3) +
+    # theme_Publication() +
+    theme(legend.title=element_blank())
+  ggsave(output_path, plot=plot)
+  
+}
+
+filelist <- c(
+  "results/clinvar/clinvar_simulations_ese_overlaps.csv",
+  "results/clinvar/clinvar_simulations_RESCUE_eses_overlaps.csv",
+  "results/clinvar/clinvar_simulations_Ke400_eses_overlaps.csv"
+)
+groups <- c("INT3", "RESCUE", "Ke")
+output_path = "results/graphs/clinvar_simulations_ese_hits_compare_motif_sets.pdf"
+plot(filelist, groups, output_path)
+
+ese_file <- "results/clinvar/clinvar_simulations_ese_overlaps.csv"
+get_zs(ese_file)
+
+library(dplyr)
+ese_hits_file <- "results/clinvar/clinvar_ese_hit_simulation_3_69.csv"
+ese_hits_file <- "results/clinvar/clinvar_RESCUE_eses_hit_simulation_3_69.csv"
+ese_hits_file <- "results/clinvar/clinvar_Ke400_eses_hit_simulation_3_69.csv"
+file <- read.csv(ese_hits_file, head=T)
+real <- filter(file, simulation == "real")
+sim <- filter(file, simulation != "real")
+z <- (real$both_ese_hit_count - mean(sim$both_ese_hit_count)) / sd(sim$both_ese_hit_count)
+z
+p_from_z(z)
+
+
 file1 <- "results/clinvar/clinvar_simulations.csv"
 file2 <- "results/clinvar/1000_genomes_simulations.csv"
 output <- "results/clinvar/simulations.pdf"

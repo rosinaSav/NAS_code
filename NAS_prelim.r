@@ -55,6 +55,8 @@ get_n_t =  function(feature1, feature2, neg_control, NAS_data, title, swap = FAL
   plot <- hist(n_t, col = "RoyalBlue", breaks = 20, main = title, xlab = "Proportion of simulants that show an effect smaller or equal to true effect.")
   plot
   abline(v = 0.5, lty = 2, lwd = 2)
+  print(sum((n_t > 0.5) & (!is.na(n_t))))
+  print(sum(!is.na(n_t)))
   p = binom.test(sum((n_t > 0.5) & (!is.na(n_t))), sum(!is.na(n_t)), alternative = "g")$p.value
   text(0.7, y_pos, label = paste("p ~ ", round(p, 3), sep = ""), cex = 2)
   if (return_p == TRUE) {
@@ -257,7 +259,166 @@ read_in_simulations = function(simulant_prefix, simulant_number, ids, column_nam
   return(out_list)
 }
 
+plot_theme <- function(font_size=12) {
+  theme(
+    plot.title = element_text(face = "bold", size = 16, hjust = 0.5),
+    text = element_text(),
+    panel.background = element_blank(),
+    plot.background = element_rect(colour = NA),
+    # panel.border = element_rect(colour = NA),
+    axis.title = element_text(face = "bold",size = rel(1.2)),
+    axis.title.y = element_text(angle=90,vjust =2),
+    axis.title.x = element_text(vjust = -0.2),
+    axis.text = element_text(size=font_size),
+    # axis.text.x = element_text(size=font_size),
+    axis.line = element_line(colour="black"),
+    axis.ticks = element_line(),
+    panel.grid.major = element_line(colour="#f0f0f0"),
+    panel.grid.minor = element_blank(),
+    # legend.key = element_rect(colour = NA),
+    # legend.position = "bottom",
+    # legend.direction = "horizontal",
+    # legend.key.size= unit(0.2, "cm"),
+    # legend.title = element_text(face="italic"),
+    plot.margin=unit(c(10,5,5,5),"mm"),
+    strip.background=element_rect(colour="#f0f0f0",fill="#f0f0f0"),
+  )
+}
+
+#
+title_styling <- function(plot, title, title_left) {
+  if(!is.null(title)) {
+    plot <- plot +
+      labs(title=title) +
+      theme(
+        plot.margin=unit(c(10,5,5,5),"mm")
+      )
+  }
+  if(!is.null(title_left)) {
+    plot <- plot +
+      theme(
+        plot.title = element_text(hjust = -0.075)
+      )
+  }
+  return(plot)
+}
+
+plot_diff_hist_het <- function(title=NULL, title_left=NULL) {
+  library(ggplot2)
+  plot <- ggplot() + 
+    geom_histogram(aes(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC),binwidth = 1,fill = chosen_colour,color = "black") + 
+    scale_x_continuous(limits = c(-30, 100), breaks = seq(-30, 100, 10)) +
+    labs(x = "PSI PTC-/- - PTC-/+", y="Frequency") + 
+    plot_theme(font_size = 12)
+  
+  plot <- title_styling(plot, title, title_left)
+  return(plot)
+}
+
+plot_diff_hist_het_zoom <- function(title=NULL, title_left=NULL) {
+  library(ggplot2)
+  plot <- ggplot() + 
+    geom_histogram(aes(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC),binwidth = 1,fill = chosen_colour,color = "black") + 
+    coord_cartesian(ylim=c(0, 50)) +
+    scale_x_continuous(limits = c(-30, 100), breaks = seq(-30, 100, 10)) +
+    labs(x = "PSI PTC-/- - PTC-/+", y="Frequency") + 
+    plot_theme(font_size = 12)
+  
+  plot <- title_styling(plot, title, title_left)
+  return(plot)
+}
+
+get_n_t_value <- function(neg_control, feature1, feature2, threshold) {
+  n_t = rep(NA, length(neg_control))
+  for (index in 1:length(neg_control)) {
+    # get the true difference
+    true_diff = NAS_data[index, feature1] - NAS_data[index, feature2]
+    # if the true difference is bigger than the threshold
+    if (abs(true_diff) >= threshold) {
+      # get the differences for each of the simulations
+      sim_diffs = neg_control[[index]][feature1] - neg_control[[index]][feature2]
+      sim_diffs = sim_diffs[!is.na(sim_diffs)]
+      n = sum((true_diff > sim_diffs) & (true_diff != sim_diffs))
+      t = length(sim_diffs[true_diff != sim_diffs])
+      n_t[index] = n/t      
+    }
+  } 
+  return(n_t)
+}
+get_n_t_plot =  function(feature1, feature2, neg_control, NAS_data, xlab, swap = FALSE, big_only = FALSE, return_p = TRUE, return_plot = FALSE, title=NULL, title_left=NULL) {
+  threshold = 0
+  y_pos = 60
+  if (big_only != FALSE) {
+    threshold = big_only
+    y_pos = 10
+  }
+  if (swap == TRUE) {
+    temp = feature1
+    feature1 = feature2
+    feature2 = temp
+  }
+  
+  n_t <- get_n_t_value(neg_control, feature1, feature2, threshold)
+  
+  library(ggplot2)
+  plot <- ggplot() + 
+    geom_histogram(aes(n_t),binwidth = 0.02,fill = chosen_colour,color = "black") + 
+    geom_vline(xintercept = 0.5, lty=2) +
+    coord_cartesian(xlim = c(0,1)) +
+    labs(x = xlab, y="Frequency") + 
+    plot_theme(font_size = 12)
+  
+  plot <- title_styling(plot, title, title_left)
+  return(plot)
+}
+
+
+plot_diff_hist_het_zoom <- function(title=NULL, title_left=NULL) {
+  library(ggplot2)
+  plot <- ggplot() + 
+    geom_histogram(aes(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC),binwidth = 1,fill = chosen_colour,color = "black") + 
+    coord_cartesian(ylim=c(0, 50)) +
+    scale_x_continuous(limits = c(-30, 100), breaks = seq(-30, 100, 10)) +
+    labs(x = "PSI PTC-/- - PTC-/+", y="Frequency") + 
+    plot_theme(font_size = 12)
+  
+  plot <- title_styling(plot, title, title_left)
+  return(plot)
+}
+
+plot_diff_hist_het_rpm <- function(feature1, feature2, title=NULL, title_left=NULL, binwidth=NULL, xlab=NULL, ylab=NULL) {
+  if(is.null(binwidth)) {
+    bindwidth <- 1
+  }
+  if(is.null(xlab)) {
+    xlab <- ""
+  }
+  if(is.null(ylab)) {
+    ylab <- ""
+  }
+  
+  library(ggplot2)
+  plot <- ggplot() + 
+    geom_histogram(aes(NAS_data[[feature1]] - NAS_data[[feature2]]), binwidth = binwidth,fill = chosen_colour,color = "black") + 
+    # scale_x_continuous(limits = c(-30, 100), breaks = seq(-30, 100, 10)) +
+    coord_cartesian(ylim=c(0,20)) +
+    labs(x = xlab, y= ylab) + 
+    plot_theme(font_size = 12) +
+    geom_vline(xintercept = 0.025, col="red") +
+    geom_vline(xintercept = -0.025, col="red")
+  
+  plot <- title_styling(plot, title, title_left)
+  return(plot)
+}
+
+# plot_diff_hist_het_rpm("norm_count_no_PTC", "norm_count_het_PTC", binwidth=0.025, title="B", title_left = T, xlab="RPMskip PTC-/- - PTC-/+", ylab="Frequency")
+
+
 chosen_colour = "RoyalBlue"
+
+
+####### tests
+
 
 #PSI
 NAS_data = prepare_dataset("results/clean_run_2/clean_run__analysis_final_output.txt")
@@ -290,13 +451,62 @@ dev.off()
 # ask whether there is a significant difference between RPMskip for her PTC and homo no PTC
 wilcox.test(NAS_data$norm_count_het_PTC, NAS_data$norm_count_no_PTC, paired=T, alternative="greater")
 
+#histogram of psi ptc-/- - ptc-/+
+hist_psi_no_ptc_minus_psi_het_ptc <- plot_diff_hist_het(title="A", title_left=T)
+ggsave("results/graphs/hist_psi_diff_no_ptc_het_ptc.pdf", plot=hist_psi_no_ptc_minus_psi_het_ptc, width=8, height=5)
 
-# big changes
-big_changes_PSI = plot_individual_change(NAS_data, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "Exons with >5% change between any two categories", "PSI", 5, 100, big_changes_binom_test = TRUE)
+#histogram of psi ptc-/- - ptc-/+ with zoom
+library(grid)
+library(gridExtra)
+hist_psi_no_ptc_minus_psi_het_ptc_title <- plot_diff_hist_het(title="A", title_left=T)
+hist_psi_no_ptc_minus_psi_het_ptc_zoom_title <- plot_diff_hist_het_zoom(title="B", title_left=T)
+hist_psi_no_het_with_zoom <- grid.arrange(hist_psi_no_ptc_minus_psi_het_ptc_title, hist_psi_no_ptc_minus_psi_het_ptc_zoom_title, ncol=2)
+ggsave("results/graphs/hist_psi_no_het_with_zoom.pdf", plot=hist_psi_no_het_with_zoom, width=12, height=5)
+
+# histogram of the simulants with psi difference less than real ptc-/- - ptc-/+
+simulants_less_real_ptc_no_minus_het <- get_n_t_plot("PSI_no_PTC", "PSI_het_PTC", neg_control, NAS_data, xlab="Proportion of simulants with PSI for pseudoPTC-/- - pseudoPTC-/+\nless than or equal to PTC-/- - PTC-/+", swap = FALSE, title="A", title_left=T)
+# same for rpmskip
+simulants_less_real_ptc_no_minus_het_rpm_skip <- get_n_t_plot("norm_count_no_PTC", "norm_count_het_PTC", neg_control, NAS_data, xlab="Proportion of simulants with RPMskip for pseudoPTC-/- - pseudoPTC-/+\nless than or equal to PTC-/- - PTC-/+",  swap = T, title="B", title_left =T)
+
+# just psi
+ggsave('results/graphs/simulants_less_real_ptc_no_minus_het.pdf', plot = simulants_less_real_ptc_no_minus_het, width=8, height=5)
+# both
+sim_plot <- grid.arrange(simulants_less_real_ptc_no_minus_het, simulants_less_real_ptc_no_minus_het_rpm_skip, ncol=2)
+ggsave('results/graphs/simulantions_less_than_real_diff.pdf', plot = sim_plot, width=14, height=5)
+
+# big changes in psi
+big_changes_psi = plot_individual_change(NAS_data, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "", "", 5, 100, reverse = T, big_changes_binom_test = F)
+big_changes_psi
+big_changes_psi = plot_individual_change(NAS_data, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "", "", 5, 100, reverse = F, big_changes_binom_test = TRUE)
+
+
+# rpmskip/rpkinclude difference histograms
+library(grid)
+library(gridExtra)
+rpminclude_diff <- plot_diff_hist_het_rpm("norm_count_no_PTC_incl", "norm_count_het_PTC_incl", binwidth=0.5, title="A", title_left = T, xlab="RPMinclude PTC-/- - PTC-/+", ylab="Frequency")
+rpmskip_diff <- plot_diff_hist_het_rpm("norm_count_no_PTC", "norm_count_het_PTC", binwidth=0.025, title="B", title_left = T, xlab="RPMskip PTC-/- - PTC-/+", ylab="Frequency")
+rpm_plot <- grid.arrange(rpminclude_diff, rpmskip_diff, ncol=2)
+ggsave('results/graphs/hist_rpm_diff_no_ptc_het_ptc.pdf', plot = rpm_plot, width=12, height=5)
+
+# rpmskip norm test
+get_n_t("norm_count_no_PTC", "norm_count_het_PTC", neg_control, NAS_data, "title", swap = T, big_only = FALSE, return_p = T, return_plot = FALSE)
+
+# big changes rpmskip
+big_changes_RPMskip = plot_individual_change(NAS_data, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "Exons with >0.025 change between any two categories", "RPMskip", 0.025, 5, reverse = TRUE, big_changes_binom_test = TRUE)
+big_changes_RPMskip
+
+
+# shift psi and rpmskip
+big_changes_psi_shift = plot_individual_change(NAS_data_shift, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "", "", 5, 100, reverse = F, big_changes_binom_test = TRUE)
+big_changes_RPMskip_shift = plot_individual_change(NAS_data_shift, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "Exons with >0.025 change between any two categories", "RPMskip", 0.025, 5, reverse = TRUE, big_changes_binom_test = TRUE)
+big_changes_RPMskip_shift
+
+
+
 
 # shifted
 big_changes_PSI_shift = plot_individual_change(NAS_data_shift, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "Exons with >5% change between any two categories", "PSI", 5, 100, big_changes_binom_test = TRUE)
-big_changes_RPMskip_shift = plot_individual_change(NAS_data_shift, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "Exons with >0.025 change between any two categories", "RPMskip", 0.025, 5, reverse = TRUE, big_changes_binom_test = TRUE)
+big_changes_RPMskip_shift = plot_individual_change(NAS_data_shift, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "Exons with >0.025 change between any two categories", "RPMskip", 0.0375, 5, reverse = TRUE, big_changes_binom_test = TRUE)
 big_changes_RPMskip_shift
 
 # plot showing the p values for each percentage cutoff
@@ -313,7 +523,7 @@ y <- log(pvals)
 pdf("results/graphs/psi_difference_binomial_test_p_values.pdf", width=10)
 plot.new()
 plot.window(c(0,10), c(min(y), 0))
-title(xlab = "abs(PSI-/- - PSI-/+)", ylab = "Bionmial test log (p value)") 
+title(xlab = "PSI difference threshold", ylab = "Bionmial test log p value") 
 axis(1, at = seq(0, 10, by = 1), labels = seq(0, 10, by = 1))
 axis(2, at = seq(floor(min(y)), 0, 1), labels = seq(floor(min(y)), 0, 1))
 points(x, y, pch=16, cex=0.8, col=ifelse(y < log(0.05), "blue", "red"))
@@ -469,3 +679,6 @@ ese_overlap_simulation_plot(snp_sim_file, mono_sim_file)
 dev.off()
 
 ese_overlap_simulation_tests(snp_sim_file, mono_sim_file)
+
+
+

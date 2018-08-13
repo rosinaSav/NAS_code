@@ -16,3 +16,4 @@ binaries/
 blast/
 *.pyc
 *.json
+.RData
