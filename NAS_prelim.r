@@ -372,6 +372,62 @@ get_n_t_plot =  function(feature1, feature2, neg_control, NAS_data, xlab, swap =
   return(plot)
 }
 
+get_n_t_value_line <- function(NAS_data, feature1, feature2) {
+  n_t = rep(NA, length(NAS_data))
+  diffs <- data.frame(true = double())
+  for (index in 1:length(neg_control)) {
+    # get the true difference
+    true_diff = NAS_data[index, feature1] - NAS_data[index, feature2]
+    diffs <- rbind(diffs, data.frame(true_diff))
+  }
+  return(diffs)
+}
+
+get_diff_plot =  function(feature1, feature2, neg_control, NAS_data, xlab, ylab, swap = FALSE, big_only = FALSE, return_p = TRUE, return_plot = FALSE, title=NULL, title_left=NULL, hline = NULL, ylims = NULL, breaks = NULL, labels = NULL, scale_y = NULL) {
+  threshold = 0
+  y_pos = 60
+  if (big_only != FALSE) {
+    threshold = big_only
+    y_pos = 10
+  }
+  if (swap == TRUE) {
+    temp = feature1
+    feature1 = feature2
+    feature2 = temp
+  }
+  
+  n_t <- get_n_t_value_line(NAS_data, feature1, feature2)
+  colnames(n_t) <- c("true_diff")
+  n_t$ID <- seq.int(nrow(n_t))
+  
+  plot <- ggplot() + 
+    geom_line(aes(x = n_t$ID, y = n_t$true_diff), col="RoyalBlue") + 
+    labs(x = xlab, y=ylab) + 
+    theme(
+      axis.text.x = element_blank(),
+      axis.ticks.x=element_blank(),
+      panel.background = element_rect( fill = "#f5f5f5"),
+      panel.grid.major = element_line(colour="#ffffff"),
+      panel.grid.minor = element_line(colour="#ffffff"),
+    )
+  
+  if(!is.null(hline)) {
+    print(hline)
+    plot <- plot +
+      geom_hline(yintercept = hline, lty=2, col="#aaaaaa") + 
+      geom_hline(yintercept = -hline, lty=2, col="#aaaaaa")
+  }
+  if(!is.null(ylims) | !is.null(labels) | !is.null(breaks)) {
+    plot <- plot + scale_y_continuous(limits = ylims, labels = labels, breaks = breaks)
+  }
+  if(!is.null(scale_y)) {
+    plot <- plot + 
+      coord_cartesian(ylim = scale_y)
+  }
+  plot <- title_styling(plot, title, title_left)
+  return(plot)
+  
+}
 
 plot_diff_hist_het_zoom <- function(title=NULL, title_left=NULL) {
   library(ggplot2)
@@ -420,6 +476,7 @@ chosen_colour = "RoyalBlue"
 ####### tests
 
 
+
 #PSI
 NAS_data = prepare_dataset("results/clean_run_2/clean_run__analysis_final_output.txt")
 NAS_data_shift = prepare_dataset("results/clean_run_2/clean_run_out_of_frame__analysis_final_output.txt")
@@ -458,10 +515,12 @@ ggsave("results/graphs/hist_psi_diff_no_ptc_het_ptc.pdf", plot=hist_psi_no_ptc_m
 #histogram of psi ptc-/- - ptc-/+ with zoom
 library(grid)
 library(gridExtra)
-hist_psi_no_ptc_minus_psi_het_ptc_title <- plot_diff_hist_het(title="A", title_left=T)
-hist_psi_no_ptc_minus_psi_het_ptc_zoom_title <- plot_diff_hist_het_zoom(title="B", title_left=T)
-hist_psi_no_het_with_zoom <- grid.arrange(hist_psi_no_ptc_minus_psi_het_ptc_title, hist_psi_no_ptc_minus_psi_het_ptc_zoom_title, ncol=2)
-ggsave("results/graphs/hist_psi_no_het_with_zoom.pdf", plot=hist_psi_no_het_with_zoom, width=12, height=5)
+psi_diff_plot <- get_diff_plot("PSI_no_PTC", "PSI_het_PTC", neg_control, NAS_data, xlab="PTC", ylab="PSIdiff (PTC-/- - PTC-/+)", hline = 5, ylims = c(-20, 100), breaks = seq(-20, 100, 10), labels = seq(-20, 100, 10))
+ggsave("results/graphs/psi_diff.pdf", plot = psi_diff_plot, width=8, height = 5 )
+# hist_psi_no_ptc_minus_psi_het_ptc_title <- plot_diff_hist_het(title="A", title_left=T)
+# hist_psi_no_ptc_minus_psi_het_ptc_zoom_title <- plot_diff_hist_het_zoom(title="B", title_left=T)
+# hist_psi_no_het_with_zoom <- grid.arrange(hist_psi_no_ptc_minus_psi_het_ptc_title, hist_psi_no_ptc_minus_psi_het_ptc_zoom_title, ncol=2)
+# ggsave("results/graphs/hist_psi_no_het_with_zoom.pdf", plot=hist_psi_no_het_with_zoom, width=12, height=5)
 
 # histogram of the simulants with psi difference less than real ptc-/- - ptc-/+
 simulants_less_real_ptc_no_minus_het <- get_n_t_plot("PSI_no_PTC", "PSI_het_PTC", neg_control, NAS_data, xlab="Proportion of simulants with PSI for pseudoPTC-/- - pseudoPTC-/+\nless than or equal to PTC-/- - PTC-/+", swap = FALSE, title="A", title_left=T)
@@ -483,10 +542,13 @@ big_changes_psi = plot_individual_change(NAS_data, "PSI_w_PTC", "PSI_het_PTC", "
 # rpmskip/rpkinclude difference histograms
 library(grid)
 library(gridExtra)
-rpminclude_diff <- plot_diff_hist_het_rpm("norm_count_no_PTC_incl", "norm_count_het_PTC_incl", binwidth=0.5, title="A", title_left = T, xlab="RPMinclude PTC-/- - PTC-/+", ylab="Frequency")
-rpmskip_diff <- plot_diff_hist_het_rpm("norm_count_no_PTC", "norm_count_het_PTC", binwidth=0.025, title="B", title_left = T, xlab="RPMskip PTC-/- - PTC-/+", ylab="Frequency")
+rpminclude_diff <- get_diff_plot("norm_count_no_PTC_incl", "norm_count_het_PTC_incl", neg_control, NAS_data, xlab="PTC", ylab="RPMincl (PTC-/- - PTC-/+)", title="A", title_left =T)
+rpmskip_diff <- get_diff_plot("norm_count_no_PTC", "norm_count_het_PTC", neg_control, NAS_data, xlab="PTC", ylab="RPMskip (PTC-/- - PTC-/+)", title="B", title_left =T)
+# rpminclude_diff <- plot_diff_hist_het_rpm("norm_count_no_PTC_incl", "norm_count_het_PTC_incl", binwidth=0.5, title="A", title_left = T, xlab="RPMinclude PTC-/- - PTC-/+", ylab="Frequency")
+# rpmskip_diff <- plot_diff_hist_het_rpm("norm_count_no_PTC", "norm_count_het_PTC", binwidth=0.025, title="B", title_left = T, xlab="RPMskip PTC-/- - PTC-/+", ylab="Frequency")
 rpm_plot <- grid.arrange(rpminclude_diff, rpmskip_diff, ncol=2)
-ggsave('results/graphs/hist_rpm_diff_no_ptc_het_ptc.pdf', plot = rpm_plot, width=12, height=5)
+# ggsave('results/graphs/hist_rpm_diff_no_ptc_het_ptc.pdf', plot = rpm_plot, width=12, height=5)
+ggsave('results/graphs/rpm_diff_no_ptc_het_ptc.pdf', plot = rpm_plot, width=12, height=5)
 
 # rpmskip norm test
 get_n_t("norm_count_no_PTC", "norm_count_het_PTC", neg_control, NAS_data, "title", swap = T, big_only = FALSE, return_p = T, return_plot = FALSE)
