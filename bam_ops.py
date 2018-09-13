@@ -357,8 +357,6 @@ def count_junction_reads(sam, junctions, outfile, read_count):
                 #get intron position in chromosome coordinates based on the alignment cigar
 
                 putative_junctions = map_intron_from_cigar(cigar, sam_start)
-                print(cigar, sam_start)
-                print(putative_junctions)
                 if putative_junctions:
                     for junction in putative_junctions:
                         #if the 3'end of the exon is in the junctions dict

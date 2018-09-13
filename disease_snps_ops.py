@@ -31,8 +31,25 @@ def get_ptc_overlaps(disease_ptc_file, ptc_file, output_file):
             if ptc_pos in disease_ptc_list:
                 outfile.write('{0}\t**\t{1}\n'.format("\t".join(ptc_list[ptc_pos]), "\t".join(disease_ptc_list[ptc_pos])))
 
+def get_unique_ptcs(ptc_file, ptc_intersect_file, output_file):
+    '''
+    Get unique disease ptcs that arent in the 1000 genomes set
+    '''
+    disease_ptcs = gen.read_many_fields(ptc_file, "\t")
+    intersect_ptcs = gen.read_many_fields(ptc_intersect_file, "\t")
 
-def ptc_location_simulation(snp_file, full_bed, cds_fasta, output_directory, required_simulations, coding_exons_file):
+    intersect_list = []
+    for ptc in intersect_ptcs:
+        intersect_list.append(int(ptc[1]))
+
+    with open(output_file, "w") as outfile:
+        for ptc in disease_ptcs:
+            start = int(ptc[7])
+            if start not in intersect_list:
+                outfile.write('{0}\n'.format("\t".join(ptc)))
+
+
+def ptc_location_simulation(snp_file, full_bed, cds_fasta, possible_positions_dir, output_directory, required_simulations, coding_exons_file):
     '''
     Simulate the snp location.
     For each snp, pick another site that has the same reference allele and that would generate a ptc with the mutated allele.
@@ -43,7 +60,7 @@ def ptc_location_simulation(snp_file, full_bed, cds_fasta, output_directory, req
     possible_locations = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: [])))
     nts = ["A", "C", "G", "T"]
     for nt in nts:
-        location_file = "{0}/possible_ptc_locations_{1}.fasta".format(output_directory, nt)
+        location_file = "{0}/possible_ptc_locations_{1}.fasta".format(possible_positions_dir, nt)
         entry_names, entry_locations = gen.read_fasta(location_file)
         for i, name in enumerate(entry_names):
             exon = name.split(':')[0]
@@ -51,6 +68,7 @@ def ptc_location_simulation(snp_file, full_bed, cds_fasta, output_directory, req
             ma = name.split(':')[1][-1]
             possible_locations[exon][aa][ma].append(entry_locations[i])
 
+    # get a list of exons and their lengths
     exons = gen.read_many_fields(coding_exons_file, "\t")
     exon_list = {}
     for exon in exons:
@@ -76,6 +94,7 @@ def generate_pseudo_snps(snp_file, possible_locations, exon_list, output_file):
             snp_info = EntryInfo(snp)
             if len(possible_locations[snp_info.transcript_id][snp_info.aa][snp_info.ma]):
                 possible_ptcs = possible_locations[snp_info.transcript_id][snp_info.aa][snp_info.ma][0].split(',')
+                print(snp_info.transcript_id, possible_ptcs)
                 choices = list(range(len(possible_ptcs)))
                 choice = np.random.choice(choices)
                 pseudo_ptc_choice = possible_ptcs[choice]
@@ -92,6 +111,10 @@ def generate_pseudo_snps(snp_file, possible_locations, exon_list, output_file):
 
 
 def generate_possible_ptc_locations(full_bed, cds_fasta, output_directory):
+    '''
+    Get all the locations of positions that if mutated to a
+    particular nt, could generate a ptc
+    '''
 
     stop_bases = ["A", "G", "T"]    # a mutation to c cant generate a stop so its not included
     stop_codons = ["TAA", "TAG", "TGA"]
@@ -468,164 +491,164 @@ def get_introns(exon_bed, output_file):
                     outlist = gen.stringify([exon.chr, intron_start, intron_stop, "{0}.{1}-{2}".format(exon.transcript_id, exon.exon_no, next_exon.exon_no), ".", exon.strand])
                     outfile.write("{0}\n".format("\t".join(outlist)))
 
-def clinvar_ptc_locations(disease_ptcs_file, disease_snps_relative_exon_positions, ptc_file, output_file):
-    '''
-    Get the relative positions of disease PTCs.
-    Use Chi square test to see whether disease PTCs are located nearer
-    exon ends more often than expected given nullself.
-    Null takes the number of base pairs in the window as a proportion of exon length.
-    e.g. if 5% of base pairs are within 0-3 bp of an exon end, the null is that 5% of
-    PTCs should occur in this region.
-    '''
-    # Get a list of 1000 genomes ptcs
-    ptcs = gen.read_many_fields(ptc_file, "\t")
-    ptc_list = {}
-    ptc_positions = []
-    for ptc in ptcs[1:]:
-        ptc_id = ptc[8]
-        ptc_positions.append(int(ptc[7]))
-        ptc_list[ptc_id] = [ptc[3], int(ptc[1]), int(ptc[2]), int(ptc[7])]
-
-    # Get a list of clinvar ptcs
-    disease_ptcs = gen.read_many_fields(disease_ptcs_file, "\t")
-    disease_ptc_list = {}
-    disease_ptc_positions = []
-    for ptc in disease_ptcs:
-        ptc_id = ptc[8]
-        disease_ptc_positions.append(int(ptc[7]))
-        disease_ptc_list[ptc_id] = [ptc[3], int(ptc[1]), int(ptc[2]), int(ptc[7])]
-
-    # get all ptcs that overlap between the two datasets
-    overlaps = [i for i in ptc_positions if i in disease_ptc_positions]
-
-    # get the relative exon positions of the clinvar ptcs
-    disease_relative_positions = gen.read_many_fields(disease_snps_relative_exon_positions, "\t")
-    disease_relative_positions_list = {}
-    for snp in disease_relative_positions:
-        snp_id = snp[8]
-        disease_relative_positions_list[snp_id] = [snp[3], int(snp[11])]
-
-    disease_nt_counts = {}
-    disease_ptc_counts = {}
-    disease_exon_sample_list = []
-    ends = [5, 3]
-    for end in ends:
-        disease_nt_counts[end] = [0,0,0]
-        disease_ptc_counts[end] = [0,0,0]
-
-    # for each of the clinvar ptcs not in the overlap, get the number of bp
-    # in each window of the exon, the number of ptcs in that window.
-    # only sample the number of bp for each exon once (some exons may have
-    # more than 1 ptc and would otherwise contribute 2x)
-
-    for ptc_id in disease_ptc_list:
-        ptc = disease_ptc_list[ptc_id]
-        ptc_pos = ptc[3]
-        if ptc_pos not in overlaps:
-            if ptc_id in disease_relative_positions_list and disease_relative_positions_list[ptc_id][0] == ptc[0]:
-                exon_length = ptc[2] - ptc[1]
-                transcript_exon = ptc[0]
-
-                if transcript_exon not in disease_exon_sample_list:
-                    if exon_length >= 138:
-                        for i in ends:
-                            disease_nt_counts[i][0] += 3
-                            disease_nt_counts[i][1] += 66
-                            disease_nt_counts[i][2] += (np.divide(exon_length, 2) - 69)
-                    elif exon_length > 6 and exon_length < 138:
-                        for i in ends:
-                            disease_nt_counts[i][0] += 3
-                            disease_nt_counts[i][1] += (np.divide(exon_length, 2) - 3)
-                    else:
-                        for i in ends:
-                            disease_nt_counts[i][0] += np.divide(exon_length, 2)
-
-                disease_exon_sample_list.append(transcript_exon)
-
-                rel_pos = int(disease_relative_positions_list[ptc_id][1])
-                distances = [rel_pos, exon_length - rel_pos]
-                min_dist = min(distances)
-                if distances.index(min_dist) == 0:
-                    end = 5
-                else:
-                    end = 3
-
-                if min_dist <= 2:
-                    print(ptc_id)
-                    disease_ptc_counts[end][0] += 1
-                elif min_dist > 2 and min_dist <= 68:
-                    disease_ptc_counts[end][1] += 1
-                else:
-                    disease_ptc_counts[end][2] += 1
-
-    # write the output and chisq test to file
-    intervals = ["0-3 bp", "4-69 bp", "70+ bp"]
-
-    for end in disease_ptc_counts:
-        print(end, disease_ptc_counts[end])
-
-    total_disease_nts = []
-    [total_disease_nts.extend(disease_nt_counts[end]) for end in disease_nt_counts]
-    total_disease_nts = sum(total_disease_nts)
-    total_disease_ptcs = []
-    [total_disease_ptcs.extend(disease_ptc_counts[end]) for end in disease_ptc_counts]
-    total_disease_ptcs = sum(total_disease_ptcs)
-
-    with open(output_file, "w") as outfile:
-        outfile.write('whole_exons\n')
-        outfile.write('\n \n')
-        outfile.write('region,nt,nt_prop,expected_disease_ptcs,observed_disease_ptcs,fo/fe\n')
-        chisq = []
-        expecteds = []
-        nt_props = []
-        for i, region in enumerate(intervals):
-            region_nts = sum(disease_nt_counts[end][i] for end in disease_nt_counts)
-            region_nts_prop = np.divide(region_nts, total_disease_nts)
-            nt_props.append(region_nts_prop)
-            expected_region_ptcs = region_nts_prop * total_disease_ptcs
-            expecteds.append(expected_region_ptcs)
-            region_ptcs = sum(disease_ptc_counts[end][i] for end in disease_ptc_counts)
-            outfile.write("{0},{1},{2},{3},{4},{5}\n".format(region, region_nts, region_nts_prop, expected_region_ptcs, region_ptcs, np.divide(region_ptcs, expected_region_ptcs)))
-            chisq.append(np.divide((region_ptcs - expected_region_ptcs)**2, expected_region_ptcs))
-
-        observeds = [0,0,0]
-        for end in disease_ptc_counts:
-            for i, count in enumerate(disease_ptc_counts[end]):
-                observeds[i] += count
-
-        chisq_calc = chisquare(observeds, f_exp = expecteds)
-
-        outfile.write("total,{0},{1},{2}\n".format(total_disease_nts, sum(nt_props), sum(expecteds)))
-        outfile.write('\n\n')
-        outfile.write('total_ptcs:,{0}\n'.format(total_disease_ptcs))
-        outfile.write('chisq:,{0}\ndf:,{1}\npval:,{2}\n'.format(sum(chisq), len(chisq) - 1, chisq_calc.pvalue))
-
-        for end in ends:
-            outfile.write("\n \n{0}'\n".format(end))
-            outfile.write('\n \n')
-            outfile.write('region,nt,nt_prop,expected_disease_ptcs,observed_disease_ptcs,fo/fe\n')
-            chisq = []
-            expecteds = []
-            nt_props = []
-            for i, region in enumerate(intervals):
-                region_nts = disease_nt_counts[end][i]
-                region_nts_prop = np.divide(region_nts, np.divide(total_disease_nts, 2))
-                nt_props.append(region_nts_prop)
-                expected_region_ptcs = region_nts_prop * np.divide(total_disease_ptcs, 2)
-                expecteds.append(expected_region_ptcs)
-                region_ptcs = disease_ptc_counts[end][i]
-                outfile.write("{0},{1},{2},{3},{4},{5}\n".format(region, region_nts, region_nts_prop, expected_region_ptcs, region_ptcs, np.divide(region_ptcs, expected_region_ptcs)))
-                chisq.append(np.divide((region_ptcs - expected_region_ptcs)**2, expected_region_ptcs))
-
-            observeds = [0,0,0]
-            for i, count in enumerate(disease_ptc_counts[end]):
-                observeds[i] += count
-            chisq_calc = chisquare(observeds, f_exp = expecteds)
-
-            outfile.write("total,{0},{1},{2}\n".format(sum(disease_nt_counts[end]), sum(nt_props), sum(expecteds)))
-            outfile.write('\n\n')
-            outfile.write('total_ptcs:,{0}\n'.format(sum(disease_ptc_counts[end])))
-            outfile.write('chisq:,{0}\ndf:,{1}\npval:,{2}\n'.format(sum(chisq), len(chisq) - 1, chisq_calc.pvalue))
+# def clinvar_ptc_locations(disease_ptcs_file, disease_snps_relative_exon_positions, ptc_file, output_file):
+#     '''
+#     Get the relative positions of disease PTCs.
+#     Use Chi square test to see whether disease PTCs are located nearer
+#     exon ends more often than expected given nullself.
+#     Null takes the number of base pairs in the window as a proportion of exon length.
+#     e.g. if 5% of base pairs are within 0-3 bp of an exon end, the null is that 5% of
+#     PTCs should occur in this region.
+#     '''
+#     # Get a list of 1000 genomes ptcs
+#     ptcs = gen.read_many_fields(ptc_file, "\t")
+#     ptc_list = {}
+#     ptc_positions = []
+#     for ptc in ptcs[1:]:
+#         ptc_id = ptc[8]
+#         ptc_positions.append(int(ptc[7]))
+#         ptc_list[ptc_id] = [ptc[3], int(ptc[1]), int(ptc[2]), int(ptc[7])]
+#
+#     # Get a list of clinvar ptcs
+#     disease_ptcs = gen.read_many_fields(disease_ptcs_file, "\t")
+#     disease_ptc_list = {}
+#     disease_ptc_positions = []
+#     for ptc in disease_ptcs:
+#         ptc_id = ptc[8]
+#         disease_ptc_positions.append(int(ptc[7]))
+#         disease_ptc_list[ptc_id] = [ptc[3], int(ptc[1]), int(ptc[2]), int(ptc[7])]
+#
+#     # get all ptcs that overlap between the two datasets
+#     overlaps = [i for i in ptc_positions if i in disease_ptc_positions]
+#
+#     # get the relative exon positions of the clinvar ptcs
+#     disease_relative_positions = gen.read_many_fields(disease_snps_relative_exon_positions, "\t")
+#     disease_relative_positions_list = {}
+#     for snp in disease_relative_positions:
+#         snp_id = snp[8]
+#         disease_relative_positions_list[snp_id] = [snp[3], int(snp[11])]
+#
+#     disease_nt_counts = {}
+#     disease_ptc_counts = {}
+#     disease_exon_sample_list = []
+#     ends = [5, 3]
+#     for end in ends:
+#         disease_nt_counts[end] = [0,0,0]
+#         disease_ptc_counts[end] = [0,0,0]
+#
+#     # for each of the clinvar ptcs not in the overlap, get the number of bp
+#     # in each window of the exon, the number of ptcs in that window.
+#     # only sample the number of bp for each exon once (some exons may have
+#     # more than 1 ptc and would otherwise contribute 2x)
+#
+#     for ptc_id in disease_ptc_list:
+#         ptc = disease_ptc_list[ptc_id]
+#         ptc_pos = ptc[3]
+#         if ptc_pos not in overlaps:
+#             if ptc_id in disease_relative_positions_list and disease_relative_positions_list[ptc_id][0] == ptc[0]:
+#                 exon_length = ptc[2] - ptc[1]
+#                 transcript_exon = ptc[0]
+#
+#                 if transcript_exon not in disease_exon_sample_list:
+#                     if exon_length >= 138:
+#                         for i in ends:
+#                             disease_nt_counts[i][0] += 3
+#                             disease_nt_counts[i][1] += 66
+#                             disease_nt_counts[i][2] += (np.divide(exon_length, 2) - 69)
+#                     elif exon_length > 6 and exon_length < 138:
+#                         for i in ends:
+#                             disease_nt_counts[i][0] += 3
+#                             disease_nt_counts[i][1] += (np.divide(exon_length, 2) - 3)
+#                     else:
+#                         for i in ends:
+#                             disease_nt_counts[i][0] += np.divide(exon_length, 2)
+#
+#                 disease_exon_sample_list.append(transcript_exon)
+#
+#                 rel_pos = int(disease_relative_positions_list[ptc_id][1])
+#                 distances = [rel_pos, exon_length - rel_pos]
+#                 min_dist = min(distances)
+#                 if distances.index(min_dist) == 0:
+#                     end = 5
+#                 else:
+#                     end = 3
+#
+#                 if min_dist <= 2:
+#                     print(ptc_id)
+#                     disease_ptc_counts[end][0] += 1
+#                 elif min_dist > 2 and min_dist <= 69:
+#                     disease_ptc_counts[end][1] += 1
+#                 else:
+#                     disease_ptc_counts[end][2] += 1
+#
+#     # write the output and chisq test to file
+#     intervals = ["0-3 bp", "4-69 bp", "70+ bp"]
+#
+#     for end in disease_ptc_counts:
+#         print(end, disease_ptc_counts[end])
+#
+#     total_disease_nts = []
+#     [total_disease_nts.extend(disease_nt_counts[end]) for end in disease_nt_counts]
+#     total_disease_nts = sum(total_disease_nts)
+#     total_disease_ptcs = []
+#     [total_disease_ptcs.extend(disease_ptc_counts[end]) for end in disease_ptc_counts]
+#     total_disease_ptcs = sum(total_disease_ptcs)
+#
+#     with open(output_file, "w") as outfile:
+#         outfile.write('whole_exons\n')
+#         outfile.write('\n \n')
+#         outfile.write('region,nt,nt_prop,expected_disease_ptcs,observed_disease_ptcs,fo/fe\n')
+#         chisq = []
+#         expecteds = []
+#         nt_props = []
+#         for i, region in enumerate(intervals):
+#             region_nts = sum(disease_nt_counts[end][i] for end in disease_nt_counts)
+#             region_nts_prop = np.divide(region_nts, total_disease_nts)
+#             nt_props.append(region_nts_prop)
+#             expected_region_ptcs = region_nts_prop * total_disease_ptcs
+#             expecteds.append(expected_region_ptcs)
+#             region_ptcs = sum(disease_ptc_counts[end][i] for end in disease_ptc_counts)
+#             outfile.write("{0},{1},{2},{3},{4},{5}\n".format(region, region_nts, region_nts_prop, expected_region_ptcs, region_ptcs, np.divide(region_ptcs, expected_region_ptcs)))
+#             chisq.append(np.divide((region_ptcs - expected_region_ptcs)**2, expected_region_ptcs))
+#
+#         observeds = [0,0,0]
+#         for end in disease_ptc_counts:
+#             for i, count in enumerate(disease_ptc_counts[end]):
+#                 observeds[i] += count
+#
+#         chisq_calc = chisquare(observeds, f_exp = expecteds)
+#
+#         outfile.write("total,{0},{1},{2}\n".format(total_disease_nts, sum(nt_props), sum(expecteds)))
+#         outfile.write('\n\n')
+#         outfile.write('total_ptcs:,{0}\n'.format(total_disease_ptcs))
+#         outfile.write('chisq:,{0}\ndf:,{1}\npval:,{2}\n'.format(sum(chisq), len(chisq) - 1, chisq_calc.pvalue))
+#
+#         for end in ends:
+#             outfile.write("\n \n{0}'\n".format(end))
+#             outfile.write('\n \n')
+#             outfile.write('region,nt,nt_prop,expected_disease_ptcs,observed_disease_ptcs,fo/fe\n')
+#             chisq = []
+#             expecteds = []
+#             nt_props = []
+#             for i, region in enumerate(intervals):
+#                 region_nts = disease_nt_counts[end][i]
+#                 region_nts_prop = np.divide(region_nts, np.divide(total_disease_nts, 2))
+#                 nt_props.append(region_nts_prop)
+#                 expected_region_ptcs = region_nts_prop * np.divide(total_disease_ptcs, 2)
+#                 expecteds.append(expected_region_ptcs)
+#                 region_ptcs = disease_ptc_counts[end][i]
+#                 outfile.write("{0},{1},{2},{3},{4},{5}\n".format(region, region_nts, region_nts_prop, expected_region_ptcs, region_ptcs, np.divide(region_ptcs, expected_region_ptcs)))
+#                 chisq.append(np.divide((region_ptcs - expected_region_ptcs)**2, expected_region_ptcs))
+#
+#             observeds = [0,0,0]
+#             for i, count in enumerate(disease_ptc_counts[end]):
+#                 observeds[i] += count
+#             chisq_calc = chisquare(observeds, f_exp = expecteds)
+#
+#             outfile.write("total,{0},{1},{2}\n".format(sum(disease_nt_counts[end]), sum(nt_props), sum(expecteds)))
+#             outfile.write('\n\n')
+#             outfile.write('total_ptcs:,{0}\n'.format(sum(disease_ptc_counts[end])))
+#             outfile.write('chisq:,{0}\ndf:,{1}\npval:,{2}\n'.format(sum(chisq), len(chisq) - 1, chisq_calc.pvalue))
 
 def get_coding_exon_nt_positions(coding_exons_list, clean_disease_ptc_list, disease_relative_positions_list, exclude_cpg=None):
     '''
@@ -664,6 +687,10 @@ def get_coding_exon_nt_positions(coding_exons_list, clean_disease_ptc_list, dise
 
 def get_real_positions(clean_ptc_list, relative_positions_list, regions):
 
+    '''
+    Get the positions of nonsense mutations in the real dataset
+    '''
+
     location_counts = {}
     ends = [5,3]
     for region in regions:
@@ -687,9 +714,9 @@ def get_real_positions(clean_ptc_list, relative_positions_list, regions):
         else:
             end = 3
 
-        if min_dist <= 1:
+        if min_dist < 2: # ptc is in base 0
             location_counts[regions[0]][end] += 1
-        elif min_dist > 1 and min_dist <= 68:
+        elif min_dist >= 2 and min_dist < 69:
             location_counts[regions[1]][end] += 1
         else:
             location_counts[regions[2]][end] += 1
@@ -697,7 +724,6 @@ def get_real_positions(clean_ptc_list, relative_positions_list, regions):
     return location_counts
 
 def get_possible_eses(exon_seq, rel_pos):
-
     possible_eses = []
     if rel_pos - 5 >= 0:
         possible_eses.append(exon_seq[rel_pos-5:rel_pos+1])
@@ -742,6 +768,7 @@ def get_real_ese_overlap(clean_ptc_list, relative_positions_list, regions, codin
         possible_eses = get_possible_eses(exon_seq, rel_pos)
         ese_overlap = list(set(ese_list) & set(possible_eses))
 
+        # relative positions are in base 0
         if min_dist <= 1 and len(ese_overlap):
             ese_overlaps[regions[0]][end] += 1
         elif min_dist > 1 and min_dist <= 68 and len(ese_overlap):
@@ -840,7 +867,7 @@ def write_to_file(real_positions, process_list, regions, output_file):
 
 def simulate_mutations(simulant_list, simulations, clean_ptc_list, relative_positions_list, coding_exons_fasta, ese_list, exclude_cpg):
     '''
-    Run the simulations
+    Run the simulations for nonsense mutation locations
     '''
 
     # This needs to be done in here for parallelisation
@@ -907,11 +934,11 @@ def simulate_mutations(simulant_list, simulations, clean_ptc_list, relative_posi
                 possible_eses = get_possible_eses(exon_seq, simulant_position)
                 overlaps = list(set(ese_list) & set(possible_eses))
 
-                if min_dist <= 1:
+                if min_dist < 2:
                     location_counts[regions[0]][end] += 1
                     if len(overlaps):
                         ese_overlaps[regions[0]][end] += 1
-                elif min_dist > 1 and min_dist <= 68:
+                elif min_dist >= 2 and min_dist < 69:
                     location_counts[regions[1]][end] += 1
                     if len(overlaps):
                         ese_overlaps[regions[1]][end] += 1
@@ -999,9 +1026,9 @@ def get_ptcs_in_window(ptc_list, relative_positions_list, window_start, window_e
         # need to get exons longer than the window end * 2 to account for
         # both 5' and 3' ends
         if exon_length >= (window_end*2):
-            rel_pos = rel_pos_info[1]
+            rel_pos = rel_pos_info[1] + 1 #now in base 1
             ptc.append(rel_pos)
-            if rel_pos >= window_start - 1 and rel_pos <= window_end - 1:
+            if rel_pos >= window_start and rel_pos <= window_end:
                 ptcs_in_window[5][ptc_id] = ptc
             elif rel_pos <= exon_length - window_start and rel_pos >= exon_length - window_end:
                 ptcs_in_window[3][ptc_id] = ptc
@@ -1124,7 +1151,7 @@ def ese_hit_simulation(disease_ptcs_file, relative_exon_positions_file, ptc_file
     ese_list = [ese[0] for ese in gen.read_many_fields(ese_file, "\t") if ese[0][0] != "#"]
     coding_exons = get_coding_exons(coding_exons_fasta)
 
-    # get the ptcs that are in the 4-69 bp region for each exon of exon
+    # get the ptcs that are in the 3-69 bp region for each exon of exon
     # this requires exons at least 128 bp in length for comparison
     window_ptcs = get_ptcs_in_window(clean_ptc_list, relative_positions_list, window_start, window_end)
     # get indices of each nt in that region that dont contain a ptc mutation
@@ -1155,3 +1182,156 @@ def ese_hit_simulation(disease_ptcs_file, relative_exon_positions_file, ptc_file
             outlist.append(sum(simulation_outputs[simulation][0]))
             outlist.append(sum(simulation_outputs[simulation][1]))
             outfile.write("{0}\n".format(",".join(gen.stringify(outlist))))
+
+
+def get_unique_rel_pos(unique_ptcs, disease_snps_relative_exon_positions, unique_ptcs_rel_pos_file):
+    '''
+    Get the relative positions of the unique ptcs
+    '''
+    snps = gen.read_many_fields(disease_snps_relative_exon_positions, "\t")
+    snp_list = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict()))
+    for snp in snps:
+        transcript = snp[3].split('.')[0]
+        exon = int(snp[3].split('.')[1])
+        rel_pos = int(snp[11])
+        snp_list[transcript][exon] = rel_pos
+
+    ptcs = gen.read_many_fields(unique_ptcs, "\t")
+    with open(unique_ptcs_rel_pos_file, "w") as outfile:
+        for ptc in ptcs:
+            # print(transcript, exon)
+            transcript = ptc[3].split('.')[0]
+            exon = int(ptc[3].split('.')[1])
+            ptc[11] = snp_list[transcript][exon]
+            # print(ptc)
+            outfile.write("{0}\n".format("\t".join(gen.stringify(ptc))))
+
+def excess_test(unique_ptcs_rel_pos_file, coding_exon_fasta, output_file):
+    '''
+    Ask whether there is an excess of nonsense mutations in the exon ends
+    compared with the exon cores
+    '''
+
+    # get length of exon seqs
+    names, seqs = gen.read_fasta(coding_exon_fasta)
+    exon_seqs = {}
+    for i, name in enumerate(names):
+        exon_seqs[name.split('(')[0]] = [seqs[i], len(seqs[i])]
+
+    nts = [0,0,0]
+    positions = [0,0,0]
+
+    ptcs_rel_pos = gen.read_many_fields(unique_ptcs_rel_pos_file, "\t")
+    for ptc in ptcs_rel_pos:
+        exon = ptc[3]
+        exon_seq, exon_length = exon_seqs[exon]
+        if exon_length >= 138:
+            # rel pos is base 1
+            rel_pos = int(ptc[11]) + 1
+            nts[0] += 4     # the two splice sites at either exon end
+            nts[1] += 134   # the exon ends (to 69 bp), minus splice sites
+            nts[2] += (exon_length - 138)   # the rest of the exon
+
+            five_prime_dist = rel_pos
+            three_prime_dist = exon_length - rel_pos
+            min_dist = min(five_prime_dist, three_prime_dist)
+
+            if min_dist <= 2:
+                positions[0] += 1
+            elif min_dist > 2 and min_dist <= 69:
+                positions[1] += 1
+            elif min_dist > 69:
+                positions[2] += 1
+
+    core_ptc_per_nt = np.divide(positions[2], nts[2])
+    expected_2 = nts[0] * core_ptc_per_nt
+    difference_2 = positions[0] - expected_2
+    excess_2 = np.divide(difference_2, sum(positions))*100
+    expected_3_69 = nts[1] * core_ptc_per_nt
+    difference_3_69 = positions[1] - expected_3_69
+    excess_3_69 = np.divide(difference_3_69, sum(positions))*100
+
+    with open(output_file, "w") as outfile:
+        outfile.write("nucleotides in exons\n")
+        outfile.write("0.2,{0}\n".format(nts[0]))
+        outfile.write("3.69,{0}\n".format(nts[1]))
+        outfile.write("70+,{0}\n".format(nts[2]))
+        outfile.write("\n")
+        outfile.write("nonsense mutations\n")
+        outfile.write("0.2,{0}\n".format(positions[0]))
+        outfile.write("3.69,{0}\n".format(positions[1]))
+        outfile.write("70+,{0}\n".format(positions[2]))
+        outfile.write("\n")
+        outfile.write("nonsense per bp in core,{0}\n".format(core_ptc_per_nt))
+        outfile.write("0.2 expected,{0}\n".format(expected_2))
+        outfile.write("0.2 difference,{0}\n".format(difference_2))
+        outfile.write("0.2 excess,{0}%\n".format(excess_2))
+        outfile.write("3.69 expected,{0}\n".format(expected_3_69))
+        outfile.write("3.69 difference,{0}\n".format(difference_3_69))
+        outfile.write("3.69 excess,{0}%\n".format(excess_3_69))
+
+
+
+def disease_ptc_location_test(rel_pos_file, coding_exons_fasta, output_file):
+    '''
+    Chisquare test on ptc locations
+    '''
+
+    exon_names, exon_seqs = gen.read_fasta(coding_exons_fasta)
+    exon_list = {}
+    for i, name in enumerate(exon_names):
+        exon_list[name.split('(')[0]] = len(exon_seqs[i])
+
+    ptcs = gen.read_many_fields(rel_pos_file, "\t")
+
+    nts = [0,0,0]
+    hits = [0,0,0]
+
+    for ptc in ptcs:
+        exon_id = ptc[3]
+        length = exon_list[exon_id]
+        rel_pos = int(ptc[11]) + 1  # rel pos in base 0
+
+        if length <= 4:
+            nts[0] += 4
+        elif length > 4 and length <= 138:
+            nts[0] += 4
+            nts[1] += 134
+        else:
+            nts[0] += 4
+            nts[1] += 134
+            nts[2] += (length-138)
+
+        dist_fp = rel_pos
+        dist_tp = length - dist_fp
+        min_dist = min(dist_fp, dist_tp)
+
+        if min_dist <= 4:
+            hits[0] += 1
+        elif min_dist > 4 and min_dist <= 138:
+            hits[1]+= 1
+        elif min_dist > 138:
+            hits[2] += 1
+
+    expected = []
+    for i in nts:
+        expected.append(np.divide(i, sum(nts)) * sum(hits))
+    chisq = chisquare(hits, expected)
+
+    positions = ["0-2bp", "3-69bp", "70+bp"]
+    with open(output_file, "w") as outfile:
+        outfile.write('position,num_nts,num_ptcs\n')
+        for i, pos in enumerate(positions):
+            outfile.write("{0},{1},{2}\n".format(pos, nts[i], hits[i]))
+        outfile.write('sum,{0},{1}\n'.format(sum(nts), sum(hits)))
+
+        outfile.write('\n,nts%,ptcs%\n')
+        for i, pos in enumerate(positions):
+            outfile.write("{0},{1},{2}\n".format(pos, np.divide(nts[i], sum(nts))*100, np.divide(hits[i], sum(hits))*100))
+
+        outfile.write('\n,expected,observed\n')
+        for i, pos in enumerate(positions):
+            outfile.write("{0},{1},{2}\n".format(pos, expected[i], hits[i]))
+
+        outfile.write("df,chisq,p\n")
+        outfile.write("{0},{1},{2}\n".format(len(hits)-1,chisq.statistic, chisq.pvalue))

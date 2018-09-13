@@ -148,7 +148,7 @@ def ptc_monomorphic_simulation(out_prefix, simulation_output_folder, sample_file
     else:
         run_ptc_monomorphic_simulation_instance([1], out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, syn_nonsyn_file, exon_junctions_file, bam_files, nt_indices_files, coding_exon_fasta, False, use_old_sims)
 
-def ptc_snp_simulation(out_prefix, simulation_output_folder, ptc_file, syn_nonsyn_file, exon_junctions_file, bam_files, required_simulations, use_old_sims = False):
+def ptc_snp_simulation(out_prefix, simulation_output_folder, ptc_file, syn_nonsyn_file, exon_junctions_file, bam_files, required_simulations, exon_junctions_bam_output_folder, use_old_sims = False):
     '''
     Set up the PTC simulations and then run.
     if use_old_sims is True, don't pick new simulant SNPs.
@@ -182,11 +182,11 @@ def ptc_snp_simulation(out_prefix, simulation_output_folder, ptc_file, syn_nonsy
     #if you're only doing one simulation, don't parallelize the simulations
     #parallelize the processing of bams like for true data
     if required_simulations > 1:
-        processes = gen.run_in_parallel(simulations, ["foo", out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, nonsynonymous_snps_file, exon_junctions_file, bam_files, True, use_old_sims], run_ptc_simulation_instance)
+        processes = gen.run_in_parallel(simulations, ["foo", out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, nonsynonymous_snps_file, exon_junctions_file, bam_files, exon_junctions_bam_output_folder, True, use_old_sims], run_ptc_simulation_instance)
         for process in processes:
             process.get()
     else:
-        run_ptc_simulation_instance([1], out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, nonsynonymous_snps_file, exon_junctions_file, bam_files, False, use_old_sims)
+        run_ptc_simulation_instance([1], out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, nonsynonymous_snps_file, exon_junctions_file, bam_files, exon_junctions_bam_output_folder, False, use_old_sims)
 
 def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_junctions_file, out_folder, PTC_file, syn_nonsyn_file, out_prefix, exon_junctions_bam_output_folder, kw_dict):
     '''
@@ -252,7 +252,9 @@ def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_j
         mapq_flag_xt_filtered_bam = "{0}_xt.bam".format(mapq_flag_filtered_bam[:-4])
         mapq_flag_xt_nm_filtered_bam = "{0}_nm.bam".format(mapq_flag_xt_filtered_bam[:-4])
 
+
         if not os.path.isfile(output_file):
+
 
             #1: We get a count of the total reads in the sample which can be used for normalisation
             #I'm initializing it to None for safety. That way, if the process fails,
@@ -339,7 +341,7 @@ def process_bam_per_individual(bam_files, global_exon_junctions_file, PTC_exon_j
 
 
 
-def run_ptc_simulation_instance(simulations, out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, nonsynonymous_snps_file, exon_junctions_file, bam_files, parallel = False, use_old_sims = False):
+def run_ptc_simulation_instance(simulations, out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, nonsynonymous_snps_file, exon_junctions_file, bam_files, exon_junctions_bam_output_folder, parallel = False, use_old_sims = False):
     '''
     Run the ptc simulations for the required number.
     '''
@@ -370,16 +372,18 @@ def run_ptc_simulation_instance(simulations, out_prefix, simulation_output_folde
         if (not use_old_sims) or (not(os.path.isfile(pseudo_ptc_file))):
             bo.filter_exon_junctions(exon_junctions_file, pseudo_ptc_file, pseudo_ptc_exon_junctions_file)
 
-        #run the bam analysis for each
-        #(don't parallelize if you're doing the simulations in parallel)
-        kw_dict = {"ptc_snp_simulation": True, "simulation_instance_folder": simulation_instance_folder, "simulation_number": simulation_number}
-        if parallel:
-            process_bam_per_individual(bam_files, exon_junctions_file, pseudo_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_ptc_file, remaining_snps_file, out_prefix, kw_dict)
-        else:
-            processes = gen.run_in_parallel(bam_files, ["foo", exon_junctions_file, pseudo_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_ptc_file, remaining_snps_file, out_prefix, kw_dict], process_bam_per_individual)
-            for process in processes:
-                process.get()
-
-        #process final psi for simulation
-        final_file = "{0}/final_output_simulation_{1}.txt".format(simulation_bam_analysis_output_folder, simulation_number)
-        bmo.compare_PSI(pseudo_ptc_file, simulation_bam_analysis_output_folder, final_file, sim_number = simulation_number)
+        # # print('parallel', parallel)
+        # #run the bam analysis for each
+        # #(don't parallelize if you're doing the simulations in parallel)
+        # kw_dict = {"ptc_snp_simulation": True, "simulation_instance_folder": simulation_instance_folder, "simulation_number": simulation_number}
+        # if parallel:
+        #     process_bam_per_individual(bam_files, exon_junctions_file, pseudo_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_ptc_file, remaining_snps_file, out_prefix, exon_junctions_bam_output_folder, kw_dict)
+        # else:
+        #     # (bam_files, global_exon_junctions_file, PTC_exon_junctions_file, out_folder, PTC_file, syn_nonsyn_file, out_prefix, exon_junctions_bam_output_folder, kw_dict)
+        #     processes = gen.run_in_parallel(bam_files, ["foo", exon_junctions_file, pseudo_ptc_exon_junctions_file, simulation_bam_analysis_output_folder, pseudo_ptc_file, remaining_snps_file, out_prefix, exon_junctions_bam_output_folder, kw_dict], process_bam_per_individual)
+        #     for process in processes:
+        #         process.get()
+        #
+        # #process final psi for simulation
+        # final_file = "{0}/final_output_simulation_{1}.txt".format(simulation_bam_analysis_output_folder, simulation_number)
+        # bmo.compare_PSI(pseudo_ptc_file, simulation_bam_analysis_output_folder, final_file, sim_number = simulation_number)

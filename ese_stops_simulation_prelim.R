@@ -63,17 +63,12 @@ title_styling <- function(plot, title, title_left) {
         plot.margin=unit(c(10,5,5,5),"mm")
       )
   }
-  if(!is.null(title_left)) {
-    plot <- plot +
-      theme(
-        plot.title = element_text(hjust = -0.075)
-      )
-  }
   return(plot)
 }
 
 
 get_plot <- function(file_path, out_path, main=NULL, title_left=NULL) {
+  library(ggplot2)
   file <- read.csv(file_path, sep=",", head=T)
   simulants <- file[file$id != 'real',]
   real <- file[file$id == 'real',]
@@ -82,10 +77,9 @@ get_plot <- function(file_path, out_path, main=NULL, title_left=NULL) {
     geom_histogram(breaks=seq(min(file$stop_count), max(file$stop_count), by = 1), col="black", fill="RoyalBlue", alpha = .8) +
     # labs(title=paste(sprintf(main), " (", nrow(simulants), " simulations)", sep="")) +
     labs(x="Stop codon count in all reading frames", y="Frequency") +
-    geom_vline(xintercept=file$stop_count[file$id == "real"], lty=2, col="red") + 
-    plot_theme()
+    geom_vline(xintercept=file$stop_count[file$id == "real"], lty=2, col="red")
   
-  plot <- title_styling(plot, main, title_left)
+  # plot <- title_styling(plot, main, title_left = FALSE)
   # out_path = paste("ese_stops_simulations_output/", set, "/", set, "_", simulations, "_hist.head(id", sep="")
   # ggsave(out_path, plot=plot)
   print(plot)
@@ -143,25 +137,6 @@ get_p("results/motif_stops_simulation/CaceresHurstESEs_INT3/stop_counts_10000.tx
 get_p("results/motif_stops_simulation/ises_wang_2012/stop_counts_10000.txt", direction="less")
 get_p("results/motif_stops_simulation/ess_fas-hex3_wang_2004/stop_counts_10000.txt", direction="less")
 
-# get_p("results/motif_stops_simulation/ises_wang_2012/stop_counts_10000.txt", direction="less")
-# get_plot("results/motif_stops_simulation/ises_wang_2012/stop_counts_10000.txt", "results/motif_stops_simulation/ises_wang_2012/plot.pdf", "ISEs Wang 2012")
-# 
-# get_p("results/motif_stops_simulation/ess_fas-hex3_wang_2004/stop_counts_10000.txt")
-# get_plot("results/motif_stops_simulation/ess_fas-hex3_wang_2004/stop_counts_10000.txt", "results/motif_stops_simulation/ess_fas-hex3_wang_2004/plot.pdf", "ESSs Wang 2004")
-# 
-# get_p("results/motif_stops_simulation/CaceresHurstESEs_INT3/stop_counts_10000.txt", direction="less")
-# get_plot("results/motif_stops_simulation/CaceresHurstESEs_INT3/stop_counts_10000.txt", "results/motif_stops_simulation/CaceresHurstESEs_INT3/plot.pdf", "ESEs INT3")
-# 
-# get_p("results/motif_stops_simulation/filtered_RBP_motifs_nonCDS/stop_counts_10000.txt", direction="less")
-# get_plot("results/motif_stops_simulation/filtered_RBP_motifs_nonCDS/stop_counts_10000.txt", "results/motif_stops_simulation/filtered_RBP_motifs_nonCDS/plot.pdf", "RBP motifs non-CDS")
-# 
-# get_p("results/motif_stops_simulation/ess_wang_2007/stop_counts_10000.txt", direction="less")
-# get_plot("results/motif_stops_simulation/ess_wang_2007/stop_counts_10000.txt", "results/motif_stops_simulation/ess_wang_2007/plot.pdf", "ESS Wang 2007")
-# 
-# get_plot("results/motif_stops_simulation/CaceresHurstESEs_INT3/stop_counts_1000.txt", "results/motif_stops_simulation/ess_wang_2007/plot.pdf", "ESS Wang 2007")
-# get_plot("results/motif_stops_simulation/ess_fas-hex3_wang_2004/stop_counts_1000.txt", "results/motif_stops_simulation/ess_wang_2007/plot.pdf", "ESS Wang 2007")
-# get_plot("results/motif_stops_simulation/ises_wang_2012/stop_counts_1000.txt", "results/motif_stops_simulation/ess_wang_2007/plot.pdf", "ESS Wang 2007")
-# 
 
 # P value for INT3
 file_path <- paste("ese_stops_simulations_output/", "INT3", "/", "INT3", "_stop_counts_" , 10000, ".csv", sep="")

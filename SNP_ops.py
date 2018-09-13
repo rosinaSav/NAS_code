@@ -229,6 +229,7 @@ def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, ptc_output_file, 
             if match_allele_frequency:
                 #get the allele frequency of the ptc
                 ptc_allele_frequency = get_allele_frequency(ptc)
+                print(ptc_id, ptc_allele_frequency)
                 #set the upper and lower bounds
                 alt_snp_allele_frequency_lower_limit = ptc_allele_frequency - match_allele_frequency_window
                 alt_snp_allele_frequency_upper_limit = ptc_allele_frequency + match_allele_frequency_window

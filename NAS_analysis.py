@@ -121,12 +121,12 @@ def main():
     bam_files = ["{0}/{1}".format(bams_folder, i) for i in full_sample_names if (i.split("."))[0] in sample_names]
 
     #in parallel, do the processing on individual .bam files
+    exon_junctions_bam_output_folder = "{0}__analysis_exon_junction_bams".format(out_prefix)
     if bam_analysis_folder == "None":
         bam_analysis_folder = "{0}__analysis_bam_analysis".format(out_prefix)
     gen.create_directory(bam_analysis_folder)
     if process_bams:
         print("Processing RNA-seq data...")
-        exon_junctions_bam_output_folder = "{0}__analysis_exon_junction_bams".format(out_prefix)
         if out_of_frame:
             splits = exon_junctions_bam_output_folder.split('/')
             splits[-1] = splits[-1].replace('_out_of_frame', '')
@@ -164,7 +164,7 @@ def main():
         if simulate_ptc_snps and not number_of_simulations:
             print("Please specify the number of simulations")
             raise Exception
-        nao.ptc_snp_simulation(out_prefix, simulation_output_folder, PTC_file, syn_nonsyn_file, exon_junctions_file, bam_files, number_of_simulations, use_old_sims = use_old_sims)
+        nao.ptc_snp_simulation(out_prefix, simulation_output_folder, PTC_file, syn_nonsyn_file, exon_junctions_file, bam_files, number_of_simulations, exon_junctions_bam_output_folder, use_old_sims = use_old_sims)
 
     # run the simulation that picks monomorphic sites
     if simulate_ptcs_with_monomorphic:
