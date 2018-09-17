@@ -147,3 +147,10 @@ real = file[file$id == "real",]
 
 
 (nrow(simulants[simulants$stop_count < real$stop_count,]) + 1) / (nrow(simulants) + 1)
+
+file <- read.csv('results/motif_stops_simulation/region_hexamer_sim.csv', head=T)
+head(file)
+real <- file[file$sim == "real",]
+sims <- file[file$sim != "real",]
+p <- (nrow(sims[sims$count <= real$count,]) + 1) / (nrow(sims) + 1)
+p

@@ -1045,16 +1045,20 @@ max(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC)
 x <- seq(0, 10, 0.1)
 y <- log(pvals)
 
-pdf("results/graphs/psi_difference_binomial_test_p_values.pdf", width=10)
-plot.new()
-plot.window(c(0,10), c(min(y), 0))
-title(xlab = "PSI difference threshold", ylab = "Bionmial test log p value") 
-axis(1, at = seq(0, 10, by = 1), labels = seq(0, 10, by = 1))
-axis(2, at = seq(floor(min(y)), 0, 1), labels = seq(floor(min(y)), 0, 1))
-points(x, y, pch=16, cex=0.8, col=ifelse(y < log(0.05), "blue", "red"))
-abline(h = log(0.05), lty=2)
-dev.off()
-
+plot <- ggplot() +
+  geom_point(aes(x= x, y =y), col = ifelse(y < log(0.05), "RoyalBlue", "red")) + 
+  geom_hline(yintercept = log(0.05), lty=2) +
+  scale_x_continuous(name = "PSIdiff threshold", breaks=seq(0, 10, by = 1), labels = seq(0, 10, by = 1)) +
+  labs(y="Bionmial test log P value") + 
+  theme(
+    # axis.text.x = element_blank(),
+    axis.ticks.x=element_blank(),
+    panel.background = element_rect( fill = "#f5f5f5"),
+    panel.grid.major = element_line(colour="#ffffff"),
+    panel.grid.minor = element_line(colour="#ffffff")
+  )
+plot
+ggsave("results/graphs/psi_difference_binomial_test_p_values.eps", plot = plot, width=10, height=7)  
 
 
 par(mfrow = c(2, 2))

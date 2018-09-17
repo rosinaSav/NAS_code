@@ -93,7 +93,7 @@ def simulate_motifs(simulations, exon_seqs, motifs):
 
     return outputs
 
-def run_exon_simulation(motif_file, exon_fasta, output_dir, required_simulations):
+def run_exon_simulation(motif_file, exon_fasta, output_dir, required_simulations, output_file):
     '''
     Run simulation that picks hexamers from the exon sequences
     '''
@@ -116,11 +116,12 @@ def run_exon_simulation(motif_file, exon_fasta, output_dir, required_simulations
     for process in processes:
         outputs.extend(process.get())
 
-    print(real_count)
-    print(outputs)
+    with open(output_file, "w") as outfile:
+        outfile.write('sim,count\n')
+        outfile.write('real,{0}\n'.format(real_count))
+        for i, count in enumerate(outputs):
+            outfile.write('{0},{1}\n'.format(i+1,count))
 
-    pval = np.divide(len([i for i in outputs if i <= real_count]) + 1, len(outputs) + 1)
-    print(pval)
 
 
 
@@ -153,9 +154,10 @@ def main():
         # run the simulations
         run_simulations(simulation_sets, required_simulations)
 
+    exon_hexamer_simulation = "{0}/region_hexamer_sim.csv".format(output_dir)
     if exon_simulation:
         exon_fasta = "{0}_CDS_intervals.fasta".format(results_dir)
-        run_exon_simulation(motif_file, exon_fasta, output_dir, required_simulations)
+        run_exon_simulation(motif_file, exon_fasta, output_dir, required_simulations, exon_hexamer_simulation)
 
 
 if __name__ == "__main__":

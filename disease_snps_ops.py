@@ -217,25 +217,6 @@ def get_exon_list(file):
         exon_list[exon_info.snp_id] = exon
     return(exon_list)
 
-def get_ptc_info(ptc_file, relative_exon_positions_file, output_file):
-    '''
-    Get basic info about the location of snp.
-    '''
-    exon_list = get_exon_list(relative_exon_positions_file)
-
-    ptcs = gen.read_many_fields(ptc_file, "\t")
-    with open(output_file, "w") as outfile:
-        header_list = ["ptc_id", "transcript_id", "exon_id", "aa", "ma", "exon_length", "5_dist", "3_dist", "min_dist"]
-        outfile.write("{0}\n".format(",".join(header_list)))
-        for ptc in ptcs:
-            ptc_info = EntryInfo(ptc)
-            ptc = EntryInfo(exon_list[ptc_info.snp_id])
-            # check the type
-            if ptc_info.type != ".":
-                exon_length = ptc.exon_stop - ptc.exon_start
-                three_prime_dist = exon_length - ptc.rel_pos
-                output_list = gen.stringify([ptc_info.given_id, ptc.transcript_id, ptc.exon_id, ptc.aa, ptc.ma, exon_length, ptc.rel_pos, three_prime_dist, min(ptc.rel_pos, three_prime_dist)])
-                outfile.write("{0}\n".format(",".join(output_list)))
 
 def refactor_ptc_file(input_file, output_file, header=None):
     '''
@@ -683,6 +664,7 @@ def get_coding_exon_nt_positions(coding_exons_list, clean_disease_ptc_list, dise
                         coding_exon_nt_positions[transcript][exon][nt].append(i)
 
     return coding_exon_nt_positions
+
 
 
 def get_real_positions(clean_ptc_list, relative_positions_list, regions):

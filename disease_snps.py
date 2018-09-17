@@ -80,55 +80,12 @@ def main():
     # get the info about the ptcs
     output_file_ptc_info = "{0}/disease__analysis_ptc_info.txt".format(output_directory)
     output_file_other_info = "{0}/disease__analysis_other_info.txt".format(output_directory)
-    if get_info:
-        print("Getting PTC information...")
-        dso.get_ptc_info(unique_ptcs, disease_snps_relative_exon_positions, output_file_ptc_info)
-        dso.get_ptc_info(unique_ptcs, disease_snps_relative_exon_positions, output_file_other_info)
 
     unique_ptcs_rel_pos_file = "{0}/ptcs_no_intersect_rel_pos.bed".format(output_directory)
     if get_unique_rel_pos:
         dso.get_unique_rel_pos(unique_ptcs, disease_snps_relative_exon_positions, unique_ptcs_rel_pos_file)
 
-    # location_simulation_output_directory = "{0}/possible_ptc_locations".format(output_directory)
-    # coding_exons_file = "{0}_exons.bed".format(results_prefix)
-    # if get_possible_ptc_locations:
-    #     print("Getting possible PTC mutation locations...")
-    #     dso.generate_possible_ptc_locations(full_bed, cds_fasta, location_simulation_output_directory)
-
-    # # simulation to see if disease ptcs occur at exon ends more conmonly than by chance
-    # if simulate_ptc_location:
-    #     # print(required_simulations)
-    #     # if not required_simulations:
-    #         # print("\nERROR: please specify the number of simulations required.\n")
-    #     output_dir = "{0}/pseudo_ptcs".format(output_directory)
-    #     gen.create_output_directories(output_dir)
-    #     dso.ptc_location_simulation(disease_ptcs_file, full_bed, cds_fasta, location_simulation_output_directory, output_dir, simulations, coding_exons_file)
-
     ptc_file = "{0}_ptc_file.txt".format(results_prefix)
-    # overlap_file = "{0}/disease__analysis_overlaps.txt".format(output_directory)
-    # if get_overlaps:
-    #     print("Getting overlap between disease PTCs and 1000 genomes PTCs...")
-    #     dso.get_ptc_overlaps(unique_ptcs, ptc_file, overlap_file)
-
-
-
-
-
-    # compare_file = "{0}/ptc_distances_disease.txt".format(output_directory)
-    # relative_exon_positions_file = "{0}_SNP_relative_exon_position.bed".format(results_prefix)
-    # exon_fasta = "{0}_CDS_intervals.fasta".format(results_prefix)
-    # cds_fasta = "{0}_CDS.fasta".format(results_prefix)
-    # if compare_ptcs:
-    #     dso.compare_ptcs(ptc_intersect_file, ptc_file, relative_exon_positions_file, exon_fasta, cds_fasta, cds_bed_file, intron_bed, compare_file)
-
-    # kgenomes_relative_exon_positions_file = "{0}_SNP_relative_exon_position.bed".format(results_prefix)
-    # compare_distances_file = "{0}/compare_distances.txt".format(output_directory)
-    # if compare_distances:
-    #     dso.compare_distances(unique_ptcs, disease_snps_relative_exon_positions, ptc_file, kgenomes_relative_exon_positions_file, compare_distances_file)
-    #
-    # clinvar_ptc_locations_file = "{0}/clinvar_ptc_locations.csv".format(output_directory)
-    # if clinvar_ptc_locations:
-    #     dso.clinvar_ptc_locations(unique_ptcs, disease_snps_relative_exon_positions, ptc_file, clinvar_ptc_locations_file)
 
     ese_file_name = ese_file.split('/')[-1].split('.')[0]
 
@@ -146,7 +103,7 @@ def main():
         clinvar_location_simulation_file = "{0}/clinvar_simulations_exclude_cpg.csv".format(output_directory)
         if "INT3" not in ese_file_name:
             clinvar_location_simulation_ese_overlap_file = "{0}/clinvar_simulations_{1}_overlaps_exclude_cpg.csv".format(output_directory, ese_file_name)
-        else:
+        else:dfrttyyt6tttttttt
             clinvar_location_simulation_ese_overlap_file = "{0}/clinvar_simulations_ese_overlaps_exclude_cpg.csv".format(output_directory)
 
         kgenomes_location_simulation_file = "{0}/1000_genomes_simulations_exclude_cpg.csv".format(output_directory)
