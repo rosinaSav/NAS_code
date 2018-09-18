@@ -114,17 +114,17 @@ def main():
 
     window_start = 3
     window_end = 69
-    clinvar_ese_hit_simulation_file = "{0}/clinvar_{1}_ese_hit_simulation_{2}_{3}.csv".format(output_directory, ese_file_name, window_start, window_end)
-    kgenomes_ese_hit_simulation_file = "{0}/1000_genomes_ese_hit_simulation_{1}_{2}.csv".format(output_directory, window_start, window_end)
+    clinvar_ese_hit_simulation_file = "{0}/clinvar_ese_hit_simulation_{1}_{2}_{3}.csv".format(output_directory, window_start, window_end, ese_file_name)
+    kgenomes_ese_hit_simulation_file = "{0}/1000_genomes_ese_hit_simulation_{1}_{2}_{3}.csv".format(output_directory, window_start, window_end, ese_file_name)
 
     # do a simulation picking only sites from within the region
     if ese_hit_simulation:
         if not only_kgenomes:
             print("Simulating ESE hits on the {0}-{1} region for disease PTCs...".format(window_start, window_end))
-            dso.ese_hit_simulation(unique_ptcs, disease_snps_relative_exon_positions, ptc_file, coding_exons_fasta, simulations, clinvar_ese_hit_simulation_file, ese_file, window_start, window_end, exclude_cpg, clinvar=True)
+            dso.ese_hit_simulation(unique_ptcs_rel_pos_file, coding_exons_fasta, simulations, clinvar_ese_hit_simulation_file, ese_file, window_start, window_end, exclude_cpg)
         if not only_disease:
             print("Simulating ESE hits on the {0}-{1} region for 1000 genomes PTCs...".format(window_start, window_end))
-            dso.ese_hit_simulation(unique_ptcs, snp_relative_positions_file, ptc_file, coding_exons_fasta, simulations, kgenomes_ese_hit_simulation_file, ese_file, window_start, window_end, exclude_cpg)
+            dso.ese_hit_simulation(kgenomes_unique_ptcs_rel_pos_file, coding_exons_fasta, simulations, kgenomes_ese_hit_simulation_file, ese_file, window_start, window_end, exclude_cpg)
 
 
     excess_test_file = "{0}/clinvar_ptc_{1}_{2}_excesses.csv".format(output_directory, window_start, window_end)

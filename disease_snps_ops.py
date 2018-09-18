@@ -829,7 +829,7 @@ def get_relative_position_list(relative_position_file):
     relative_positions = gen.read_many_fields(relative_position_file, "\t")
     relative_positions_list = {}
     for ptc in relative_positions:
-        ptc_pos = int(ptc[8])
+        ptc_pos = ptc[8]
         exon = ptc[3]
         transcript = exon.split('.')[0]
         exon_id = int(exon.split('.')[1])
@@ -926,6 +926,7 @@ def get_ref_allele_matched_simulants(relative_positions_list, coding_exons_indic
     Get a set of random positions in exon with same matched ref allele
     '''
     simulant_list = {}
+    cant_count = 0
 
     for ptc in relative_positions_list:
         transcript = relative_positions_list[ptc][0]
@@ -945,11 +946,12 @@ def get_ref_allele_matched_simulants(relative_positions_list, coding_exons_indic
             simulant_position = np.random.choice(possible_positions, 1)[0]
         # otherwise, use relative position
         else:
+            cant_count += 1
             simulant_position = rel_pos
 
         simulant_list[ptc] = [transcript, exon_id, simulant_position, strand, ref_allele, mut_allele]
 
-    return simulant_list
+    return simulant_list, cant_count
 
 
 
@@ -962,14 +964,6 @@ def simulate_mutation_locations(simulant_list, simulations, relative_positions_l
     # This needs to be done in here for parallelisation for some reason
     coding_exons = get_coding_exons(coding_exons_fasta)
 
-    # coding_exons_names, coding_exons_seqs = gen.read_fasta(coding_exons_fasta)
-    # coding_exons_list = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict()))
-    # for i, name in enumerate(coding_exons_names):
-    #     name = name.split('(')[0]
-    #     t = name.split('.')[0]
-    #     e = int(name.split('.')[1])
-    #     coding_exons_list[t][e] = coding_exons_seqs[i]
-
     # get a list of all exon indices without a ptc
     coding_exons_indices_no_ptcs = get_coding_exons_indices_no_ptcs(coding_exons, relative_positions_list, exclude_cpg)
 
@@ -980,81 +974,14 @@ def simulate_mutation_locations(simulant_list, simulations, relative_positions_l
         np.random.seed()
         print("Running simulation {0}/{1}".format(simulation, simulations))
 
-        ref_allele_matched_simulants = get_ref_allele_matched_simulants(relative_positions_list, coding_exons_indices_no_ptcs)
+        ref_allele_matched_simulants, cant_counts = get_ref_allele_matched_simulants(relative_positions_list, coding_exons_indices_no_ptcs)
         simulant_positions = get_ptc_positions(ref_allele_matched_simulants, coding_exons)
         simulant_ese_overlaps = get_ptc_ese_overlap(ref_allele_matched_simulants, coding_exons, ese_list)
         location_outputs[simulation] = simulant_positions
         ese_overlap_outputs[simulation] = simulant_ese_overlaps
 
     return location_outputs, ese_overlap_outputs
-    # simulation_outputs = {}
-    # simulation_outputs_ese_overlaps = {}
-    #
-    # for simulation in simulant_list:
-    #     np.random.seed()
-    #     print("Running simulation {0}/{1}".format(simulation, simulations))
-    #
-    #     location_counts = {}
-    #     ese_overlaps = {}
-    #     regions = ["0-2 bp", "3-69 bp", "70+ bp"]
-    #     for region in regions:
-    #         location_counts[region] = 0
-    #         ese_overlaps[region] = 0
-    #
-    #     for i, ptc_id in enumerate(clean_ptc_list):
-    #         if ptc_id in relative_positions_list:
-    #
-    #             ptc = clean_ptc_list[ptc_id]
-    #             pos = ptc[3]
-    #             t = ptc[4]
-    #             e = ptc[5]
-    #             strand = ptc[6]
-    #             ref_allele = ptc[7]
-    #             if strand == "-":
-    #                 ref_allele = gen.reverse_complement(ref_allele)
-    #             exon_length = len(coding_exons_list[t][e])
-    #             rel_pos_info = relative_positions_list[ptc_id]
-    #             rel_pos = rel_pos_info[1]
-    #
-    #             positions = coding_exon_nt_positions[t][e][ref_allele]
-    #
-    #             if len(positions):
-    #                 simulant_position = np.random.choice(positions, 1)[0]
-    #             else:
-    #                 simulant_position = rel_pos
-    #
-    #             rel_pos_base_1 = rel_pos + 1
-    #             simulant_position_base_1 = simulant_position + 1
-    #
-    #             distances = [simulant_position_base_1-1, exon_length - simulant_position_base_1]
-    #             min_dist = min(distances)
-    #
-    #             exon_seq = coding_exons[t][e]
-    #             possible_eses = get_possible_eses(exon_seq, simulant_position)
-    #             overlaps = list(set(ese_list) & set(possible_eses))
-    #
-    #             # 3-69bp region is between min_dist = 2 and min_dist = 68
-    #             # becuase a mutation in the first position has a min_dist = 0,
-    #             # mutation in second position has min_dist = 1 etc
-    #             if min_dist < 2:
-    #                 location_counts[regions[0]] += 1
-    #                 if len(overlaps):
-    #                     ese_overlaps[regions[0]] += 1
-    #             elif min_dist >= 2 and min_dist <= 68:
-    #                 location_counts[regions[1]] += 1
-    #                 if len(overlaps):
-    #                     ese_overlaps[regions[1]] += 1
-    #             else:
-    #                 location_counts[regions[2]] += 1
-    #                 if len(overlaps):
-    #                     ese_overlaps[regions[2]] += 1
-    #
-    #
-    #     simulation_outputs[simulation] = location_counts
-    #     simulation_outputs_ese_overlaps[simulation] = ese_overlaps
-    #
-    #
-    # return simulation_outputs, simulation_outputs_ese_overlaps
+
 
 def get_clean_ptc_list(ptc_file, disease_ptcs_file):
     '''
@@ -1108,7 +1035,7 @@ def get_clean_ptc_list(ptc_file, disease_ptcs_file):
 
     return clean_genomes_ptc_list, clean_clinvar_ptc_list
 
-def get_ptcs_in_window(ptc_list, relative_positions_list, window_start, window_end, coding_exons):
+def get_ptcs_in_window(relative_positions_list, window_start, window_end, coding_exons):
     '''
     Filter PTCs to only those in the given window (inclusive).
     window_start: start of the window (in base 1)
@@ -1117,168 +1044,147 @@ def get_ptcs_in_window(ptc_list, relative_positions_list, window_start, window_e
 
     ptcs_in_window = {}
 
-    for ptc_id in ptc_list:
-        rel_pos_info = relative_positions_list[ptc_id]
-        rel_pos = rel_pos_info[1]
-        rel_pos_base_1 = rel_pos + 1    #now in base 1
-        ptc = ptc_list[ptc_id]
+    for ptc_id in relative_positions_list:
+        transcript = relative_positions_list[ptc_id][0]
+        exon_id = relative_positions_list[ptc_id][1]
+        rel_pos = relative_positions_list[ptc_id][2]
+        rel_pos_base_1 = rel_pos + 1
 
-        transcript = ptc[4]
-        exon_id = ptc[5]
         exon_seq = coding_exons[transcript][exon_id]
         exon_length = len(exon_seq)
 
-        # need to minus 1 from rel pos because mutation at position 1 need to be
-        # distance 0
-        min_dist = min(rel_pos_base_1-1, exon_length - rel_pos_base_1)
+        min_dist = get_min_dist(rel_pos_base_1, exon_length)
 
-        # need to get exons longer than the window end * 2 to account for
-        # both 5' and 3' ends
-        if exon_length >= (window_end*2):
-            ptc.extend([rel_pos, rel_pos_base_1])
-            # need to account here for the fact min dist is effectively base 0
-            if min_dist >= window_start-1 and min_dist <= window_end-1:
-                ptcs_in_window[ptc_id] = ptc
-
+        # need to account for the fact that min_dist will be 0 for ptc with relative
+        # position 1 (in base 1) or 0
+        # i.e. position 3, will have min_dist of 2
+        if min_dist >= window_start - 1 and min_dist <= window_end -1:
+            ptcs_in_window[ptc_id] = relative_positions_list[ptc_id]
 
     return ptcs_in_window
 
-def get_non_mut_nts(ptc_list, coding_exons, window_start, window_end):
+def get_non_mut_window_nts(ptc_list, coding_exons, window_start, window_end):
 
-    non_mut_nts = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: [])))
+    # get the locations of all ptcs grouped by transcript, exon, nt
     relative_ptc_locations = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: [])))
-    exon_lengths = collections.defaultdict(lambda: collections.defaultdict())
+    for ptc in ptc_list:
+        transcript = ptc_list[ptc][0]
+        exon_id = ptc_list[ptc][1]
+        rel_pos = ptc_list[ptc][2]
+        strand = ptc_list[ptc][3]
+        ref_allele = ptc_list[ptc][4]
+        if strand == "-":
+            ref_allele = gen.reverse_complement(ref_allele)
+        relative_ptc_locations[transcript][exon_id][ref_allele].append(rel_pos)
 
-    for ptc_id in ptc_list:
-        ptc = ptc_list[ptc_id]
-        transcript = ptc[4]
-        exon = ptc[5]
-        exon_length = ptc[2] - ptc[1]
-        rel_pos = int(ptc[8])
-        exon_seq = coding_exons[transcript][exon]
-        nt = exon_seq[rel_pos]
+    # now get a list of all positions in an exon without a ptc
+    coding_exon_nt_positions_no_ptc = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: [])))
+    for ptc in ptc_list:
+        transcript = ptc_list[ptc][0]
+        exon_id = ptc_list[ptc][1]
+        strand = ptc_list[ptc][3]
+        ref_allele = ptc_list[ptc][4]
+        if strand == "-":
+            ref_allele = gen.reverse_complement(ref_allele)
 
-        relative_ptc_locations[transcript][exon][nt].append(rel_pos)
-        exon_lengths[transcript][exon] = exon_length
+        exon_seq = list(coding_exons[transcript][exon_id])
+        interested_indices = []
+        five_prime_start = window_start - 1  # have to account for it being base 1
+        five_prime_end = window_end
+        interested_indices.extend(list(range(five_prime_start, five_prime_end)))
+        three_prime_start = len(exon_seq) - window_end - 1
+        three_prime_end = len(exon_seq) - window_start
+        interested_indices.extend(list(range(three_prime_start, three_prime_end)))
 
-    # now create a dictionary of all the positions that dont have a mutation
-    # in each exon for each nt
-    for transcript in exon_lengths:
-        for exon in exon_lengths[transcript]:
-            exon_nts = coding_exons[transcript][exon]
+        for id in interested_indices:
+            if id not in relative_ptc_locations[transcript][exon_id][ref_allele]:
+                coding_exon_nt_positions_no_ptc[transcript][exon_id][ref_allele].append(id)
 
-            five_start = window_start-1   # need to to convert window to base 0
-            five_end = window_end   # this doesn't need converting because python takes it up to but not inclusive
-            start_nts = list(exon_nts[five_start:five_end])
+    return coding_exon_nt_positions_no_ptc
 
-            exon_length = len(exon_nts)
-            three_start = exon_length - window_end - 1
-            three_end = exon_length - window_start
-            end_nts = list(exon_nts[three_start:three_end])
-
-            # now add them all to a dict
-            # need to set the start of the window to base 0
-            for i, nt in enumerate(start_nts, start=five_start):
-                if i not in relative_ptc_locations[transcript][exon][nt]:
-                    non_mut_nts[transcript][exon][nt].append(i)
-            for i, nt in enumerate(end_nts, start=three_start):
-                if i not in relative_ptc_locations[transcript][exon][nt]:
-                    non_mut_nts[transcript][exon][nt].append(i)
-
-    return non_mut_nts
-
-def get_real_ese_hits(ptc_list, coding_exons, ese_list):
+def get_ese_hits(ptc_list, coding_exons, ese_list):
 
     hit_count = 0
 
     for ptc_id in ptc_list:
-        ptc = ptc_list[ptc_id]
-        transcript = ptc[4]
-        exon = ptc[5]
-        rel_pos = ptc[8]
-        exon_seq = coding_exons[transcript][exon]
+        transcript = ptc_list[ptc_id][0]
+        exon_id = ptc_list[ptc_id][1]
+        rel_pos = ptc_list[ptc_id][2]
+        exon_seq = coding_exons[transcript][exon_id]
         possible_eses = get_possible_eses(exon_seq, rel_pos)
         overlaps = list(set(ese_list) & set(possible_eses))
         if len(overlaps):
             hit_count += 1
-
     return hit_count
 
 def simulate_ese_hits(simulation_list, simulations, ptc_list, coding_exons_fasta, ese_list, window_start, window_end):
 
     hit_counts = {}
 
+    # have to get the coding exons here during parallelisation
     coding_exons = get_coding_exons(coding_exons_fasta)
 
+    # # get indices of each nt in that region that dont contain a ptc mutation
+    window_ptcs_no_mut_indices = get_non_mut_window_nts(ptc_list, coding_exons, window_start, window_end)
+
     for simulation in simulation_list:
+        np.random.seed()
         print("Simulation {0}/{1}".format(simulation+1, simulations))
-        simulation_non_mut_nts = get_non_mut_nts(ptc_list, coding_exons, window_start, window_end)
+
         hit_count = 0
         cant_count = 0
-        np.random.seed()
-        for i, ptc_id in enumerate(ptc_list):
-            if i:
-                ptc = ptc_list[ptc_id]
-                transcript = ptc[4]
-                exon = ptc[5]
-                rel_pos = ptc[8]
-                exon_seq = coding_exons[transcript][exon]
-                mut_nt = exon_seq[rel_pos]
 
-                if len(simulation_non_mut_nts[transcript][exon][mut_nt]):
-                    sim_choice = np.random.choice(simulation_non_mut_nts[transcript][exon][mut_nt], replace=False)
-                else:
-                    cant_count += 1
-                    sim_choice = rel_pos
-
-                possible_eses = get_possible_eses(exon_seq, sim_choice)
-                overlaps = list(set(ese_list) & set(possible_eses))
-                if len(overlaps):
-                    hit_count += 1
-        hit_counts[simulation] = [hit_count, cant_count]
+        ref_allele_matched_simulants, cant_count = get_ref_allele_matched_simulants(ptc_list, window_ptcs_no_mut_indices)
+        simulant_ese_hits = get_ese_hits(ref_allele_matched_simulants, coding_exons, ese_list)
+        hit_counts[simulation] = [simulant_ese_hits, cant_count]
 
     return hit_counts
 
+def get_long_exons(relative_positions, coding_exons, length):
+    '''
+    keep only exons with length greater than defined length
+    '''
+    long_exons = {}
+    for ptc_id in relative_positions:
+        transcript = relative_positions[ptc_id][0]
+        exon_id = relative_positions[ptc_id][1]
+        exon_seq = coding_exons[transcript][exon_id]
+        exon_length = len(exon_seq)
 
-def ese_hit_simulation(disease_ptcs_file, relative_exon_positions_file, ptc_file, coding_exons_fasta, simulations, output_file, ese_file, window_start, window_end, exclude_cpg, clinvar=None):
+        # only consider exons with length > 138
+        if exon_length > length:
+            long_exons[ptc_id] = relative_positions[ptc_id]
+    return long_exons
 
-    # get the ptcs that occur strictly in one dataset
-    clean_genomes_ptc_list, clean_clinvar_ptc_list = get_clean_ptc_list(ptc_file, disease_ptcs_file)
+def ese_hit_simulation(rel_pos_file, coding_exons_fasta, simulations, output_file, ese_file, window_start, window_end, exclude_cpg, clinvar=None):
+    '''
+    Simulate ese hits strictly within a region
+    '''
 
-    if clinvar:
-        clean_ptc_list = clean_clinvar_ptc_list
-    else:
-        clean_ptc_list = clean_genomes_ptc_list
-
-    # get the relative exon positions of the clinvar snps
-    relative_positions = gen.read_many_fields(relative_exon_positions_file, "\t")
-    relative_positions_list = {}
-    for snp in relative_positions:
-        snp_id = snp[8]
-        relative_positions_list[snp_id] = [snp[3], int(snp[11])]
-
-    # get the list of eses and coding exons
-    ese_list = [ese[0] for ese in gen.read_many_fields(ese_file, "\t") if ese[0][0] != "#"]
+    # get a list of the relative positions of the ptcs
+    relative_positions_list = get_relative_position_list(rel_pos_file)
+    # get a list of eses
+    ese_list = get_eses_from_file(ese_file)
+    # get the coding exons
     coding_exons = get_coding_exons(coding_exons_fasta)
+
+    long_exons = get_long_exons(relative_positions_list, coding_exons, window_end*2)
 
     # get the ptcs that are in the 3-69 bp region for each exon of exon
     # this requires exons at least 128 bp in length for comparison
-    window_ptcs = get_ptcs_in_window(clean_ptc_list, relative_positions_list, window_start, window_end, coding_exons)
-    # get indices of each nt in that region that dont contain a ptc mutation
-    non_mut_nts = get_non_mut_nts(window_ptcs, coding_exons, window_start, window_end)
-
-    # get the hit counts of eses for the real ptcs
-    real_ese_hits = get_real_ese_hits(window_ptcs, coding_exons, ese_list)
+    window_ptcs = get_ptcs_in_window(long_exons, window_start, window_end, coding_exons)
+    real_ese_hits = get_ese_hits(window_ptcs, coding_exons, ese_list)
 
     # simulate the hit counts for nt matched mutations
     simulation_list = list(range(simulations))
     # simulate_ese_hits(simulation_list, simulations, window_ptcs, coding_exons_fasta, ese_list, window_start, window_end)
     processes = gen.run_in_parallel(simulation_list, ["foo", simulations, window_ptcs, coding_exons_fasta, ese_list, window_start, window_end], simulate_ese_hits)
-
+    #
     simulation_outputs = {}
     for process in processes:
         simulation_hits = process.get()
         simulation_outputs = {**simulation_outputs, **simulation_hits}
+
 
     with open(output_file, "w") as outfile:
         outfile.write("simulation,ese_hit_count,cant_count\n")
@@ -1355,17 +1261,8 @@ def excess_test(unique_ptcs_rel_pos_file, coding_exons_fasta, output_file):
     # get relative positions
     relative_positions = get_relative_position_list(unique_ptcs_rel_pos_file)
 
-    long_exons = {}
-
-    for ptc_id in relative_positions:
-        transcript = relative_positions[ptc_id][0]
-        exon_id = relative_positions[ptc_id][1]
-        exon_seq = coding_exons[transcript][exon_id]
-        exon_length = len(exon_seq)
-
-        # only consider exons with length > 138
-        if exon_length > 138:
-            long_exons[ptc_id] = relative_positions[ptc_id]
+    # keep only those with exons longer than 138
+    long_exons = get_long_exons(relative_positions, coding_exons, 138)
 
     ptc_locations = get_ptc_positions(long_exons, coding_exons)
     exon_nts = get_exon_nts(long_exons, coding_exons)
