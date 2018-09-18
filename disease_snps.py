@@ -103,7 +103,7 @@ def main():
         clinvar_location_simulation_file = "{0}/clinvar_simulations_exclude_cpg.csv".format(output_directory)
         if "INT3" not in ese_file_name:
             clinvar_location_simulation_ese_overlap_file = "{0}/clinvar_simulations_{1}_overlaps_exclude_cpg.csv".format(output_directory, ese_file_name)
-        else:dfrttyyt6tttttttt
+        else:
             clinvar_location_simulation_ese_overlap_file = "{0}/clinvar_simulations_ese_overlaps_exclude_cpg.csv".format(output_directory)
 
         kgenomes_location_simulation_file = "{0}/1000_genomes_simulations_exclude_cpg.csv".format(output_directory)
