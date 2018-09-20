@@ -109,7 +109,7 @@ def main():
             dso.ptc_location_simulation(unique_ptcs_rel_pos_file, coding_exons_fasta, simulations, clinvar_location_simulation_file, clinvar_location_simulation_ese_overlap_file, ese_file, only_ese, exclude_cpg)
         if not only_disease:
             print('Running ptc location simulation on 1000 genomes PTCs...')
-            dso.ptc_location_simulation(kgenomes_unique_ptcs_rel_pos_file, coding_exons_fasta, simulations, clinvar_location_simulation_file, clinvar_location_simulation_ese_overlap_file, ese_file, only_ese, exclude_cpg)
+            dso.ptc_location_simulation(kgenomes_unique_ptcs_rel_pos_file, coding_exons_fasta, simulations, kgenomes_location_simulation_file, kgenomes_location_simulation_ese_overlap_file, ese_file, only_ese, exclude_cpg)
 
 
     window_start = 3

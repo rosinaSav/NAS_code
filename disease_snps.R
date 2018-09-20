@@ -2,71 +2,92 @@ p_from_z <- function(z) {
   return(2*pnorm(-abs(z)))
 }
 
-get_region_z <- function(filepath, set) {
-  file <- read.csv(filepath, head=T)
-  real = file[file$sim_id == "real",]
-  sims = file[file$sim_id != "real",]
-  z0_2 <- (real$all_0.2.bp - mean(sims$all_0.2.bp)) / sd(sims$all_0.2.bp)
-  z3_69 <- (real$all_3.69.bp - mean(sims$all_3.69.bp)) / sd(sims$all_3.69.bp)
-  z70 <- (real$all_70..bp - mean(sims$all_70..bp)) / sd(sims$all_70..bp)
+get_region_z <- function(data, set) {
+  real = data[data$simulation == "real",]
+  sims = data[data$simulation != "real",]
+  z0_2 <- (real$X0.2 - mean(sims$X0.2)) / sd(sims$X0.2)
+  z3_69 <- (real$X3.69 - mean(sims$X3.69)) / sd(sims$X3.69)
+  z70 <- (real$X70. - mean(sims$X70.)) / sd(sims$X70.)
   
   zs <- data.frame(set, z0_2, z3_69, z70)
   colnames(zs) <- c("set", "z_0_2","z_3_69", "z_70")
   return(zs)
 }
 
-get_region_hit_z <- function(file) {
-  print(head(file))
-  real = file[file$simulation == "real",]
-  sims = file[file$simulation != "real",]
-  z <- (real$both_ese_hit_count - mean(sims$both_ese_hit_count)) / sd(sims$both_ese_hit_count)
+get_region_hit_z <- function(data) {
+  real = data[data$simulation == "real",]
+  sims = data[data$simulation != "real",]
+  z <- (real$ese_hit_count - mean(sims$ese_hit_count)) / sd(sims$ese_hit_count)
   zs <- data.frame(z)
   colnames(zs) <- c("region hits")
   return(zs)
 }
 
-file <- read.csv('results/clinvar/clinvar_ese_hit_simulation_3_69.csv', head=T)
-get_region_hit_z(file)
-
-
-get_region_ps <- function(filepath, set) {
-  file <- read.csv(filepath, head=T)
-  real = file[file$sim_id == "real",]
-  sims = file[file$sim_id != "real",]
-  z0_2 <- (real$all_0.2.bp - mean(sims$all_0.2.bp)) / sd(sims$all_0.2.bp)
-  z3_69 <- (real$all_3.69.bp - mean(sims$all_3.69.bp)) / sd(sims$all_3.69.bp)
-  z70 <- (real$all_70..bp - mean(sims$all_70..bp)) / sd(sims$all_70..bp)
+get_region_ps <- function(data, set) {
+  real = data[data$simulation == "real",]
+  sims = data[data$simulation != "real",]
+  z0_2 <- (real$X0.2 - mean(sims$X0.2)) / sd(sims$X0.2)
+  z3_69 <- (real$X3.69 - mean(sims$X3.69)) / sd(sims$X3.69)
+  z70 <- (real$X70. - mean(sims$X70.)) / sd(sims$X70.)
   
   ps <- data.frame(set, p_from_z(z0_2), p_from_z(z3_69), p_from_z(z70))
   colnames(ps) <- c("set", "z_0_2","z_3_69", "z_70")
   return(ps)
 }
 
-locations_file <- "results/clinvar/clinvar_simulations.csv"
-clinvar_regions_zs <- get_region_z(locations_file, "ClinVar")
-clinvar_regions_ps <- get_region_ps(locations_file, "ClinVar")
+get_region_hit_p <- function(data) {
+  real = data[data$simulation == "real",]
+  sims = data[data$simulation != "real",]
+  z <- (real$ese_hit_count - mean(sims$ese_hit_count)) / sd(sims$ese_hit_count)
+  p <- data.frame(p_from_z(z))
+  colnames(p) <- c("region p")
+  return(p)
+}
+
+
+locations_file <- "results/clinvar2/clinvar_ptc_location_simulation.csv"
+file <- read.csv(locations_file, head=T)
+clinvar_regions_zs <- get_region_z(file, "ClinVar")
+clinvar_regions_ps <- get_region_ps(file, "ClinVar")
 clinvar_regions_zs
 clinvar_regions_ps
 
-int3 <- "results/clinvar/clinvar_simulations_ese_overlaps.csv"
-int3_clinvar_ese_hit_zs <- get_region_z(int3, "INT3")
-int3_clinvar_ese_hit_ps <- get_region_ps(int3, "INT3")
-int3_clinvar_ese_hit_zs
-int3_clinvar_ese_hit_ps
 
-rescue <- "results/clinvar/clinvar_simulations_RESCUE_eses_overlaps.csv"
-rescue_clinvar_ese_hit_zs <- get_region_z(rescue, "RESCUE")
-rescue_clinvar_ese_hit_ps <- get_region_ps(rescue, "RESCUE")
-rescue_clinvar_ese_hit_zs
-rescue_clinvar_ese_hit_ps
+int3_file <- "results/clinvar2/clinvar_ptc_location_simulation_CaceresHurstESEs_INT3_ese_overlaps.csv"
+rescue_file <- "results/clinvar2/clinvar_ptc_location_simulation_RESCUE_eses_ese_overlaps.csv"
+ke400_file <- "results/clinvar2/clinvar_ptc_location_simulation_Ke400_eses_ese_overlaps.csv"
 
-ke <- "results/clinvar/clinvar_simulations_Ke400_eses_overlaps.csv"
-ke_clinvar_ese_hit_zs <- get_region_z(ke, "Ke400")
-ke_clinvar_ese_hit_ps <- get_region_ps(ke, "Ke400")
-ke_clinvar_ese_hit_zs
-ke_clinvar_ese_hit_ps
+int3 <- read.csv(int3_file, head=T)
+rescue <- read.csv(rescue_file, head=T)
+ke400 <- read.csv(ke400_file, head=T)
 
-ese_hits <- rbind(int3_clinvar_ese_hit_zs, rescue_clinvar_ese_hit_zs, ke_clinvar_ese_hit_zs)
+z_int3 <- get_region_z(int3, "INT3")
+z_rescue <- get_region_z(rescue, "RESCUE")
+z_ke400 <- get_region_z(ke400, "Ke400")
+
+get_region_ps(int3, "INT3")
+get_region_ps(rescue, "RESCUE")
+get_region_ps(ke400, "Ke400")
+
+
+ese_hits_int3_file <- "results/clinvar2/clinvar_ese_hit_simulation_3_69_CaceresHurstESEs_INT3.csv"
+ese_hits_rescue_file <- "results/clinvar2/clinvar_ese_hit_simulation_3_69_RESCUE_eses.csv"
+ese_hits_ke400_file <- "results/clinvar2/clinvar_ese_hit_simulation_3_69_Ke400_eses.csv"
+ese_hits_int3 <- read.csv(ese_hits_int3_file, head=T)
+ese_hits_rescue <- read.csv(ese_hits_rescue_file, head=T)
+ese_hits_ke400 <- read.csv(ese_hits_ke400_file, head=T)
+
+get_region_hit_z(ese_hits_int3)
+get_region_hit_z(ese_hits_rescue)
+get_region_hit_z(ese_hits_ke400)
+get_region_hit_p(ese_hits_int3)
+get_region_hit_p(ese_hits_rescue)
+get_region_hit_p(ese_hits_ke400)
+
+
+library(reshape2)
+library(ggplot2)
+ese_hits <- rbind(z_int3, z_rescue, z_ke400)
 ese_hits_melt <- melt(ese_hits)
 
 plot <- ggplot(ese_hits_melt, aes(x=variable, fill=set, y=value)) +   
@@ -80,7 +101,6 @@ plot <- ggplot(ese_hits_melt, aes(x=variable, fill=set, y=value)) +
   theme(legend.title=element_blank())
 plot
 ggsave('results/graphs/nonsense_mutations_ese_hits_locations_simulations.eps', plot=plot, width=10, height=7)
-
 
 
 file <- read.csv('results/clinvar/clinvar_ese_hit_simulation_3_69.csv', head=T)
