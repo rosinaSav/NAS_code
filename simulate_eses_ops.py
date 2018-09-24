@@ -23,7 +23,6 @@ def make_simulants(motifs, n_sim, output_file_name = None, retro = False, mono =
     concat: concatenate the true motifs before extracting dinucleotides
     '''
 
-    print('running simulations')
     if cap_runs:
         longest_runs_numbers = get_longest_run(motifs)
         longest_runs_strings = ["".join([base for i in range(longest_runs_numbers[base] + 1)]) for base in longest_runs_numbers]

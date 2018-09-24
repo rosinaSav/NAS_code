@@ -65,6 +65,8 @@ z_int3 <- get_region_z(int3, "INT3")
 z_rescue <- get_region_z(rescue, "RESCUE")
 z_ke400 <- get_region_z(ke400, "Ke400")
 
+z_int3
+
 get_region_ps(int3, "INT3")
 get_region_ps(rescue, "RESCUE")
 get_region_ps(ke400, "Ke400")
@@ -103,8 +105,8 @@ plot
 ggsave('results/graphs/nonsense_mutations_ese_hits_locations_simulations.eps', plot=plot, width=10, height=7)
 
 
-file <- read.csv('results/clinvar/clinvar_ese_hit_simulation_3_69.csv', head=T)
-get_region_hit_z(file)
+kgenomes_location_file <- read.csv('results/clinvar2/1000_genomes_simulations.csv', head=T)
+kgenomes_regions_zs <- get_region_z(kgenomes_location_file, "1000 Genomes")
 
 nonsense_mutation_regions <- rbind(kgenomes_regions_zs, clinvar_regions_zs)
 nonsense_mutation_regions_melt <- melt(nonsense_mutation_regions)
@@ -119,7 +121,7 @@ plot <- ggplot(nonsense_mutation_regions_melt, aes(x=variable, fill=set, y=value
   scale_x_discrete(labels = c("0-2", "3-69", "70+")) + 
   theme(legend.title=element_blank())
 
-ggsave('results/graphs/nonsense_mutations_locations_simulations.pdf', plot=plot, width=10, height=7)
+ggsave('results/graphs/nonsense_mutations_locations_simulations.eps', plot=plot, width=10, height=7)
 
 
 
