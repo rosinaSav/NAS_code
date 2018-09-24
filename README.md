@@ -30,6 +30,8 @@ generic.py: module containing generic utility functions.
 
 map_FANTOM.py: mapping FANTOM5 CAGE peaks to gene promoters and calculating a series of expression parameters for each gene.
 
+motif_stops.R: analysis of the number of stop codons in a set of motifs.
+
 NAS_analysis.py: main scripts to check whether PTCs are associated with greater rates of exon skipping.
 
 NAS_misc_tests.py: miscellaneous tests on large effect cases.

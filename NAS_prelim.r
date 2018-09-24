@@ -1,3 +1,10 @@
+library(grid)
+library(gridExtra)
+library(ggplot2)
+library(reshape2)
+library(dplyr)
+library(ggpubr)
+
 compare_the_two_measures = function(NAS_data, title) {
   cor_test = cor.test(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC, NAS_data$norm_count_no_PTC - NAS_data$norm_count_het_PTC, method = "spearman")
   plot(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC, NAS_data$norm_count_no_PTC - NAS_data$norm_count_het_PTC, pch = 19, col = "RoyalBlue", xlab = "PSI(-/-) - PSI(-/+)", ylab = "RPMskip(-/-) - RPMskip(-/+)", main = title)
@@ -28,6 +35,186 @@ expression_analysis_core = function(overlap, all_exons, column, expression) {
   print("p for difference:")
   print(wilcox.test(overlap_data, all_data, alt = "t")$p.value)
 }
+
+
+# get_n_t_value(neg_control, "PSI_no_PTC", "PSI_het_PTC", 0)
+
+get_diff_plot =  function(feature1, feature2, neg_control, NAS_data, xlab, ylab, swap = FALSE, big_only = FALSE, return_p = TRUE, return_plot = FALSE, title=NULL, title_left=NULL, hline = NULL, ylims = NULL, breaks = NULL, labels = NULL, scale_y = NULL) {
+  threshold = 0
+  y_pos = 60
+  if (big_only != FALSE) {
+    threshold = big_only
+    y_pos = 10
+  }
+  if (swap == TRUE) {
+    temp = feature1
+    feature1 = feature2
+    feature2 = temp
+  }
+  
+  n_t <- get_n_t_value_line(NAS_data, feature1, feature2)
+  colnames(n_t) <- c("true_diff")
+  n_t$ID <- seq.int(nrow(n_t))
+  
+  plot <- ggplot()
+  
+  if(!is.null(hline)) {
+    print(hline)
+    plot <- plot +
+      geom_hline(yintercept = hline, lty=2, col="#aaaaaa") +
+      geom_hline(yintercept = -hline, lty=2, col="#aaaaaa") +
+      geom_rect(aes(xmin = 0, xmax=max(n_t$ID), ymin=-hline, ymax=hline), col="grey", alpha=0.1, linetype=0)
+  }
+  
+  plot <- plot + 
+    geom_line(aes(x = n_t$ID, y = n_t$true_diff), col="RoyalBlue") + 
+    labs(x = xlab, y=ylab) + 
+    theme(
+      # axis.text.x = element_blank(),
+      axis.ticks.x=element_blank(),
+      panel.background = element_rect( fill = "#f5f5f5"),
+      panel.grid.major = element_line(colour="#ffffff"),
+      panel.grid.minor = element_line(colour="#ffffff")
+    )
+  
+  plot <- plot + scale_x_continuous(expand = c(0,0), labels = c())
+  
+  if(!is.null(ylims) | !is.null(labels) | !is.null(breaks)) {
+    plot <- plot + scale_y_continuous(limits = ylims, labels = labels, breaks = breaks)
+  }
+  if(!is.null(scale_y)) {
+    plot <- plot +
+      coord_cartesian(ylim = scale_y)
+  }
+  plot <- title_styling(plot, title, title_left)
+  return(plot)
+}
+
+
+
+
+get_neg_control_plot <- function(NAS_data, neg_control, feature1, feature2, limit_y = NULL) {
+  library(ggplot2)
+  library(reshape2)
+  true_diffs <- get_true_diffs(NAS_data, "PSI_no_PTC", "PSI_het_PTC")
+  sims_diffs <- get_sims_diffs(NAS_data, "PSI_no_PTC", "PSI_het_PTC", true_diffs)
+  
+  sims_diffs <- melt(sims_diffs)
+  
+  sims_diffs = sims_diffs[!is.na(sims_diffs$value),]
+  sims_diffs$id <- numextract(sims_diffs$variable)
+  
+  # print(head(sims_diffs))
+  
+  uniques <- length(unique(sims_diffs$id))
+  # print(length(uniques))
+  l <- list()
+  for(i in 1:uniques) {
+    l[[i]] = c()
+  }
+  
+  # sims <- data.frame(matrix(NA, nrow = max_diff_length, ncol = length(neg_control)))
+  for(i in 1:nrow(sims_diffs)) {
+    row <- sims_diffs[i,]
+    id = row$id
+    l[[id]] <- c(l[[id]], row$value)
+    # print(id)
+    
+    # do stuff with row
+  }
+  positives <- list()
+  for (i in 1:length(l)) {
+    entry = l[[i]]
+    pos <- sum(entry >= 0)
+    positives[[i]] = pos
+  }
+  
+  sims_diffs <- mutate(sims_diffs, positives = NA, order = NA)
+  sims_diffs$id <- as.numeric(sims_diffs$id)
+  
+  # print(head(sims_diffs))
+  
+  for (i in 1:nrow(sims_diffs)) {
+    row <- sims_diffs[i,]
+    # print(as.numeric(row$id))
+    # print(positives[as.numeric(row$id)])
+    # print(positives[as.numeric(row$id)])
+    sims_diffs[i, "positives"] = positives[row$id]
+  }
+  
+  sims_diffs <- arrange(sims_diffs, desc(positives))
+  rank = 0
+  current_id = 0
+  for (i in 1:nrow(sims_diffs)) {
+    row <- sims_diffs[i,]
+    if (row$id != current_id) {
+      current_id = row$id
+      rank = rank + 1
+    }
+    sims_diffs[i, "order"] = rank
+  }
+  
+  print(head(sims_diffs))
+  
+  # print(head(sim)
+  
+  # true_diffs$id <- seq.int(nrow(true_diffs))
+  
+  plot <- ggplot() +
+    geom_point(aes(x = sims_diffs$order, y = sims_diffs$value), size=0.2, colour=ifelse(sims_diffs$value > 0, "RoyalBlue", "red")) +
+    geom_hline(yintercept = 0, lty=2) +
+    labs(x="PTC", y = "True PSIdiff - simulant PSIdiff") +
+    theme(
+      axis.text.x = element_blank(),
+      axis.ticks.x = element_blank(),
+      panel.background = element_rect(fill = "#f5f5f5"),
+      panel.grid.major = element_line(colour="#f5f5f5"),
+      panel.grid.minor = element_line(colour="#000000")
+    )
+  
+  if(!is.null(limit_y)) {
+    plot <- plot + coord_cartesian(ylim=c(-3,3))
+  }
+  
+  return(plot)
+}
+
+
+get_sims_diffs <- function(NAS_data, feature1, feature2, true_diffs) {
+  max_diff_length = 0
+  for (index in 1:length(neg_control)) {
+    sim_diffs = neg_control[[index]][feature1] - neg_control[[index]][feature2]
+    sim_diffs = sim_diffs[!is.na(sim_diffs)]
+    if(length(sim_diffs) > max_diff_length) {
+      max_diff_length = length(sim_diffs)
+    }
+  }
+  
+  sims <- data.frame(matrix(NA, nrow = max_diff_length, ncol = length(neg_control)))
+  for (index in 1:length(neg_control)) {
+    sim_diffs = neg_control[[index]][feature1] - neg_control[[index]][feature2]
+    sim_diffs = sim_diffs[!is.na(sim_diffs)]
+    true_diff = true_diffs[index, "true_diff"]
+    sim_diffs = true_diff - sim_diffs
+    length(sim_diffs) <- max_diff_length
+    col_id = paste("X", index, sep="")
+    sims[col_id] <- sim_diffs
+  }
+  return(sims)
+}
+
+
+get_true_diffs <- function(NAS_data, feature1, feature2) {
+  diffs <- data.frame(true = double())
+  for (index in 1:length(neg_control)) {
+    # get the true difference
+    true_diff = NAS_data[index, feature1] - NAS_data[index, feature2]
+    diffs <- rbind(diffs, data.frame(true_diff))
+  }
+  return(diffs)
+}
+
+
 
 get_n_t =  function(feature1, feature2, neg_control, NAS_data, title, swap = FALSE, big_only = FALSE, return_p = TRUE, return_plot = FALSE) {
   threshold = 0
@@ -68,6 +255,66 @@ get_n_t =  function(feature1, feature2, neg_control, NAS_data, title, swap = FAL
   }
 }
 
+get_n_t_plot =  function(feature1, feature2, neg_control, NAS_data, xlab, swap = FALSE, big_only = FALSE, return_p = TRUE, return_plot = FALSE, title=NULL, title_left=NULL) {
+  threshold = 0
+  y_pos = 60
+  if (big_only != FALSE) {
+    threshold = big_only
+    y_pos = 10
+  }
+  if (swap == TRUE) {
+    temp = feature1
+    feature1 = feature2
+    feature2 = temp
+  }
+  
+  n_t <- get_n_t_value(neg_control, feature1, feature2, threshold)
+  
+  library(ggplot2)
+  plot <- ggplot() + 
+    geom_histogram(aes(n_t),binwidth = 0.02,fill = chosen_colour,color = "black") + 
+    geom_vline(xintercept = 0.5, lty=2) +
+    coord_cartesian(xlim = c(0,1)) +
+    labs(x = xlab, y="Frequency") + 
+    plot_theme(font_size = 12)
+  
+  plot <- title_styling(plot, title, title_left)
+  return(plot)
+}
+
+get_n_t_value <- function(neg_control, feature1, feature2, threshold) {
+  n_t = rep(NA, length(neg_control))
+  for (index in 1:length(neg_control)) {
+    # get the true difference
+    true_diff = NAS_data[index, feature1] - NAS_data[index, feature2]
+    # if the true difference is bigger than the threshold
+    if (abs(true_diff) >= threshold) {
+      # get the differences for each of the simulations
+      sim_diffs = neg_control[[index]][feature1] - neg_control[[index]][feature2]
+      sim_diffs = sim_diffs[!is.na(sim_diffs)]
+      n = sum((true_diff > sim_diffs) & (true_diff != sim_diffs))
+      t = length(sim_diffs[true_diff != sim_diffs])
+      n_t[index] = n/t      
+    }
+  }
+  print(sum((n_t > 0.5) & (!is.na(n_t))))
+  print(sum(!is.na(n_t)))
+  p = binom.test(sum((n_t > 0.5) & (!is.na(n_t))), sum(!is.na(n_t)), alternative = "g")$p.value
+  print(p)
+  # return(n_t)
+}
+
+get_n_t_value_line <- function(NAS_data, feature1, feature2) {
+  n_t = rep(NA, length(NAS_data))
+  diffs <- data.frame(true = double())
+  for (index in 1:length(neg_control)) {
+    # get the true difference
+    true_diff = NAS_data[index, feature1] - NAS_data[index, feature2]
+    diffs <- rbind(diffs, data.frame(true_diff))
+  }
+  return(diffs)
+}
+
 
 get_n_t_visual =  function(feature1, feature2, neg_control, NAS_data, swap = FALSE) {
   par(mfrow = c(4, 4))
@@ -86,6 +333,86 @@ get_n_t_visual =  function(feature1, feature2, neg_control, NAS_data, swap = FAL
     abline(v = true_diff, lwd = 2, col = "orange")
   }
 }
+
+individual_changes_plot <- function(NAS_data, feature1, feature2, threshold, xlab, ylab, col1  = NULL, col2 = NULL, xlab1=NULL, xlab2=NULL) {
+  dots <- data.frame(xpos = double(), ypos = double(), diff = double())
+  lines <- data.frame(x0 = double(), x1 = double(), y0 = double(), y1 = double())
+  for (exon in 1:dim(NAS_data)[1]) {
+    exon_name = NAS_data[exon, 1]
+    no_PTC = NAS_data[exon, feature1]
+    het_PTC = NAS_data[exon, feature2]
+    x_pos = 0
+    x_pos2 = 1
+    if (is.finite(no_PTC) && is.finite(het_PTC)) {
+      if (abs(no_PTC - het_PTC) > threshold) {
+        diff = no_PTC - het_PTC
+        dots[nrow(dots) + 1,] = list(x_pos,no_PTC,diff)
+        dots[nrow(dots) + 1,] = list(x_pos2,het_PTC,diff)
+        lines[nrow(lines) + 1, ] = list(x_pos, x_pos2, no_PTC, het_PTC)
+      }
+    }
+  }
+  
+  if(is.null(col1)) {
+    col1 = "RoyalBlue"
+  }
+  if(is.null(col2)) {
+    col2 = "red"
+  }
+  
+  if(is.null(xlab1) || is.null(xlab2)) {
+    labels <- c("PTC -/-", "PTC-/+")
+  } else {
+    labels <- c(xlab1, xlab2)
+  }
+  
+  plot <- ggplot() + 
+    geom_point(aes(x = dots$xpos, y = dots$ypos), size=0.8, colour = ifelse(dots$diff > 0, col1, col2))
+  plot <- plot +
+    geom_segment(data = lines, aes(x = x0, y = y0, xend = x1, yend = y1), colour = ifelse(lines$y1 > lines$y0, col2, col1)) +
+    scale_x_continuous(breaks=c(0, 1), labels=labels) +
+    labs(x = xlab, y = ylab) +
+    theme(
+      panel.background = element_rect( fill = "#f5f5f5"),
+      panel.grid.major = element_line(colour="#ffffff"),
+      panel.grid.minor = element_line(colour="#ffffff")
+    )
+  
+  return(plot)
+}
+
+individual_changes_pvals_plot <- function(NAS_data) {
+  pvals <- c()
+  for (i in seq(0, 10, 0.1)) {
+    changes_PSI_binom_test = plot_individual_change(NAS_data, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "", "PSI", i, 100, big_changes_binom_test = TRUE)
+    pvals <- c(pvals, changes_PSI_binom_test$p.value)
+  }
+  
+  max(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC)
+  x <- seq(0, 10, 0.1)
+  y <- log(pvals)
+  
+  plot <- ggplot() +
+    geom_point(aes(x= x, y =y), col = ifelse(y < log(0.05), "RoyalBlue", "red")) + 
+    geom_hline(yintercept = log(0.05), lty=2) +
+    scale_x_continuous(name = "PSIdiff threshold", breaks=seq(0, 10, by = 1), labels = seq(0, 10, by = 1)) +
+    labs(y="Bionmial test log P value") + 
+    theme(
+      # axis.text.x = element_blank(),
+      axis.ticks.x=element_blank(),
+      panel.background = element_rect( fill = "#f5f5f5"),
+      panel.grid.major = element_line(colour="#ffffff"),
+      panel.grid.minor = element_line(colour="#ffffff")
+    )
+  return(plot)
+}
+
+
+numextract <- function(string){ 
+  library(stringr)
+  str_extract(string, "\\-*\\d+\\.*\\d*")
+} 
+
 
 overlap_significance = function(overlap, pool_size, n1, n2, sim_number) {
   sim_overlaps = vector()
@@ -116,6 +443,57 @@ perform_tests = function(NAS_data) {
   print(wilcox.test(NAS_data$norm_count_w_PTC, NAS_data$norm_count_het_PTC, alternative = "g", paired = TRUE)$p.value)
   print("H: PTC+ homozygotes have higher normalized read count than PTC- homozygotes")
   print(wilcox.test(NAS_data$norm_count_w_PTC, NAS_data$norm_count_no_PTC, alternative = "g", paired = TRUE)$p.value)
+}
+
+plot_diff_hist_het <- function(title=NULL, title_left=NULL) {
+  library(ggplot2)
+  plot <- ggplot() + 
+    geom_histogram(aes(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC),binwidth = 1,fill = chosen_colour,color = "black") + 
+    scale_x_continuous(limits = c(-30, 100), breaks = seq(-30, 100, 10)) +
+    labs(x = "PSI PTC-/- - PTC-/+", y="Frequency") + 
+    plot_theme(font_size = 12)
+  
+  plot <- title_styling(plot, title, title_left)
+  return(plot)
+}
+
+
+plot_diff_hist_het_rpm <- function(feature1, feature2, title=NULL, title_left=NULL, binwidth=NULL, xlab=NULL, ylab=NULL) {
+  if(is.null(binwidth)) {
+    bindwidth <- 1
+  }
+  if(is.null(xlab)) {
+    xlab <- ""
+  }
+  if(is.null(ylab)) {
+    ylab <- ""
+  }
+  
+  library(ggplot2)
+  plot <- ggplot() + 
+    geom_histogram(aes(NAS_data[[feature1]] - NAS_data[[feature2]]), binwidth = binwidth,fill = chosen_colour,color = "black") + 
+    # scale_x_continuous(limits = c(-30, 100), breaks = seq(-30, 100, 10)) +
+    coord_cartesian(ylim=c(0,20)) +
+    labs(x = xlab, y= ylab) + 
+    plot_theme(font_size = 12) +
+    geom_vline(xintercept = 0.025, col="red") +
+    geom_vline(xintercept = -0.025, col="red")
+  
+  plot <- title_styling(plot, title, title_left)
+  return(plot)
+}
+
+plot_diff_hist_het_zoom <- function(title=NULL, title_left=NULL) {
+  library(ggplot2)
+  plot <- ggplot() + 
+    geom_histogram(aes(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC),binwidth = 1,fill = chosen_colour,color = "black") + 
+    coord_cartesian(ylim=c(0, 50)) +
+    scale_x_continuous(limits = c(-30, 100), breaks = seq(-30, 100, 10)) +
+    labs(x = "PSI PTC-/- - PTC-/+", y="Frequency") + 
+    plot_theme(font_size = 12)
+  
+  plot <- title_styling(plot, title, title_left)
+  return(plot)
 }
 
 plot_diff_hists_het = function(NAS_data, title) {
@@ -305,67 +683,6 @@ plot_individual_change_lim = function(NAS_data, w_PTC_name, het_PTC_name, no_PTC
   }
 }
 
-plot_individual_change_lim(NAS_data, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "", "", 5, 100, reverse = T, big_changes_binom_test = F)
-
-
-prepare_dataset = function(datafile) {
-  NAS_data = read.csv(datafile, stringsAsFactors = FALSE, sep = "\t")
-  max_sample_count = max(NAS_data$sample_count)
-  NAS_data = NAS_data[NAS_data$ptc_count > 0 & NAS_data$sample_count > (0.5 * max_sample_count), ]
-  NAS_data$PSI_w_PTC = NAS_data$PSI_w_PTC * 100
-  NAS_data$PSI_het_PTC = NAS_data$PSI_het_PTC * 100
-  NAS_data$PSI_no_PTC = NAS_data$PSI_no_PTC * 100
-  NAS_data$norm_count_w_PTC = NAS_data$norm_count_w_PTC * 1000000
-  NAS_data$norm_count_het_PTC = NAS_data$norm_count_het_PTC * 1000000
-  NAS_data$norm_count_no_PTC = NAS_data$norm_count_no_PTC * 1000000
-  if ("norm_count_w_PTC_incl" %in% colnames(NAS_data)) {
-    NAS_data$norm_count_w_PTC_incl = NAS_data$norm_count_w_PTC_incl * 1000000
-    NAS_data$norm_count_het_PTC_incl = NAS_data$norm_count_het_PTC_incl * 1000000
-    NAS_data$norm_count_no_PTC_incl = NAS_data$norm_count_no_PTC_incl * 1000000
-  }
-  NAS_data = NAS_data[order(NAS_data$id),]
-  return(NAS_data)
-}
-
-read_in_simulations = function(simulant_prefix, simulant_number, ids, column_names) {
-  sim_mat = matrix(NA, 1, 13)
-  colnames(sim_mat) = column_names
-  out_list = rep(list(sim_mat), length(ids))
-  for (sim in 1:simulant_number) {
-    print(sim)
-    current_data = read.csv(paste(simulant_prefix, sim, ".txt", sep = ""), header = TRUE, stringsAsFactors = FALSE, sep = "\t")
-    for (exon in 1:dim(current_data)[1]) {
-      current_id = current_data[exon, "id"]
-      if (current_id %in% ids) {
-        out_list[[match(current_id, ids)]] = rbind(out_list[[match(current_id, ids)]], current_data[exon, ])
-      }
-    }
-  }
-  
-  prepared_out_list <- prepare_neg_control(out_list)
-  return(prepared_out_list)
-}
-
-prepare_controls <- function(set) {
-  set <- transform(
-    set,
-    PSI_no_PTC = PSI_no_PTC*100,
-    PSI_w_PTC = PSI_w_PTC*100,
-    PSI_het_PTC = PSI_het_PTC*100,
-    norm_count_w_PTC = norm_count_w_PTC * 1000000,
-    norm_count_het_PTC = norm_count_het_PTC * 1000000,
-    norm_count_no_PTC = norm_count_no_PTC * 1000000,
-    norm_count_w_PTC_incl = norm_count_w_PTC_incl * 1000000,
-    norm_count_het_PTC_incl = norm_count_het_PTC_incl * 1000000,
-    norm_count_no_PTC_incl = norm_count_no_PTC_incl * 1000000
-  )
-}
-
-prepare_neg_control <- function(out_list) {
-  neg_control <- lapply(out_list, prepare_controls)
-  return(neg_control)
-}
-
 plot_theme <- function(font_size=12) {
   theme(
     plot.title = element_text(face = "bold", size = 16, hjust = 0.5),
@@ -392,7 +709,67 @@ plot_theme <- function(font_size=12) {
   )
 }
 
-#
+# plot_individual_change_lim(NAS_data, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "", "", 5, 100, reverse = T, big_changes_binom_test = F)
+
+prepare_controls <- function(set) {
+  set <- transform(
+    set,
+    PSI_no_PTC = PSI_no_PTC*100,
+    PSI_w_PTC = PSI_w_PTC*100,
+    PSI_het_PTC = PSI_het_PTC*100,
+    norm_count_w_PTC = norm_count_w_PTC * 1000000,
+    norm_count_het_PTC = norm_count_het_PTC * 1000000,
+    norm_count_no_PTC = norm_count_no_PTC * 1000000,
+    norm_count_w_PTC_incl = norm_count_w_PTC_incl * 1000000,
+    norm_count_het_PTC_incl = norm_count_het_PTC_incl * 1000000,
+    norm_count_no_PTC_incl = norm_count_no_PTC_incl * 1000000
+  )
+}
+
+prepare_dataset = function(datafile) {
+  NAS_data = read.csv(datafile, stringsAsFactors = FALSE, sep = "\t")
+  max_sample_count = max(NAS_data$sample_count)
+  NAS_data = NAS_data[NAS_data$ptc_count > 0 & NAS_data$sample_count > (0.5 * max_sample_count), ]
+  NAS_data$PSI_w_PTC = NAS_data$PSI_w_PTC * 100
+  NAS_data$PSI_het_PTC = NAS_data$PSI_het_PTC * 100
+  NAS_data$PSI_no_PTC = NAS_data$PSI_no_PTC * 100
+  NAS_data$norm_count_w_PTC = NAS_data$norm_count_w_PTC * 1000000
+  NAS_data$norm_count_het_PTC = NAS_data$norm_count_het_PTC * 1000000
+  NAS_data$norm_count_no_PTC = NAS_data$norm_count_no_PTC * 1000000
+  if ("norm_count_w_PTC_incl" %in% colnames(NAS_data)) {
+    NAS_data$norm_count_w_PTC_incl = NAS_data$norm_count_w_PTC_incl * 1000000
+    NAS_data$norm_count_het_PTC_incl = NAS_data$norm_count_het_PTC_incl * 1000000
+    NAS_data$norm_count_no_PTC_incl = NAS_data$norm_count_no_PTC_incl * 1000000
+  }
+  NAS_data = NAS_data[order(NAS_data$id),]
+  return(NAS_data)
+}
+
+prepare_neg_control <- function(out_list) {
+  neg_control <- lapply(out_list, prepare_controls)
+  return(neg_control)
+}
+
+read_in_simulations = function(simulant_prefix, simulant_number, ids, column_names) {
+  sim_mat = matrix(NA, 1, 13)
+  colnames(sim_mat) = column_names
+  out_list = rep(list(sim_mat), length(ids))
+  for (sim in 1:simulant_number) {
+    print(sim)
+    current_data = read.csv(paste(simulant_prefix, sim, ".txt", sep = ""), header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+    for (exon in 1:dim(current_data)[1]) {
+      current_id = current_data[exon, "id"]
+      if (current_id %in% ids) {
+        out_list[[match(current_id, ids)]] = rbind(out_list[[match(current_id, ids)]], current_data[exon, ])
+      }
+    }
+  }
+  
+  prepared_out_list <- prepare_neg_control(out_list)
+  return(prepared_out_list)
+}
+
+
 title_styling <- function(plot, title, title_left) {
   if(!is.null(title)) {
     plot <- plot +
@@ -410,466 +787,13 @@ title_styling <- function(plot, title, title_left) {
   return(plot)
 }
 
-plot_diff_hist_het <- function(title=NULL, title_left=NULL) {
-  library(ggplot2)
-  plot <- ggplot() + 
-    geom_histogram(aes(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC),binwidth = 1,fill = chosen_colour,color = "black") + 
-    scale_x_continuous(limits = c(-30, 100), breaks = seq(-30, 100, 10)) +
-    labs(x = "PSI PTC-/- - PTC-/+", y="Frequency") + 
-    plot_theme(font_size = 12)
-  
-  plot <- title_styling(plot, title, title_left)
-  return(plot)
-}
-
-plot_diff_hist_het_zoom <- function(title=NULL, title_left=NULL) {
-  library(ggplot2)
-  plot <- ggplot() + 
-    geom_histogram(aes(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC),binwidth = 1,fill = chosen_colour,color = "black") + 
-    coord_cartesian(ylim=c(0, 50)) +
-    scale_x_continuous(limits = c(-30, 100), breaks = seq(-30, 100, 10)) +
-    labs(x = "PSI PTC-/- - PTC-/+", y="Frequency") + 
-    plot_theme(font_size = 12)
-  
-  plot <- title_styling(plot, title, title_left)
-  return(plot)
-}
-
-get_n_t_value <- function(neg_control, feature1, feature2, threshold) {
-  n_t = rep(NA, length(neg_control))
-  for (index in 1:length(neg_control)) {
-    # get the true difference
-    true_diff = NAS_data[index, feature1] - NAS_data[index, feature2]
-    # if the true difference is bigger than the threshold
-    if (abs(true_diff) >= threshold) {
-      # get the differences for each of the simulations
-      sim_diffs = neg_control[[index]][feature1] - neg_control[[index]][feature2]
-      sim_diffs = sim_diffs[!is.na(sim_diffs)]
-      n = sum((true_diff > sim_diffs) & (true_diff != sim_diffs))
-      t = length(sim_diffs[true_diff != sim_diffs])
-      n_t[index] = n/t      
-    }
-  }
-  print(sum((n_t > 0.5) & (!is.na(n_t))))
-  print(sum(!is.na(n_t)))
-  p = binom.test(sum((n_t > 0.5) & (!is.na(n_t))), sum(!is.na(n_t)), alternative = "g")$p.value
-  print(p)
-  # return(n_t)
-}
-
-get_n_t_value(neg_control, "PSI_no_PTC", "PSI_het_PTC", 0)
-
-get_n_t_plot =  function(feature1, feature2, neg_control, NAS_data, xlab, swap = FALSE, big_only = FALSE, return_p = TRUE, return_plot = FALSE, title=NULL, title_left=NULL) {
-  threshold = 0
-  y_pos = 60
-  if (big_only != FALSE) {
-    threshold = big_only
-    y_pos = 10
-  }
-  if (swap == TRUE) {
-    temp = feature1
-    feature1 = feature2
-    feature2 = temp
-  }
-  
-  n_t <- get_n_t_value(neg_control, feature1, feature2, threshold)
-  
-  library(ggplot2)
-  plot <- ggplot() + 
-    geom_histogram(aes(n_t),binwidth = 0.02,fill = chosen_colour,color = "black") + 
-    geom_vline(xintercept = 0.5, lty=2) +
-    coord_cartesian(xlim = c(0,1)) +
-    labs(x = xlab, y="Frequency") + 
-    plot_theme(font_size = 12)
-  
-  plot <- title_styling(plot, title, title_left)
-  return(plot)
-}
-
-get_n_t_value_line <- function(NAS_data, feature1, feature2) {
-  n_t = rep(NA, length(NAS_data))
-  diffs <- data.frame(true = double())
-  for (index in 1:length(neg_control)) {
-    # get the true difference
-    true_diff = NAS_data[index, feature1] - NAS_data[index, feature2]
-    diffs <- rbind(diffs, data.frame(true_diff))
-  }
-  return(diffs)
-}
-
-
-get_diff_plot =  function(feature1, feature2, neg_control, NAS_data, xlab, ylab, swap = FALSE, big_only = FALSE, return_p = TRUE, return_plot = FALSE, title=NULL, title_left=NULL, hline = NULL, ylims = NULL, breaks = NULL, labels = NULL, scale_y = NULL) {
-  threshold = 0
-  y_pos = 60
-  if (big_only != FALSE) {
-    threshold = big_only
-    y_pos = 10
-  }
-  if (swap == TRUE) {
-    temp = feature1
-    feature1 = feature2
-    feature2 = temp
-  }
-  
-  n_t <- get_n_t_value_line(NAS_data, feature1, feature2)
-  colnames(n_t) <- c("true_diff")
-  n_t$ID <- seq.int(nrow(n_t))
-  
-  plot <- ggplot()
-  
-  if(!is.null(hline)) {
-    print(hline)
-    plot <- plot +
-      geom_hline(yintercept = hline, lty=2, col="#aaaaaa") +
-      geom_hline(yintercept = -hline, lty=2, col="#aaaaaa") +
-      geom_rect(aes(xmin = 0, xmax=max(n_t$ID), ymin=-hline, ymax=hline), col="grey", alpha=0.1, linetype=0)
-  }
-  
-  plot <- plot + 
-    geom_line(aes(x = n_t$ID, y = n_t$true_diff), col="RoyalBlue") + 
-    labs(x = xlab, y=ylab) + 
-    theme(
-      # axis.text.x = element_blank(),
-      axis.ticks.x=element_blank(),
-      panel.background = element_rect( fill = "#f5f5f5"),
-      panel.grid.major = element_line(colour="#ffffff"),
-      panel.grid.minor = element_line(colour="#ffffff")
-    )
-  
-  plot <- plot + scale_x_continuous(expand = c(0,0), labels = c())
-  
-  if(!is.null(ylims) | !is.null(labels) | !is.null(breaks)) {
-    plot <- plot + scale_y_continuous(limits = ylims, labels = labels, breaks = breaks)
-  }
-  if(!is.null(scale_y)) {
-    plot <- plot +
-      coord_cartesian(ylim = scale_y)
-  }
-  plot <- title_styling(plot, title, title_left)
-  return(plot)
-}
-psi_diff_plot <- get_diff_plot("PSI_no_PTC", "PSI_het_PTC", neg_control, NAS_data, xlab="PTC", ylab="PSIdiff", hline = 5, ylims = c(-20, 100), breaks = seq(-20, 100, 10), labels = seq(-20, 100, 10))
-psi_diff_plot
-
-
-
-plot_diff_hist_het_zoom <- function(title=NULL, title_left=NULL) {
-  library(ggplot2)
-  plot <- ggplot() + 
-    geom_histogram(aes(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC),binwidth = 1,fill = chosen_colour,color = "black") + 
-    coord_cartesian(ylim=c(0, 50)) +
-    scale_x_continuous(limits = c(-30, 100), breaks = seq(-30, 100, 10)) +
-    labs(x = "PSI PTC-/- - PTC-/+", y="Frequency") + 
-    plot_theme(font_size = 12)
-  
-  plot <- title_styling(plot, title, title_left)
-  return(plot)
-}
-
-plot_diff_hist_het_rpm <- function(feature1, feature2, title=NULL, title_left=NULL, binwidth=NULL, xlab=NULL, ylab=NULL) {
-  if(is.null(binwidth)) {
-    bindwidth <- 1
-  }
-  if(is.null(xlab)) {
-    xlab <- ""
-  }
-  if(is.null(ylab)) {
-    ylab <- ""
-  }
-  
-  library(ggplot2)
-  plot <- ggplot() + 
-    geom_histogram(aes(NAS_data[[feature1]] - NAS_data[[feature2]]), binwidth = binwidth,fill = chosen_colour,color = "black") + 
-    # scale_x_continuous(limits = c(-30, 100), breaks = seq(-30, 100, 10)) +
-    coord_cartesian(ylim=c(0,20)) +
-    labs(x = xlab, y= ylab) + 
-    plot_theme(font_size = 12) +
-    geom_vline(xintercept = 0.025, col="red") +
-    geom_vline(xintercept = -0.025, col="red")
-  
-  plot <- title_styling(plot, title, title_left)
-  return(plot)
-}
-
-numextract <- function(string){ 
-  library(stringr)
-  str_extract(string, "\\-*\\d+\\.*\\d*")
-} 
-
-
-get_sims_diffs <- function(NAS_data, feature1, feature2) {
-  max_diff_length = 0
-  for (index in 1:length(neg_control)) {
-    sim_diffs = neg_control[[index]][feature1] - neg_control[[index]][feature2]
-    sim_diffs = sim_diffs[!is.na(sim_diffs)]
-    if(length(sim_diffs) > max_diff_length) {
-      max_diff_length = length(sim_diffs)
-    }
-  }
-  
-  sims <- data.frame(matrix(NA, nrow = max_diff_length, ncol = length(neg_control)))
-  for (index in 1:length(neg_control)) {
-    sim_diffs = neg_control[[index]][feature1] - neg_control[[index]][feature2]
-    sim_diffs = sim_diffs[!is.na(sim_diffs)]
-    length(sim_diffs) <- max_diff_length
-    col_id = paste("X", index, sep="")
-    sims[col_id] <- sim_diffs
-  }
-  return(sims)
-}
-
-get_true_diffs <- function(NAS_data, feature1, feature2) {
-  diffs <- data.frame(true = double())
-  for (index in 1:length(neg_control)) {
-    # get the true difference
-    true_diff = NAS_data[index, feature1] - NAS_data[index, feature2]
-    diffs <- rbind(diffs, data.frame(true_diff))
-  }
-  return(diffs)
-}
-
-
-get_neg_control_plot <- function(NAS_data, neg_control, feature1, feature2) {
-  library(ggplot2)
-  library(reshape2)
-  sims_diffs <- get_sims_diffs(NAS_data, "PSI_no_PTC", "PSI_het_PTC")
-  true_diffs <- get_true_diffs(NAS_data, "PSI_no_PTC", "PSI_het_PTC")
-  sims_diffs <- melt(sims_diffs)
-  sims_diffs$id <- numextract(sims_diffs$variable)
-  true_diffs$id <- seq.int(nrow(true_diffs))
-  
-  ggplot() + 
-    geom_point(aes(x = sims_diffs$id, y = sims_diffs$value), size=0.4, alpha = 2/10) +
-    geom_line(aes(x = true_diffs$id, y = true_diffs$true_diff), color="RoyalBlue", size = 0.5)
-  
-  # plot <- ggplot() +
-  #   geom_point(aes(x = sims_diffs$id, y = sims_diffs$value), size=0.4, alpha = 2/10) +
-  #   geom_line(aes(x = true_diffs$id, y = true_diffs$true_diff), color="RoyalBlue", size = 0.5) +
-  #   labs(x = "PTC", y = "PSIdiff") +
-  #   theme(
-  #     axis.text.x = element_blank(),
-  #     axis.ticks.x = element_blank(),
-  #     panel.background = element_rect( fill = "#f5f5f5"),
-  #     panel.grid.major = element_line(colour="#ffffff"),
-  #     panel.grid.minor = element_line(colour="#ffffff")
-  #   )
-  # return(plot)
-}
-get_neg_control_plot(NAS_data, neg_control, "PSI_no_PTC", "PSI_het_PTC")
-
-
-
-
-
-individual_changes_plot <- function(NAS_data, feature1, feature2, threshold, xlab, ylab, col1  = NULL, col2 = NULL, xlab1=NULL, xlab2=NULL) {
-  dots <- data.frame(xpos = double(), ypos = double(), diff = double())
-  lines <- data.frame(x0 = double(), x1 = double(), y0 = double(), y1 = double())
-  for (exon in 1:dim(NAS_data)[1]) {
-    exon_name = NAS_data[exon, 1]
-    no_PTC = NAS_data[exon, feature1]
-    het_PTC = NAS_data[exon, feature2]
-    x_pos = 0
-    x_pos2 = 1
-    if (is.finite(no_PTC) && is.finite(het_PTC)) {
-      if (abs(no_PTC - het_PTC) > threshold) {
-        diff = no_PTC - het_PTC
-        dots[nrow(dots) + 1,] = list(x_pos,no_PTC,diff)
-        dots[nrow(dots) + 1,] = list(x_pos2,het_PTC,diff)
-        lines[nrow(lines) + 1, ] = list(x_pos, x_pos2, no_PTC, het_PTC)
-      }
-    }
-  }
-  
-  if(is.null(col1)) {
-    col1 = "RoyalBlue"
-  }
-  if(is.null(col2)) {
-    col2 = "red"
-  }
-  
-  if(is.null(xlab1) || is.null(xlab2)) {
-    labels <- c("PTC -/-", "PTC-/+")
-  } else {
-    labels <- c(xlab1, xlab2)
-  }
-  
-  plot <- ggplot() + 
-    geom_point(aes(x = dots$xpos, y = dots$ypos), size=0.8, colour = ifelse(dots$diff > 0, col1, col2))
-  plot <- plot +
-    geom_segment(data = lines, aes(x = x0, y = y0, xend = x1, yend = y1), colour = ifelse(lines$y1 > lines$y0, col2, col1)) +
-    scale_x_continuous(breaks=c(0, 1), labels=labels) +
-    labs(x = xlab, y = ylab) +
-    theme(
-      panel.background = element_rect( fill = "#f5f5f5"),
-      panel.grid.major = element_line(colour="#ffffff"),
-      panel.grid.minor = element_line(colour="#ffffff")
-    )
-  
-  return(plot)
-}
-
-stop_count_plot <- function(file_path, main=NULL) {
-  library(ggplot2)
-  file <- read.csv(file_path, sep=",", head=T)
-  simulants <- file[file$id != 'real',]
-  real <- file[file$id == 'real',]
-  
-  plot <- ggplot(data=simulants, aes(simulants$stop_count)) +
-    geom_histogram(breaks=seq(min(file$stop_count), max(file$stop_count), by = 1), col="black", fill="RoyalBlue", alpha = .8) +
-    labs(x="Stop codon count", y="Frequency") +
-    geom_vline(xintercept=file$stop_count[file$id == "real"], lty=2, col="red") + 
-    ggtitle(main) +
-    theme(plot.title = element_text(hjust = 0.5))
-
-  greater_than <- (nrow(simulants[simulants$stop_count <= real$stop_count,]) + 1) / (nrow(simulants) + 1)
-  print(greater_than)
-  
-  # print(plot)
-  return(plot)
-}
-
-
-
-get_sims_diffs <- function(NAS_data, feature1, feature2, true_diffs) {
-  max_diff_length = 0
-  for (index in 1:length(neg_control)) {
-    sim_diffs = neg_control[[index]][feature1] - neg_control[[index]][feature2]
-    sim_diffs = sim_diffs[!is.na(sim_diffs)]
-    if(length(sim_diffs) > max_diff_length) {
-      max_diff_length = length(sim_diffs)
-    }
-  }
-  
-  sims <- data.frame(matrix(NA, nrow = max_diff_length, ncol = length(neg_control)))
-  for (index in 1:length(neg_control)) {
-    sim_diffs = neg_control[[index]][feature1] - neg_control[[index]][feature2]
-    sim_diffs = sim_diffs[!is.na(sim_diffs)]
-    true_diff = true_diffs[index, "true_diff"]
-    sim_diffs = true_diff - sim_diffs
-    length(sim_diffs) <- max_diff_length
-    col_id = paste("X", index, sep="")
-    sims[col_id] <- sim_diffs
-  }
-  return(sims)
-}
-
-get_sims_diffs(NAS_data, "PSI_no_PTC", "PSI_het_PTC", true_diffs)
-true_diffs <- get_true_diffs(NAS_data, "PSI_no_PTC", "PSI_het_PTC")
-
-
-get_true_diffs <- function(NAS_data, feature1, feature2) {
-  diffs <- data.frame(true = double())
-  for (index in 1:length(neg_control)) {
-    # get the true difference
-    true_diff = NAS_data[index, feature1] - NAS_data[index, feature2]
-    diffs <- rbind(diffs, data.frame(true_diff))
-  }
-  return(diffs)
-}
-
-
-get_neg_control_plot <- function(NAS_data, neg_control, feature1, feature2, limit_y = NULL) {
-  library(ggplot2)
-  library(reshape2)
-  true_diffs <- get_true_diffs(NAS_data, "PSI_no_PTC", "PSI_het_PTC")
-  sims_diffs <- get_sims_diffs(NAS_data, "PSI_no_PTC", "PSI_het_PTC", true_diffs)
-  
-  sims_diffs <- melt(sims_diffs)
-  
-  sims_diffs = sims_diffs[!is.na(sims_diffs$value),]
-  sims_diffs$id <- numextract(sims_diffs$variable)
-  
-  # print(head(sims_diffs))
-  
-  uniques <- length(unique(sims_diffs$id))
-  # print(length(uniques))
-  l <- list()
-  for(i in 1:uniques) {
-    l[[i]] = c()
-  }
-  
-  # sims <- data.frame(matrix(NA, nrow = max_diff_length, ncol = length(neg_control)))
-  for(i in 1:nrow(sims_diffs)) {
-    row <- sims_diffs[i,]
-    id = row$id
-    l[[id]] <- c(l[[id]], row$value)
-    # print(id)
-    
-    # do stuff with row
-  }
-  positives <- list()
-  for (i in 1:length(l)) {
-    entry = l[[i]]
-    pos <- sum(entry >= 0)
-    positives[[i]] = pos
-  }
-  
-  sims_diffs <- mutate(sims_diffs, positives = NA, order = NA)
-  sims_diffs$id <- as.numeric(sims_diffs$id)
-
-  # print(head(sims_diffs))
-  
-  for (i in 1:nrow(sims_diffs)) {
-    row <- sims_diffs[i,]
-    # print(as.numeric(row$id))
-    # print(positives[as.numeric(row$id)])
-    # print(positives[as.numeric(row$id)])
-    sims_diffs[i, "positives"] = positives[row$id]
-  }
-  
-  sims_diffs <- arrange(sims_diffs, desc(positives))
-  rank = 0
-  current_id = 0
-  for (i in 1:nrow(sims_diffs)) {
-    row <- sims_diffs[i,]
-    if (row$id != current_id) {
-      current_id = row$id
-      rank = rank + 1
-    }
-    sims_diffs[i, "order"] = rank
-  }
-  
-  print(head(sims_diffs))
-  
-  # print(head(sim)
-  
-  # true_diffs$id <- seq.int(nrow(true_diffs))
-  
-  plot <- ggplot() +
-    geom_point(aes(x = sims_diffs$order, y = sims_diffs$value), size=0.2, colour=ifelse(sims_diffs$value > 0, "RoyalBlue", "red")) +
-    geom_hline(yintercept = 0, lty=2) +
-    labs(x="PTC", y = "True PSIdiff - simulant PSIdiff") +
-    theme(
-      axis.text.x = element_blank(),
-      axis.ticks.x = element_blank(),
-      panel.background = element_rect(fill = "#f5f5f5"),
-      panel.grid.major = element_line(colour="#f5f5f5"),
-      panel.grid.minor = element_line(colour="#000000")
-    )
-  
-  if(!is.null(limit_y)) {
-    plot <- plot + coord_cartesian(ylim=c(-3,3))
-  }
-  
-  return(plot)
-}
-
-# library(ggpubr)
-plot1 <- get_neg_control_plot(NAS_data, neg_control, "PSI_no_PTC", "PSI_het_PTC")
-plot1
-
-plot2 <- get_neg_control_plot(NAS_data, neg_control, "PSI_no_PTC", "PSI_het_PTC", limit = c(-2, 2))
-plot <- ggarrange(plot1, plot2, widths = c(2, 2), ncol = 2, nrow = 1, labels = c("A", "B"))
-ggsave('results/graphs/simulants_psi_diff.pdf', plot = plot, width=12, height=7)
-ggsave('results/graphs/simulants_psi_diff.jpg', plot = plot, width=12, height=7)
-
 
 
 
 ####### tests
 
-
 chosen_colour = "RoyalBlue"
+
 
 #PSI
 NAS_data = prepare_dataset("results/clean_run_2/clean_run__analysis_final_output.txt")
@@ -885,6 +809,7 @@ nrow(NAS_data[NAS_data$PSI_w_PTC != 'NaN',])
 # summary of data
 summary(NAS_data)
 
+# medians of data
 median(NAS_data$PSI_het_PTC)
 median(NAS_data$PSI_no_PTC)
 
@@ -907,8 +832,6 @@ hist_psi_no_ptc_minus_psi_het_ptc <- plot_diff_hist_het(title="A", title_left=T)
 ggsave("results/graphs/hist_psi_diff_no_ptc_het_ptc.pdf", plot=hist_psi_no_ptc_minus_psi_het_ptc, width=8, height=5)
 
 #histogram of psi ptc-/- - ptc-/+ with zoom
-library(grid)
-library(gridExtra)
 psi_diff_plot <- get_diff_plot("PSI_no_PTC", "PSI_het_PTC", neg_control, NAS_data, xlab="PTC", ylab="PSIdiff", hline = 5, ylims = c(-20, 100), breaks = seq(-20, 100, 10), labels = seq(-20, 100, 10))
 ggsave("results/graphs/psi_diff.pdf", plot = psi_diff_plot, width=8, height = 5 )
 # hist_psi_no_ptc_minus_psi_het_ptc_title <- plot_diff_hist_het(title="A", title_left=T)
@@ -938,13 +861,14 @@ sim_plot <- grid.arrange(simulants_less_real_ptc_no_minus_het, simulants_less_re
 ggsave('results/graphs/simulantions_less_than_real_diff.pdf', plot = sim_plot, width=14, height=5)
 
 # big changes in psi
-big_changes_psi = plot_individual_change(NAS_data, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "", "", 5, 100, reverse = T, big_changes_binom_test = F)
-big_changes_psi
 
 individuals_large_effects <- individual_changes_plot(NAS_data, "PSI_no_PTC", "PSI_het_PTC", 5, "Genotype", "PSI")
 individuals_large_effects
 
 big_changes_psi = plot_individual_change(NAS_data, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "", "", 5, 100, reverse = F, big_changes_binom_test = TRUE)
+big_changes_psi
+big_changes_psi = plot_individual_change(NAS_data, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "", "", 5, 100, reverse = T, big_changes_binom_test = F)
+big_changes_RPMskip = plot_individual_change(NAS_data, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "Exons with >0.025 change between any two categories", "RPMskip", 0.025, 5, reverse = TRUE)
 
 
 # combine plots
@@ -971,9 +895,6 @@ plot <- ggarrange(
 )
 ggsave('results/graphs/rpm_diff_large_effect_plot.pdf', plot = plot, width=12, height=10)
 
-# plot <- ggarrange(rpmskip_plot, rpmskip_big_changes, widths = c(3, 2), ncol = 2, nrow = 1, labels = c("A", "B"))
-# ggsave('results/graphs/rpmskip_diff_large_effect_plot.pdf', plot = plot, width=12, height=7)
-
 # get the number of PTCs for which the real RPMskip is greater than 50% of simulants
 get_n_t("norm_count_no_PTC", "norm_count_het_PTC", neg_control, NAS_data, "title", swap=T)
 
@@ -993,169 +914,18 @@ ggsave("results/graphs/shiftptc_individual_changes.pdf", plot = plot, width=10, 
 
 
 
-# motif stop counts
-eses <- stop_count_plot("results/motif_stops_simulation/CaceresHurstESEs_INT3/stop_counts_10000.txt", "INT3 ESEs")
-ises <- stop_count_plot("results/motif_stops_simulation/ises_wang_2012/stop_counts_10000.txt", "Wang 2012 ISEs")
-library(ggpubr)
-plot <- ggarrange(eses, ises, ncol=2, labels=c("A", "B"))
-
-plot
-ggsave('results/graphs/motif_stop_counts.pdf', width=10, height=5)
-
-
-
-# rpmskip/rpkinclude difference histograms
-# library(grid)
-# library(gridExtra)
-# rpminclude_diff <- get_diff_plot("norm_count_no_PTC_incl", "norm_count_het_PTC_incl", neg_control, NAS_data, xlab="PTC", ylab="RPMincl (PTC-/- - PTC-/+)", title="A", title_left =T)
-# rpmskip_diff <- get_diff_plot("norm_count_no_PTC", "norm_count_het_PTC", neg_control, NAS_data, xlab="PTC", ylab="RPMskip (PTC-/- - PTC-/+)", title="B", title_left =T)
-# rpminclude_diff <- plot_diff_hist_het_rpm("norm_count_no_PTC_incl", "norm_count_het_PTC_incl", binwidth=0.5, title="A", title_left = T, xlab="RPMinclude PTC-/- - PTC-/+", ylab="Frequency")
-# rpmskip_diff <- plot_diff_hist_het_rpm("norm_count_no_PTC", "norm_count_het_PTC", binwidth=0.025, title="B", title_left = T, xlab="RPMskip PTC-/- - PTC-/+", ylab="Frequency")
-# rpm_plot <- grid.arrange(rpminclude_diff, rpmskip_diff, ncol=2)
-# ggsave('results/graphs/hist_rpm_diff_no_ptc_het_ptc.pdf', plot = rpm_plot, width=12, height=5)
-# ggsave('results/graphs/rpm_diff_no_ptc_het_ptc.pdf', plot = rpm_plot, width=12, height=5)
-
-
-# big changes rpmskip
-# big_changes_RPMskip = plot_individual_change(NAS_data, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "Exons with >0.025 change between any two categories", "RPMskip", 0.025, 5, reverse = TRUE, big_changes_binom_test = TRUE)
-# big_changes_RPMskip
-
-
-# shift psi and rpmskip
-# big_changes_RPMskip_shift
-
-
-
-
-# shifted
-big_changes_PSI_shift = plot_individual_change(NAS_data_shift, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "Exons with >5% change between any two categories", "PSI", 5, 100, big_changes_binom_test = TRUE)
-big_changes_RPMskip_shift = plot_individual_change(NAS_data_shift, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "Exons with >0.025 change between any two categories", "RPMskip", 0.0375, 5, reverse = TRUE, big_changes_binom_test = TRUE)
-big_changes_RPMskip_shift
-
+neg_control_plot <- get_neg_control_plot(NAS_data, neg_control, "PSI_no_PTC", "PSI_het_PTC")
+neg_control_plot_zoom <- get_neg_control_plot(NAS_data, neg_control, "PSI_no_PTC", "PSI_het_PTC", limit = c(-2, 2))
+plot <- ggarrange(neg_control_plot, neg_control_plot_zoom, widths = c(2, 2), ncol = 2, nrow = 1, labels = c("A", "B"))
+ggsave('results/graphs/simulants_psi_diff.pdf', plot = plot, width=12, height=7)
+ggsave('results/graphs/simulants_psi_diff.jpg', plot = plot, width=12, height=7)
 
 
 # plot showing the p values for each percentage cutoff
-pvals <- c()
-for (i in seq(0, 10, 0.1)) {
-  changes_PSI_binom_test = plot_individual_change(NAS_data, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "", "PSI", i, 100, big_changes_binom_test = TRUE)
-  pvals <- c(pvals, changes_PSI_binom_test$p.value)
-}
-
-max(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC)
-x <- seq(0, 10, 0.1)
-y <- log(pvals)
-
-plot <- ggplot() +
-  geom_point(aes(x= x, y =y), col = ifelse(y < log(0.05), "RoyalBlue", "red")) + 
-  geom_hline(yintercept = log(0.05), lty=2) +
-  scale_x_continuous(name = "PSIdiff threshold", breaks=seq(0, 10, by = 1), labels = seq(0, 10, by = 1)) +
-  labs(y="Bionmial test log P value") + 
-  theme(
-    # axis.text.x = element_blank(),
-    axis.ticks.x=element_blank(),
-    panel.background = element_rect( fill = "#f5f5f5"),
-    panel.grid.major = element_line(colour="#ffffff"),
-    panel.grid.minor = element_line(colour="#ffffff")
-  )
-plot
+plot = individual_changes_pvals_plot(NAS_data)
 ggsave("results/graphs/psi_difference_binomial_test_p_values.eps", plot = plot, width=10, height=7)  
 
 
-par(mfrow = c(2, 2))
-# compare psi between each ptc and its pseudo-ptc 
-p_PSI = get_n_t("PSI_no_PTC", "PSI_het_PTC", neg_control, NAS_data, "PSI-/- - PSI-/+", swap = FALSE)
-p_PSI
-
-
-
-p_RPMskip = get_n_t("norm_count_no_PTC", "norm_count_het_PTC", neg_control, NAS_data, "RPMskip-/- - RPMskip-/+", swap = TRUE)
-p_PSI_big = get_n_t("PSI_no_PTC", "PSI_het_PTC", neg_control, NAS_data, "PSI-/- - PSI-/+ (5+)", swap = FALSE, big_only = 5)
-p_RPMskip_big = get_n_t("norm_count_no_PTC", "norm_count_het_PTC", neg_control, NAS_data, "RPMskip-/- - RPMskip-/+ (0.05+)", swap = TRUE, big_only = 0.025)
-
-pdf('results/graphs/missense_sim.pdf', width=7, height=4)
-get_n_t("PSI_no_PTC", "PSI_het_PTC", neg_control, NAS_data, "PSI-/- - PSI-/+", swap = FALSE, return_p = FALSE, return_plot=TRUE)
-dev.off()
-
-par(mfrow = c(1, 3))
-hist(NAS_data$PSI_no_PTC, main = "PTC-/-", xlab = "PSI", col = chosen_colour, breaks = 20)
-hist(NAS_data$PSI_het_PTC, main = "PTC-/+", xlab = "PSI", col = chosen_colour, breaks = 20)
-hist(NAS_data$PSI_w_PTC, main = "PTC+/+", xlab = "PSI", col = chosen_colour, breaks = 20)
-
-jpeg("results/clean_run/minusminus_vs_het.jpeg", width = 23.4, height = 15.4, units = 'cm', res = 300)
-par(mfrow = c(5, 6))
-par("mar" = c(3.1, 2.1, 2.1, 1))
-plot_diff_hists_het(NAS_data, "PTC-/PTC- - PTC-/PTC+")
-for (sim in 1:100) {
-  plot_diff_hists_het(neg_control[[sim]], sim)
-}
-dev.off()
-
-jpeg("results/clean_run/het_vs_plusplus.jpeg", width = 24.4, height = 15.4, units = 'cm', res = 300)
-par(mfrow = c(5, 6))
-par("mar" = c(3.1, 2.1, 2.1, 1))
-plot_diff_hists_homo(NAS_data, "PTC-/PTC+ - PTC+/PTC+")
-for (sim in 1:30) {
-  plot_diff_hists_homo(neg_control[[sim]], sim)
-}
-dev.off()
-
-
-par(mfrow = c(1,2))
-
-pdf('results/graphs/psi_het_minus_psi_no.pdf', height=4, width=7)
-# hist(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC, breaks = seq(floor(min(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC)), ceiling(max(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC)), 1), col = chosen_colour, main = "Is PSI higher for PTC-/PTC- than for PTC-/PTC+?", xlab = "PSI(-/-) - PSI(-/+)")
-hist(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC, breaks = seq(floor(min(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC)), ceiling(max(NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC)), 1), col = chosen_colour, main = "", xlab = "PSI(-/-) - PSI(-/+)")
-abline(v=0, lty=2, lwd=2)
-dev.off()
-
-hist(NAS_data$norm_count_no_PTC - NAS_data$norm_count_het_PTC, breaks = seq(floor(min(NAS_data$norm_count_no_PTC - NAS_data$norm_count_het_PTC)), ceiling(max(NAS_data$norm_count_no_PTC - NAS_data$norm_count_het_PTC)), 1), col = chosen_colour, main = "Is PSI higher for PTC-/PTC- than for PTC-/PTC+?", xlab = "PSI(-/-) - PSI(-/+)", reverse=TRUE)
-
-
-hist(NAS_data$PSI_het_PTC - NAS_data$PSI_w_PTC, breaks = 100, col = chosen_colour, main = "Is PSI higher for PTC-/PTC+ than for PTC+/PTC+?", xlab = "PSI(-/+) - PSI(+/+)")
-
-graphics.off()
-big_changes_PSI = plot_individual_change(NAS_data, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "Exons with >5% change between any two categories", "PSI", 5, 100)
-
-
-
-big_changes_PSI_shift = plot_individual_change(NAS_data_shift, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "Exons with >5% change between any two categories", "PSI", 5, 100)
-
-#RPMskip
-par(mfrow = c(1, 1))
-compare_the_two_measures(NAS_data, "true data")
-par(mfrow = c(3, 3))
-for (sim in 1:length(neg_control)) {
-  compare_the_two_measures(neg_control[[sim]], sim)
-}
-
-par(mfrow = c(1, 3))
-hist(NAS_data$norm_count_no_PTC, main = "PTC-/-", xlab = "RPM that support skipping", col = chosen_colour, breaks = 20)
-hist(NAS_data$norm_count_het_PTC, main = "PTC-/+", xlab = "RPM that support skipping", col = chosen_colour, breaks = 20)
-hist(NAS_data$norm_count_w_PTC, main = "PTC+/+", xlab = "RPM that support skipping", col = chosen_colour, breaks = 20)
-
-jpeg("results/clean_run/minusminus_vs_het_RPM.jpeg", width = 25.4, height = 15.4, units = 'cm', res = 300)
-par(mfrow = c(5, 6))
-par("mar" = c(3.1, 2.1, 2.1, 1))
-plot_diff_RPM_hists_het(NAS_data, "-/-hom - het (RPM)")
-for (sim in 1:30) {
-  plot_diff_RPM_hists_het(neg_control[[sim]], sim)
-}
-dev.off()
-
-jpeg("results/clean_run/het_vs_plusplus_RPM.jpeg", width = 25.4, height = 15.4, units = 'cm', res = 300)
-par(mfrow = c(5, 6))
-par("mar" = c(3.1, 2.1, 2.1, 1))
-plot_diff_RPM_hists_homo(NAS_data, "het - +/+hom (RPM)")
-for (sim in 1:30) {
-  plot_diff_hists_homo(neg_control[[sim]], sim)
-}
-dev.off()
-
-graphics.off()
-big_changes_RPMskip = plot_individual_change(NAS_data, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "Exons with >0.025 change between any two categories", "RPMskip", 0.025, 5, reverse = TRUE)
-big_changes_RPMskip = plot_individual_change(NAS_data, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "Exons with >0.025 change between any two categories", "RPMskip", 0.025, 5, reverse = TRUE, big_changes_binom_test = TRUE)
-big_changes_RPMskip
-big_changes_RPMskip_shift = plot_individual_change(NAS_data_shift, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "Exons with >0.025 change between any two categories", "RPMskip", 0.025, 5, reverse = TRUE)
 
 #analysis of the exons that show a big change
 #is the overlap between the ones that show a big change in RPMskip and those that show a big change
@@ -1163,12 +933,13 @@ big_changes_RPMskip_shift = plot_individual_change(NAS_data_shift, "norm_count_w
 overlap = intersect(big_changes_PSI, big_changes_RPMskip)
 overlap
 overlap_significance(length(overlap), dim(NAS_data)[1], length(big_changes_PSI), length(big_changes_RPMskip), 10000)
-
 print(sort(overlap))
 
 expression = read.csv("results/clean_run_2/clean_run_FANTOM_expression_per_transcript.txt", sep = "\t", header = TRUE, stringsAsFactors = FALSE)
 expression_analysis(overlap, NAS_data$exon, expression)
 
+
+# RS
 #are the ones that show a big change expressed at lower levels than those that don't (Geuvadis data)?
 all_exons_expression = NAS_data$norm_count_no_PTC_incl[!(NAS_data$exon %in% overlap)] + NAS_data$norm_count_no_PTC[!(NAS_data$exon %in% overlap)]
 overlap_expression = NAS_data$norm_count_no_PTC_incl[NAS_data$exon %in% overlap] + NAS_data$norm_count_no_PTC[NAS_data$exon %in% overlap]
@@ -1180,40 +951,12 @@ all_exons_NMD = NMD_effect[!(NAS_data$exon %in% overlap)]
 overlap_NMD = NMD_effect[NAS_data$exon %in% overlap]
 wilcox.test(all_exons_NMD, overlap_NMD, alt = "g")
 
-#ESE analysis 
-NAS_ESEs_data = prepare_dataset("results/clean_run/clean_run_CaceresHurstESEs_INT3_final_output.txt")
-perform_tests(NAS_ESEs_data)
-NAS_no_ESEs_data = prepare_dataset("results/clean_run/clean_run_CaceresHurstESEs_INT3_complement_final_output.txt")
-perform_tests(NAS_no_ESEs_data)
-wilcox.test(NAS_ESEs_data$PSI_no_PTC - NAS_ESEs_data$PSI_het_PTC, NAS_no_ESEs_data$PSI_no_PTC - NAS_no_ESEs_data$PSI_het_PTC, alternative = "greater")
-wilcox.test(NAS_ESEs_data$norm_count_no_PTC - NAS_ESEs_data$norm_count_het_PTC, NAS_no_ESEs_data$norm_count_no_PTC - NAS_no_ESEs_data$norm_count_het_PTC, alternative = "less")
-
-par(mfrow = c(2, 2))
-hist(NAS_ESEs_data$PSI_no_PTC - NAS_ESEs_data$PSI_het_PTC, col = chosen_colour, breaks = 20, main = "PSI, in ESEs", xlab = "PSI(-/-) - PSI(-/+)")
-hist(NAS_no_ESEs_data$PSI_no_PTC - NAS_no_ESEs_data$PSI_het_PTC, col = chosen_colour, breaks = 20, main = "PSI, not in ESEs", xlab = "PSI(-/-) - PSI(-/+)")
-hist(NAS_ESEs_data$norm_count_no_PTC - NAS_ESEs_data$norm_count_het_PTC, col = chosen_colour, breaks = 20, main = "RPMskip, in ESEs", xlab = "RPMskip(-/-) - RPMskip(-/+)")
-hist(NAS_no_ESEs_data$norm_count_no_PTC - NAS_no_ESEs_data$norm_count_het_PTC, col = chosen_colour, breaks = 20, main = "RPMskip, not in ESEs", xlab = "RPMskip(-/-) - RPMskip(-/+)")
-
-par(mfrow = c(2, 2))
-plot_individual_change(NAS_ESEs_data, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "in ESEs", "PSI", 5, 100)
-plot_individual_change(NAS_no_ESEs_data, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "not in ESEs", "PSI", 5, 100)
-plot_individual_change(NAS_ESEs_data, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "in ESEs", "RPMskip", 0.05, 2, reverse = TRUE)
-plot_individual_change(NAS_no_ESEs_data, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "not in ESEs", "RPMskip", 0.05, 7, reverse = TRUE)
-
-#RPMinclude
-par(mfrow = c(1,1))
-hist(NAS_data$norm_count_no_PTC_incl - NAS_data$norm_count_het_PTC_incl, breaks = 100, col = chosen_colour, main = "Is RPM(incl) higher for PTC-/PTC- than for PTC-/PTC+?", xlab = "RPMincl(-/-) - RPMincl(-/+)")
-wilcox.test(NAS_data$norm_count_no_PTC_incl, NAS_data$norm_count_het_PTC_incl, alternative = "greater", paired = TRUE)
 
 
-# ESE overlap simulations
-snp_sim_file <- read.csv('results/clean_run_2/ese_overlap_simulation/snp_simulation/ese_overlap_snp_simulation.csv', head=T)
-mono_sim_file <- read.csv('results/clean_run_2/ese_overlap_simulation/monomorphic_sim/ese_overlap_monomorphic_simulation.csv', head=T)
-jpeg('results/clean_run_2/plots/ese_overlap_simulation.jpg', width=25, height = 15, units="cm", res=300)
-ese_overlap_simulation_plot(snp_sim_file, mono_sim_file)
-dev.off()
 
-ese_overlap_simulation_tests(snp_sim_file, mono_sim_file)
+
+
+
 
 
 

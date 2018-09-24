@@ -1,3 +1,6 @@
+library(reshape2)
+library(ggplot2)
+
 p_from_z <- function(z) {
   return(2*pnorm(-abs(z)))
 }
@@ -45,6 +48,8 @@ get_region_hit_p <- function(data) {
 }
 
 
+###
+
 locations_file <- "results/clinvar2/clinvar_ptc_location_simulation.csv"
 file <- read.csv(locations_file, head=T)
 clinvar_regions_zs <- get_region_z(file, "ClinVar")
@@ -87,8 +92,6 @@ get_region_hit_p(ese_hits_rescue)
 get_region_hit_p(ese_hits_ke400)
 
 
-library(reshape2)
-library(ggplot2)
 ese_hits <- rbind(z_int3, z_rescue, z_ke400)
 ese_hits_melt <- melt(ese_hits)
 
