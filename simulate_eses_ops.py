@@ -9,49 +9,6 @@ import re
 import numpy as np
 import os
 
-def make_simulants(motifs, n_sim, output_file_name = None, retro = False, mono = False, no_duplicates = False, remove_stops = False, remove_existing = False, cap_runs = False, exclude = None, seed = None, concat = True):
-    '''
-    Given a set of motifs, generate n_sim sets of simulants with the same over-all dinucleotide frequencies.
-    motifs: a list of strings (the motifs for which you want to generate simulants)
-    n_sim: number of simulant sets required
-    mono: use mono- rather than dinucleotide frequencies
-    no_duplicates: don't allow duplicates within simulant sets
-    remove_stops: don't allow simulants that contain stop codons
-    remove_existing: don't allow simulants to coincide with motifs in the true set
-    cap_runs: don't allow mononucleotide runs whose length exceeds that of the longst run of that base in the true motifs
-    exclude: don't allow any of the motifs within this list
-    seed: supply a seed for the PRNG
-    concat: concatenate the true motifs before extracting dinucleotides
-    '''
-
-    if cap_runs:
-        longest_runs_numbers = get_longest_run(motifs)
-        longest_runs_strings = ["".join([base for i in range(longest_runs_numbers[base] + 1)]) for base in longest_runs_numbers]
-    motifs = [list(i) for i in motifs]
-    nts = flatten(motifs)
-    if mono:
-        dints = flatten(motifs)
-    else:
-        if concat:
-            dints = []
-            #grab all the dinucleotides in the two reading frames
-            for i in range(0, len(nts) - 1, 2):
-                dints.append([nts[i], nts[i+1]])
-            for i in range(1, len(nts) - 1, 2):
-                dints.append([nts[i], nts[i+1]])
-        else:
-            dints = []
-            for motif in motifs:
-                for i in range(0, len(motif) - 1, 2):
-                    dints.append([motif[i], motif[i+1]])
-                for i in range(1, len(motif) - 1, 2):
-                    dints.append([motif[i], motif[i+1]])
-    # print(dints)
-    # #right now you have a list of lists. Turn that into a list of strings where each string is one dinucleotide.
-    dints = ["".join(i) for i in dints]
-    print(dints)
-
-
 
 
 def get_dinucleotides(motifs, concat_motifs=None):
@@ -168,3 +125,45 @@ def get_stop_codon_count(motifs):
 	stop_regex = re.compile('TAA|TAG|TGA')
 	stops = [len(re.findall(stop_regex, i)) for i in motifs]
 	return(sum(stops))
+
+def make_simulants(motifs, n_sim, output_file_name = None, retro = False, mono = False, no_duplicates = False, remove_stops = False, remove_existing = False, cap_runs = False, exclude = None, seed = None, concat = True):
+    '''
+    Given a set of motifs, generate n_sim sets of simulants with the same over-all dinucleotide frequencies.
+    motifs: a list of strings (the motifs for which you want to generate simulants)
+    n_sim: number of simulant sets required
+    mono: use mono- rather than dinucleotide frequencies
+    no_duplicates: don't allow duplicates within simulant sets
+    remove_stops: don't allow simulants that contain stop codons
+    remove_existing: don't allow simulants to coincide with motifs in the true set
+    cap_runs: don't allow mononucleotide runs whose length exceeds that of the longst run of that base in the true motifs
+    exclude: don't allow any of the motifs within this list
+    seed: supply a seed for the PRNG
+    concat: concatenate the true motifs before extracting dinucleotides
+    '''
+
+    if cap_runs:
+        longest_runs_numbers = get_longest_run(motifs)
+        longest_runs_strings = ["".join([base for i in range(longest_runs_numbers[base] + 1)]) for base in longest_runs_numbers]
+    motifs = [list(i) for i in motifs]
+    nts = flatten(motifs)
+    if mono:
+        dints = flatten(motifs)
+    else:
+        if concat:
+            dints = []
+            #grab all the dinucleotides in the two reading frames
+            for i in range(0, len(nts) - 1, 2):
+                dints.append([nts[i], nts[i+1]])
+            for i in range(1, len(nts) - 1, 2):
+                dints.append([nts[i], nts[i+1]])
+        else:
+            dints = []
+            for motif in motifs:
+                for i in range(0, len(motif) - 1, 2):
+                    dints.append([motif[i], motif[i+1]])
+                for i in range(1, len(motif) - 1, 2):
+                    dints.append([motif[i], motif[i+1]])
+    # print(dints)
+    # #right now you have a list of lists. Turn that into a list of strings where each string is one dinucleotide.
+    dints = ["".join(i) for i in dints]
+    print(dints)

@@ -8,6 +8,9 @@ import generic as gen
 import numpy as np
 
 def run_simulations(simulation_sets, required_simulations):
+    '''
+    Run the simulations
+    '''
 
     for motif_set in simulation_sets:
 
@@ -38,6 +41,9 @@ def run_simulations(simulation_sets, required_simulations):
         		output.write('{0},{1}\n'.format(i+1, stop_count))
 
 def get_possible_hexamers(exon):
+    '''
+    Get the possible hexamers from an exon
+    '''
     hexamers = []
     for i in range(len(exon)):
         if i+6 <= len(exon):
@@ -62,7 +68,9 @@ def generate_motifs(exon_seqs, required_motifs):
 
 
 def simulate_motifs(simulations, exon_seqs, motifs):
-
+    '''
+    Generate motifs and get stop codon count
+    '''
     outputs = []
 
     for simulation in simulations:

@@ -379,8 +379,10 @@ def count_junction_reads(sam, junctions, outfile, read_count):
             file.write("{0}\t{1}\t{2}\t{3}\n".format(exon, "|".join([str(i * 2) for i in out_dict[exon]["skip"]]), "|".join([str(i) for i in out_dict[exon]["incl"]]), read_count))
 
 def group_flags(input_bed, output_bed, flag_start):
-    '''Takes an input bed file and converts all the fields from the flag_start'th
-    onwards into a single field, with the elements separated by commas.'''
+    '''
+    Takes an input bed file and converts all the fields from the flag_start'th
+    onwards into a single field, with the elements separated by commas.
+    '''
     with open(input_bed) as input_file, open(output_bed, "w") as output_file:
         reader = csv.reader(input_file, delimiter = "\t")
         writer = csv.writer(output_file, delimiter = "\t")

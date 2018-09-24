@@ -15,20 +15,6 @@ from pathlib import Path
 import random
 import shutil
 
-def get_fasta_exon_intervals(intervals_fasta):
-    stops = ["TAA", "TAG", "TGA"]
-    exon_interval_names, exon_interval_seqs = gen.read_fasta(intervals_fasta)
-    exon_interval_list = collections.defaultdict(lambda: collections.defaultdict())
-    for i, name in enumerate(exon_interval_names):
-        transcript_id = name.split('.')[0]
-        exon = int(name.split('(')[0].split('.')[1])
-        seq = exon_interval_seqs[i]
-        if seq in stops:
-            exon_id = 99999
-        else:
-            exon_id = exon
-        exon_interval_list[transcript_id][exon_id] = seq
-    return exon_interval_list
 
 def change_bed_names(input_bed, output_bed, full_names, header):
     '''
@@ -390,12 +376,10 @@ def extract_features(gtf_file, out_file, features, full_chr_name=None, clean_chr
 
 
 def extract_nt_indices(fasta_file, output_files):
-
     '''
     Extract the indices for each nt given a fasta file
     Output files need to be of format: output_files: "A": "filepath_for_A", "C", "filepath_for_C" etc
     '''
-
     nts = ["A", "C", "G", "T"]
     names, seqs = gen.read_fasta(fasta_file)
     # pos_regex = re.compile('^(chr\d+):(\d+)-(\d+)(?=\([+-]\))');
@@ -420,25 +404,6 @@ def extract_nt_indices(fasta_file, output_files):
 
     for nt in nts:
         outfiles[nt].close()
-
-        # positions = re.search(pos_regex, id)
-        # sampleid = positions.group(1)
-        # start = int(positions.group(2))
-        # nts = list(seq)
-        # for j, nt in enumerate(nts):
-        #     indicies[sampleid][nt].append(start+j)
-
-    # with open(output_file, "w") as output:
-    #     for sampleid in sorted(indicies):
-    #         output.write('>{0}\n'.format(sampleid))
-    #         line = ""
-    #         for nt in sorted(indicies[sampleid]):
-    #             # remove any duplicates
-    #             indicies[sampleid][nt] = sorted(list(set(indicies[sampleid][nt])))
-    #             indicies[sampleid][nt] = [str(x) for x in indicies[sampleid][nt]]
-    #             line += "{0}:{1};".format(nt, ",".join(indicies[sampleid][nt]))
-    #         output.write("{0}\n".format(line))
-
 
 def fasta_from_intervals(bed_file, fasta_file, genome_fasta, force_strand = True, names = False):
     '''
@@ -625,6 +590,24 @@ def get_descriptions(names, gtf, out_file):
                                 if trans in names:
                                         description = re.search(name_regex, line).group(0)
                                         file.write("{0}\t{1}\n".format(trans, description))
+
+def get_fasta_exon_intervals(intervals_fasta):
+    '''
+    Get a list of exon seqs
+    '''
+    stops = ["TAA", "TAG", "TGA"]
+    exon_interval_names, exon_interval_seqs = gen.read_fasta(intervals_fasta)
+    exon_interval_list = collections.defaultdict(lambda: collections.defaultdict())
+    for i, name in enumerate(exon_interval_names):
+        transcript_id = name.split('.')[0]
+        exon = int(name.split('(')[0].split('.')[1])
+        seq = exon_interval_seqs[i]
+        if seq in stops:
+            exon_id = 99999
+        else:
+            exon_id = exon
+        exon_interval_list[transcript_id][exon_id] = seq
+    return exon_interval_list
 
 def link_genes_and_transcripts(bed):
         '''
