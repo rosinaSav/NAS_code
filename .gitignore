@@ -17,3 +17,15 @@ blast/
 *.pyc
 *.json
 .RData
+debugging/
+disease_analysis.py
+disease_NAS_analysis.py
+disease_ops.py
+firehose_broad*
+get_info.py
+gdc*
+repeat_simulantion.py
+runfile.py
+testR.R
+test_disease_ops.py
+transfer_bams_to_Watson.py
