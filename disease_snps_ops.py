@@ -1,3 +1,8 @@
+'''
+Auhor: Liam Abrahams.
+Look at disease SNPs from ClinVar.
+'''
+
 import generic as gen
 import bed_ops as beo
 import bam_ops as bao

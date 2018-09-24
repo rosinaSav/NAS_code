@@ -72,13 +72,13 @@ get_plot <- function(file_path, out_path, main=NULL, title_left=NULL) {
   file <- read.csv(file_path, sep=",", head=T)
   simulants <- file[file$id != 'real',]
   real <- file[file$id == 'real',]
-  
+
   plot <- ggplot(data=simulants, aes(simulants$stop_count)) +
     geom_histogram(breaks=seq(min(file$stop_count), max(file$stop_count), by = 1), col="black", fill="RoyalBlue", alpha = .8) +
     # labs(title=paste(sprintf(main), " (", nrow(simulants), " simulations)", sep="")) +
     labs(x="Stop codon count in all reading frames", y="Frequency") +
     geom_vline(xintercept=file$stop_count[file$id == "real"], lty=2, col="red")
-  
+
   # plot <- title_styling(plot, main, title_left = FALSE)
   # out_path = paste("ese_stops_simulations_output/", set, "/", set, "_", simulations, "_hist.head(id", sep="")
   # ggsave(out_path, plot=plot)
@@ -108,7 +108,7 @@ prepare_data <- function(set) {
 
 # sample_file <- read.table('results/ese_stops_simulations_output/RBP_motifs_grouped/motif_samples.txt')
 # colnames(sample_file) <- c("sample")
-# 
+#
 # for (set in sample_file$sample) {
 #   file_path = paste("results/ese_stops_simulations_output/RBP_motifs_grouped/", set, "/", set, "_stop_counts_1000.csv", sep="")
 #   out_path = paste("results/ese_stops_simulations_output/RBP_motifs_grouped/plots/", set, "_hist.jpg", sep="")
@@ -117,12 +117,12 @@ prepare_data <- function(set) {
 
 
 get_p <- function(file_path, direction="greater") {
-  
+
   file <- read.table(file_path, head=T, sep=",")
   real_count = file[file$id == "real",]
   simulants = file[file$id != "real",]
   if (direction == "less") {
-    p <- (nrow(simulants[simulants$stop_count < real_count$stop_count,] + 1)) / nrow(simulants) 
+    p <- (nrow(simulants[simulants$stop_count < real_count$stop_count,] + 1)) / nrow(simulants)
   } else {
     p <- (nrow(simulants[simulants$stop_count > real_count$stop_count,] + 1)) / nrow(simulants)
   }
@@ -130,12 +130,10 @@ get_p <- function(file_path, direction="greater") {
 }
 
 get_plot("results/motif_stops_simulation/CaceresHurstESEs_INT3/stop_counts_10000.txt", "results/motif_stops_simulation/CaceresHurstESEs_INT3/plot.pdf", "A", title_left = T)
-get_plot("results/motif_stops_simulation/ess_fas-hex3_wang_2004/stop_counts_10000.txt", "results/motif_stops_simulation/ess_fas-hex3_wang_2004/plot.pdf", "B", title_left=T)
 get_plot("results/motif_stops_simulation/ises_wang_2012/stop_counts_10000.txt", "results/motif_stops_simulation/ises_wang_2012/plot.pdf", "B", title_left=T)
 
 get_p("results/motif_stops_simulation/CaceresHurstESEs_INT3/stop_counts_10000.txt", direction="less")
 get_p("results/motif_stops_simulation/ises_wang_2012/stop_counts_10000.txt", direction="less")
-get_p("results/motif_stops_simulation/ess_fas-hex3_wang_2004/stop_counts_10000.txt", direction="less")
 
 
 # P value for INT3

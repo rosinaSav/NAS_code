@@ -1,5 +1,6 @@
 '''
 Author: Liam Abrahams.
+Check whether stop codons are depleted in motif sets by simulating the motif set.
 '''
 
 import simulate_eses_ops as se
@@ -37,26 +38,7 @@ def run_simulations(simulation_sets, required_simulations):
         		output.write('{0},{1}\n'.format(i+1, stop_count))
 
 def get_possible_hexamers(exon):
-
-    # # get exon ends
-    # if len(exon) > 138:
-    #     start = exon[2:69]
-    #     end = exon[len(exon)-69:-2]
-    # else:
-    #     mid = int(len(exon)/2)
-    #     start = exon[2:mid]
-    #     end = exon[mid:-2]
-    #
     hexamers = []
-    # for i in range(len(start)):
-    #     if i+6 <= len(start):
-    #         hexamers.append(start[i:i+6])
-    # for i in range(len(end)):
-    #     if i+6 <= len(end):
-    #         hexamers.append(end[i:i+6])
-    # # get unique hexamers
-    # hexamers = list(set(hexamers))
-
     for i in range(len(exon)):
         if i+6 <= len(exon):
             hexamers.append(exon[i:i+6])

@@ -1,5 +1,6 @@
 '''
 Author: Liam Abrahams
+Operations used to simulate eses.
 '''
 
 import generic as gen
@@ -49,61 +50,7 @@ def make_simulants(motifs, n_sim, output_file_name = None, retro = False, mono =
     # #right now you have a list of lists. Turn that into a list of strings where each string is one dinucleotide.
     dints = ["".join(i) for i in dints]
     print(dints)
-    # simulants = [["" for j in motifs] for i in range(n_sim)]
-    # for i, j in enumerate(motifs):
-    #     if mono:
-    #         dint_number = len(j)
-    #     else:
-    #         dint_number = len(j) // 2
-    #     if len(j) % 2 == 0:
-    #         even = True
-    #     else:
-    #         even = False
-    #     for k in range(n_sim):
-    #         found = False
-    #         while not found:
-    #             problem = False
-    #             sim_motif = []
-    #             for l in range(dint_number):
-    #                 if seed:
-    #                     random.seed(a = seed)
-    #                     seed = seed + 1
-    #                 sim_motif.append(random.choice(dints))
-    #             #if the length of the motif is not an even number, add on a random mononucleotide from a bag made previously.
-    #             if (not even) and (not mono):
-    #                 sim_motif.append(random.choice(nts))
-    #             sim_motif = "".join(sim_motif)
-    #             if remove_stops:
-    #                 if "TAA" in sim_motif or "TAG" in sim_motif or "TGA" in sim_motif:
-    #                     problem = True
-    #             if remove_existing:
-    #                 if list(sim_motif) in motifs:
-    #                     problem = True
-    #             if cap_runs:
-    #                 for run in longest_runs_strings:
-    #                     if run in sim_motif:
-    #                         problem = True
-    #             if no_duplicates:
-    #                 if sim_motif in simulants[k]:
-    #                     problem = True
-    #             if exclude:
-    #                 if sim_motif in exclude:
-    #                     problem = True
-    #             if not problem:
-    #                 found = True
-    #                 simulants[k][i] = sim_motif
-    # if output_file_name:
-    #     if not retro:
-    #         with open(output_file_name, "w") as file:
-    #             for i in range(n_sim):
-    #                 file.write("|".join(simulants[i]))
-    #                 file.write("\n")
-    #     else:
-    #         for i in range(n_sim):
-    #             with open("{0}/fake_ESEs_{1}.txt".format(output_file_name, i), "w") as file:
-    #                 file.write("\n".join(simulants[i]))
-    #                 file.write("\n")
-    # return(simulants)
+
 
 
 
