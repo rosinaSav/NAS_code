@@ -2,7 +2,7 @@ import generic as gen
 import bed_ops as be
 import numpy as np
 import re
-
+import os
 
 def get_lincRNA_seqs(input_file, genome_fasta, output_file):
 
@@ -149,7 +149,7 @@ def main():
 
     simulations = list(range(required_simulations))
     # outputs = simulate_seqs(simulations, seq_flanks, dint_list, dint_freqs, nt_list, nt_freqs)
-    processes = gen.run_in_parallel(simulations, ["foo", seq_flanks, dint_list, dint_freqs, nt_list, nt_freqs], simulate_seqs)
+    processes = gen.run_in_parallel(simulations, ["foo", seq_flanks, dint_list, dint_freqs, nt_list, nt_freqs], simulate_seqs, workers = os.cpu_count() - 2)
 
     outputs = []
     for process in processes:
