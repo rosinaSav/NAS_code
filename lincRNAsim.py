@@ -4,7 +4,7 @@ import numpy as np
 import re
 
 
-def get_lincRNA_seqs(input_file, output_file):
+def get_lincRNA_seqs(input_file, genome_fasta, output_file):
 
     splits_bed = "temp_data/lincRNA_exons.bed"
 
@@ -31,9 +31,7 @@ def get_lincRNA_seqs(input_file, output_file):
         for out in outs:
             outfile.write("{0}\n".format("\t".join(gen.stringify(out))))
 
-
-
-    be.fasta_from_intervals(splits_bed, output_file, "../source_data/Genomes/hg37/Homo_sapiens.GRCh37.dna.primary_assembly.fa", names=True)
+    be.fasta_from_intervals(splits_bed, output_file, genome_fasta, names=True)
 
 def get_fasta_seqs(input):
 
@@ -131,13 +129,13 @@ def simulate_seqs(simulations, seqs, dint_list, dint_freqs, nt_list, nt_freqs):
 def main():
 
     description = "Check the number of sotp codons in lincRNA set."
-    args = gen.parse_arguments(description, ["bed_file", "output_dir", "required_simulations", "get_exons", "run_simulation"], flags = [3,4], ints = [2])
-    bed_file, output_dir, required_simulations, get_exons, run_simulation = args.bed_file,  args.output_dir, args.required_simulations, args.get_exons, args.run_simulation
+    args = gen.parse_arguments(description, ["bed_file", "genome_fasta", "output_dir", "required_simulations", "get_exons", "run_simulation"], flags = [4,5], ints = [3])
+    bed_file, genome_fasta, output_dir, required_simulations, get_exons, run_simulation = args.bed_file,  args.genome_fasta, args.output_dir, args.required_simulations, args.get_exons, args.run_simulation
 
     gen.create_output_directories(output_dir)
     output_fasta = "{0}/lincRNA_exons.fa".format(output_dir)
 
-    get_lincRNA_seqs(bed_file, output_fasta)
+    get_lincRNA_seqs(bed_file, genome_fasta, output_fasta)
     lincRNA_seqs = get_fasta_seqs(output_fasta)
     seq_flanks = get_flank_seqs(lincRNA_seqs, 3, 69)
 
