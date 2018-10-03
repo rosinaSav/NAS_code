@@ -93,7 +93,7 @@ get_diff_plot =  function(feature1, feature2, neg_control, NAS_data, xlab, ylab,
 
 
 
-get_neg_control_plot <- function(NAS_data, neg_control, feature1, feature2, limit_y = NULL) {
+get_neg_control_plot <- function(NAS_data, neg_control, feature1, feature2, limit_y = NULL, order=FALSE) {
   library(ggplot2)
   library(reshape2)
   true_diffs <- get_true_diffs(NAS_data, "PSI_no_PTC", "PSI_het_PTC")
@@ -154,14 +154,14 @@ get_neg_control_plot <- function(NAS_data, neg_control, feature1, feature2, limi
     sims_diffs[i, "order"] = rank
   }
   
-  print(head(sims_diffs))
-  
-  # print(head(sim)
-  
-  # true_diffs$id <- seq.int(nrow(true_diffs))
+  if(order) {
+    xcat = "order"
+  } else {
+    xcat = "id"
+  }
   
   plot <- ggplot() +
-    geom_point(aes(x = sims_diffs$order, y = sims_diffs$value), size=0.2, colour=ifelse(sims_diffs$value > 0, "RoyalBlue", "red")) +
+    geom_point(aes(x = sims_diffs[[xcat]], y = sims_diffs$value), size=0.2, colour=ifelse(sims_diffs$value > 0, "RoyalBlue", "red")) +
     geom_hline(yintercept = 0, lty=2) +
     labs(x="PTC", y = "True PSIdiff - simulant PSIdiff") +
     theme(
@@ -169,51 +169,15 @@ get_neg_control_plot <- function(NAS_data, neg_control, feature1, feature2, limi
       axis.ticks.x = element_blank(),
       panel.background = element_rect(fill = "#f5f5f5"),
       panel.grid.major = element_line(colour="#f5f5f5"),
-      panel.grid.minor = element_line(colour="#000000")
+      panel.grid.minor = element_line(colour="#ffffff")
     )
   
   if(!is.null(limit_y)) {
-    plot <- plot + coord_cartesian(ylim=c(-3,3))
+    plot <- plot + coord_cartesian(ylim=limit_y)
   }
   
   return(plot)
 }
-
-
-get_sims_diffs <- function(NAS_data, feature1, feature2, true_diffs) {
-  max_diff_length = 0
-  for (index in 1:length(neg_control)) {
-    sim_diffs = neg_control[[index]][feature1] - neg_control[[index]][feature2]
-    sim_diffs = sim_diffs[!is.na(sim_diffs)]
-    if(length(sim_diffs) > max_diff_length) {
-      max_diff_length = length(sim_diffs)
-    }
-  }
-  
-  sims <- data.frame(matrix(NA, nrow = max_diff_length, ncol = length(neg_control)))
-  for (index in 1:length(neg_control)) {
-    sim_diffs = neg_control[[index]][feature1] - neg_control[[index]][feature2]
-    sim_diffs = sim_diffs[!is.na(sim_diffs)]
-    true_diff = true_diffs[index, "true_diff"]
-    sim_diffs = true_diff - sim_diffs
-    length(sim_diffs) <- max_diff_length
-    col_id = paste("X", index, sep="")
-    sims[col_id] <- sim_diffs
-  }
-  return(sims)
-}
-
-
-get_true_diffs <- function(NAS_data, feature1, feature2) {
-  diffs <- data.frame(true = double())
-  for (index in 1:length(neg_control)) {
-    # get the true difference
-    true_diff = NAS_data[index, feature1] - NAS_data[index, feature2]
-    diffs <- rbind(diffs, data.frame(true_diff))
-  }
-  return(diffs)
-}
-
 
 
 get_n_t =  function(feature1, feature2, neg_control, NAS_data, title, swap = FALSE, big_only = FALSE, return_p = TRUE, return_plot = FALSE) {
@@ -333,6 +297,41 @@ get_n_t_visual =  function(feature1, feature2, neg_control, NAS_data, swap = FAL
     abline(v = true_diff, lwd = 2, col = "orange")
   }
 }
+
+get_sims_diffs <- function(NAS_data, feature1, feature2, true_diffs) {
+  max_diff_length = 0
+  for (index in 1:length(neg_control)) {
+    sim_diffs = neg_control[[index]][feature1] - neg_control[[index]][feature2]
+    sim_diffs = sim_diffs[!is.na(sim_diffs)]
+    if(length(sim_diffs) > max_diff_length) {
+      max_diff_length = length(sim_diffs)
+    }
+  }
+  
+  sims <- data.frame(matrix(NA, nrow = max_diff_length, ncol = length(neg_control)))
+  for (index in 1:length(neg_control)) {
+    sim_diffs = neg_control[[index]][feature1] - neg_control[[index]][feature2]
+    sim_diffs = sim_diffs[!is.na(sim_diffs)]
+    true_diff = true_diffs[index, "true_diff"]
+    sim_diffs = true_diff - sim_diffs
+    length(sim_diffs) <- max_diff_length
+    col_id = paste("X", index, sep="")
+    sims[col_id] <- sim_diffs
+  }
+  return(sims)
+}
+
+
+get_true_diffs <- function(NAS_data, feature1, feature2) {
+  diffs <- data.frame(true = double())
+  for (index in 1:length(neg_control)) {
+    # get the true difference
+    true_diff = NAS_data[index, feature1] - NAS_data[index, feature2]
+    diffs <- rbind(diffs, data.frame(true_diff))
+  }
+  return(diffs)
+}
+
 
 individual_changes_plot <- function(NAS_data, feature1, feature2, threshold, xlab, ylab, col1  = NULL, col2 = NULL, xlab1=NULL, xlab2=NULL) {
   dots <- data.frame(xpos = double(), ypos = double(), diff = double())
@@ -915,10 +914,11 @@ ggsave("results/graphs/shiftptc_individual_changes.pdf", plot = plot, width=10, 
 
 
 neg_control_plot <- get_neg_control_plot(NAS_data, neg_control, "PSI_no_PTC", "PSI_het_PTC")
-neg_control_plot_zoom <- get_neg_control_plot(NAS_data, neg_control, "PSI_no_PTC", "PSI_het_PTC", limit = c(-2, 2))
+neg_control_plot_zoom <- get_neg_control_plot(NAS_data, neg_control, "PSI_no_PTC", "PSI_het_PTC", limit = c(-3, 3))
 plot <- ggarrange(neg_control_plot, neg_control_plot_zoom, widths = c(2, 2), ncol = 2, nrow = 1, labels = c("A", "B"))
+neg_control_plot_zoom
 ggsave('results/graphs/simulants_psi_diff.pdf', plot = plot, width=12, height=7)
-ggsave('results/graphs/simulants_psi_diff.jpg', plot = plot, width=12, height=7)
+ggsave('results/graphs/simulants_psi_diff.eps', plot = plot, width=12, height=7)
 
 
 # plot showing the p values for each percentage cutoff

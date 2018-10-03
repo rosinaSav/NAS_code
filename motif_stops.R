@@ -8,7 +8,7 @@ stop_count_plot <- function(file_path, main=NULL) {
   real <- file[file$id == 'real',]
   
   plot <- ggplot(data=simulants, aes(simulants$stop_count)) +
-    geom_histogram(breaks=seq(min(file$stop_count), max(file$stop_count), by = 1), col="black", fill="RoyalBlue", alpha = .8) +
+    geom_histogram(breaks=seq(min(file$stop_count), max(file$stop_count), by = 1), col="black", fill="RoyalBlue", alpha = 1) +
     labs(x="Stop codon count", y="Frequency") +
     geom_vline(xintercept=file$stop_count[file$id == "real"], lty=2, col="red") + 
     ggtitle(main) +
@@ -20,10 +20,21 @@ stop_count_plot <- function(file_path, main=NULL) {
   return(plot)
 }
 
+get_z <- function(data){
+  real = data[data$simulation == "real",]
+  sims = data[data$simulation != "real",]
+  z <- (real$count - mean(sims$count)) / sd(sims$count)
+  return(z)
+}
+
+p_from_z <- function(z) {
+  return(2*pnorm(-abs(z)))
+}
+
 
 # motif stop counts
 eses <- stop_count_plot("results/motif_stops_simulation/CaceresHurstESEs_INT3/stop_counts_10000.txt", "INT3 ESEs")
 ises <- stop_count_plot("results/motif_stops_simulation/ises_wang_2012/stop_counts_10000.txt", "Wang 2012 ISEs")
 plot <- ggarrange(eses, ises, ncol=2, labels=c("A", "B"))
 ggsave('results/graphs/motif_stop_counts.pdf', width=10, height=5)
-
+ggsave('results/graphs/motif_stop_counts.eps', width=10, height=5)
