@@ -45,7 +45,7 @@ class Test_generic(unittest.TestCase):
         with open(observed) as file:
             observed = "".join(file)
         self.assertEqual(expected, observed)
-        
+
     def test_get_extension(self):
         file = "test.jpg"
         length = 3

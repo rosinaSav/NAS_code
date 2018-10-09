@@ -128,36 +128,103 @@ def excess_test(unique_ptcs_rel_pos_file, coding_exons_fasta, output_file):
 
     # keep only those with exons longer than 138
     long_exons = get_long_exons(relative_positions, coding_exons, 138)
+    short_exons = {}
+    for name in relative_positions:
+        if name not in long_exons:
+            short_exons[name] = relative_positions[name]
 
-    ptc_locations = get_ptc_positions(long_exons, coding_exons)
-    exon_nts = get_exon_nts(long_exons, coding_exons)
+    # get the ptc locations and exon nts for both long and short exons
+    long_ptc_locations = get_ptc_positions(long_exons, coding_exons)
+    long_exon_nts = get_exon_nts(long_exons, coding_exons)
+    short_ptc_locations = get_ptc_positions(short_exons, coding_exons)
+    short_exon_nts = get_exon_nts(short_exons, coding_exons)
 
-    exon_cores_ptc_per_nt = np.divide(ptc_locations[2], exon_nts[2])
+    exon_cores_ptc_per_nt = np.divide(long_ptc_locations[2], long_exon_nts[2])
 
-    expected_0_2 = exon_nts[0]*exon_cores_ptc_per_nt
-    excess_0_2 = ptc_locations[0] - expected_0_2
-    excess_percentage_0_2 = np.divide(excess_0_2, sum(ptc_locations))*100
+    total_nts = [x + y for x, y in zip(long_exon_nts, short_exon_nts)]
+    total_ptcs = [x + y for x, y in zip(long_ptc_locations, short_ptc_locations)]
 
-    expected_3_69 = exon_nts[1]*exon_cores_ptc_per_nt
-    excess_3_69 = ptc_locations[1] - expected_3_69
-    excess_percentage_3_69 = np.divide(excess_3_69, sum(ptc_locations))*100
+    expected_0_2 = total_nts[0]*exon_cores_ptc_per_nt
+    excess_0_2 = total_ptcs[0] - expected_0_2
+    excess_percentage_0_2 = np.divide(excess_0_2, sum(total_ptcs))*100
+
+    expected_3_69 = total_nts[1]*exon_cores_ptc_per_nt
+    excess_3_69 = total_ptcs[1] - expected_3_69
+    excess_percentage_3_69 = np.divide(excess_3_69, sum(total_ptcs))*100
+
+    expected_large_0_2 = long_exon_nts[0]*exon_cores_ptc_per_nt
+    excess_large_0_2 = long_ptc_locations[0] - expected_large_0_2
+    excess_large_percentage_0_2 = np.divide(excess_large_0_2, sum(long_ptc_locations))*100
+
+    expected_large_3_69 = long_exon_nts[1]*exon_cores_ptc_per_nt
+    excess_large_3_69 = long_ptc_locations[1] - expected_large_3_69
+    excess_large_percentage_3_69 = np.divide(excess_large_3_69, sum(long_ptc_locations))*100
 
     with open(output_file, "w") as outfile:
-        outfile.write("nts in exons\n")
-        outfile.write("0.2,{0}\n".format(exon_nts[0]))
-        outfile.write("3.69,{0}\n".format(exon_nts[1]))
-        outfile.write("70+,{0}\n".format(exon_nts[2]))
+        outfile.write("nts in exons > 138 nt\n")
+        outfile.write("0.2,{0}\n".format(long_exon_nts[0]))
+        outfile.write("3.69,{0}\n".format(long_exon_nts[1]))
+        outfile.write("70+,{0}\n".format(long_exon_nts[2]))
         outfile.write("\n")
-        outfile.write("nonsense mutations\n")
-        outfile.write("0.2,{0}\n".format(ptc_locations[0]))
-        outfile.write("3.69,{0}\n".format(ptc_locations[1]))
-        outfile.write("70+,{0}\n".format(ptc_locations[2]))
+        outfile.write("\nnts in exons <= 138\n")
+        outfile.write("0.2,{0}\n".format(short_exon_nts[0]))
+        outfile.write("3.69,{0}\n".format(short_exon_nts[1]))
+        outfile.write("70+,{0}\n".format(short_exon_nts[2]))
         outfile.write("\n")
-        outfile.write("nonsense per bp in core,{0}\n".format(exon_cores_ptc_per_nt))
-        outfile.write("0.2 expected,{0}\n".format(expected_0_2))
+        outfile.write("\nTotal nts in exons\n")
+        outfile.write("0.2,{0}\n".format(total_nts[0]))
+        outfile.write("3.69,{0}\n".format(total_nts[1]))
+        outfile.write("70+,{0}\n".format(total_nts[2]))
+
+        outfile.write("\n")
+        outfile.write("\n***\n")
+        outfile.write("\n")
+
+        outfile.write("\nnonsense mutations > 138 nt\n")
+        outfile.write("0.2,{0}\n".format(long_ptc_locations[0]))
+        outfile.write("3.69,{0}\n".format(long_ptc_locations[1]))
+        outfile.write("70+,{0}\n".format(long_ptc_locations[2]))
+        outfile.write("\n")
+        outfile.write("\nnonsense mutations <= 138 nt\n")
+        outfile.write("0.2,{0}\n".format(short_ptc_locations[0]))
+        outfile.write("3.69,{0}\n".format(short_ptc_locations[1]))
+        outfile.write("70+,{0}\n".format(short_ptc_locations[2]))
+        outfile.write("\n")
+        outfile.write("\nTotal nonsense mutations\n")
+        outfile.write("0.2,{0}\n".format(total_ptcs[0]))
+        outfile.write("3.69,{0}\n".format(total_ptcs[1]))
+        outfile.write("70+,{0}\n".format(total_ptcs[2]))
+        outfile.write("\n")
+        outfile.write("\nTotal nonsense mutations,{0}\n\n".format(sum(total_ptcs)))
+
+        outfile.write("\n")
+        outfile.write("\n***\n")
+        outfile.write("\n")
+
+        outfile.write("nonsense per nt in cores (>138),{0}\n".format(exon_cores_ptc_per_nt))
+
+        outfile.write("\n")
+        outfile.write("\n***\n")
+        outfile.write("\n")
+
+        outfile.write("\nexcesses in exons > 138\n")
+        outfile.write("\n0.2 expected,{0}\n".format(expected_large_0_2))
+        outfile.write("0.2 difference,{0}\n".format(excess_large_0_2))
+        outfile.write("0.2 excess,{0}%\n".format(excess_large_percentage_0_2))
+        outfile.write("\n")
+        outfile.write("\n3.69 expected,{0}\n".format(expected_large_3_69))
+        outfile.write("3.69 difference,{0}\n".format(excess_large_3_69))
+        outfile.write("3.69 excess,{0}%\n".format(excess_large_percentage_3_69))
+
+        outfile.write("\n")
+        outfile.write("\n***\n")
+        outfile.write("\n")
+        outfile.write("\nexcesses in all exons\n")
+        outfile.write("\n0.2 expected,{0}\n".format(expected_0_2))
         outfile.write("0.2 difference,{0}\n".format(excess_0_2))
         outfile.write("0.2 excess,{0}%\n".format(excess_percentage_0_2))
-        outfile.write("3.69 expected,{0}\n".format(expected_3_69))
+        outfile.write("\n")
+        outfile.write("\n3.69 expected,{0}\n".format(expected_3_69))
         outfile.write("3.69 difference,{0}\n".format(excess_3_69))
         outfile.write("3.69 excess,{0}%\n".format(excess_percentage_3_69))
 
@@ -486,7 +553,7 @@ def get_introns(exon_bed, output_file):
 
 def get_long_exons(relative_positions, coding_exons, length):
     '''
-    keep only exons with length greater than defined length
+    Get only exons with length greater than defined length
     '''
     long_exons = {}
     for ptc_id in relative_positions:
