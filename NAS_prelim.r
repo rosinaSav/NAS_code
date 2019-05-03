@@ -179,6 +179,98 @@ get_neg_control_plot <- function(NAS_data, neg_control, feature1, feature2, limi
   return(plot)
 }
 
+get_neg_control_z_plot <- function(NAS_data, neg_control, feature1, feature2, limit_y = NULL, order=FALSE) {
+  library(ggplot2)
+  library(reshape2)
+  true_diffs <- get_true_diffs(NAS_data, "PSI_no_PTC", "PSI_het_PTC")
+  sims_diffs <- get_sims_diffs(NAS_data, "PSI_no_PTC", "PSI_het_PTC", true_diffs)
+  
+  true_diffs = true_diffs$true_diff
+  
+  sims_diffs <- melt(sims_diffs)
+  
+  sims_diffs = sims_diffs[!is.na(sims_diffs$value),]
+  sims_diffs$id <- numextract(sims_diffs$variable)
+  
+  uniques <- length(unique(sims_diffs$id))
+  l <- list()
+  for(i in 1:uniques) {
+    l[[i]] = c()
+  }
+  
+  for(i in 1:nrow(sims_diffs)) {
+    row <- sims_diffs[i,]
+    id = row$id
+    l[[id]] <- c(l[[id]], row$value)
+  }
+  
+  zs = c()
+  for (i in 1:length(l)) {
+    entry = l[[i]]
+    real = true_diffs[[i]]
+    z = (real - mean(entry)) / sd(entry)
+    zs = c(zs, z)
+  }
+  
+  plot <- ggplot() +
+    geom_histogram(aes(x = zs), col = "black", fill = chosen_colour, binwidth = 0.025) + 
+    geom_vline(xintercept = 0, lty = 2) + 
+    labs(x = "Z Score", y = "Count")
+  return(plot)
+}
+
+neg_control_z_test <- function(NAS_data, neg_control, feature1, feature2, limit_y = NULL, order=FALSE) {
+  library(ggplot2)
+  library(reshape2)
+  true_diffs <- get_true_diffs(NAS_data, "PSI_no_PTC", "PSI_het_PTC")
+  sims_diffs <- get_sims_diffs(NAS_data, "PSI_no_PTC", "PSI_het_PTC", true_diffs)
+  
+  true_diffs = true_diffs$true_diff
+  
+  sims_diffs <- melt(sims_diffs)
+  
+  sims_diffs = sims_diffs[!is.na(sims_diffs$value),]
+  sims_diffs$id <- numextract(sims_diffs$variable)
+  
+  uniques <- length(unique(sims_diffs$id))
+  l <- list()
+  for(i in 1:uniques) {
+    l[[i]] = c()
+  }
+  
+  for(i in 1:nrow(sims_diffs)) {
+    row <- sims_diffs[i,]
+    id = row$id
+    l[[id]] <- c(l[[id]], row$value)
+  }
+  
+  zs = c()
+  for (i in 1:length(l)) {
+    entry = l[[i]]
+    real = true_diffs[[i]]
+    z = (real - mean(entry)) / sd(entry)
+    zs = c(zs, z)
+  }
+  
+  print(sum(zs > 0))
+  print(length(zs))
+  print(binom.test(sum(zs > 0), length(zs), alternative = "g"))
+}
+
+get_psi_diff_plot <- function(NAS_data, feature1, feature2) {
+  library(ggplot2)
+  library(reshape2)
+  
+  data = NAS_data
+  data$diff = data[[feature1]] - data[[feature2]]
+  
+  plot <- ggplot() +
+    geom_histogram(aes(x = data$diff), col = "black", fill = chosen_colour) + 
+    geom_vline(xintercept = 0, lty = 2) + 
+    labs(x = "PSIdiff", y = "Count")
+  return(plot)
+}
+
 
 get_n_t =  function(feature1, feature2, neg_control, NAS_data, title, swap = FALSE, big_only = FALSE, return_p = TRUE, return_plot = FALSE) {
   threshold = 0
@@ -847,10 +939,11 @@ simulants_less_real_ptc_no_minus_het_rpm_skip <- get_n_t_plot("norm_count_no_PTC
 p <- get_n_t_plot("PSI_no_PTC", "PSI_het_PTC", neg_control, NAS_data, xlab="Proportion of simulants with PSI for pseudoPTC-/- - pseudoPTC-/+\nless than or equal to PTC-/- - PTC-/+", swap = FALSE, title="A", title_left=T, return_plot = F, return_p)
 p
 
-get_neg_control_plot(NAS_data, neg_control, "PSI_no_PTC", "PSI_het_PTC")
+# get_neg_control_plot(NAS_data, neg_control, "PSI_no_PTC", "PSI_het_PTC")
 
 # get the number of ptcs where the real PTC diff if greater than 50% of simulants
 get_n_t_value(neg_control, "PSI_no_PTC", "PSI_het_PTC", 0)
+neg_control_z_test(NAS_data, neg_control, "PSI_no_PTC", "PSI_het_PTC")
 
 
 # just psi
@@ -913,12 +1006,17 @@ ggsave("results/graphs/shiftptc_individual_changes.pdf", plot = plot, width=10, 
 
 
 
-neg_control_plot <- get_neg_control_plot(NAS_data, neg_control, "PSI_no_PTC", "PSI_het_PTC")
-neg_control_plot_zoom <- get_neg_control_plot(NAS_data, neg_control, "PSI_no_PTC", "PSI_het_PTC", limit = c(-3, 3))
-plot <- ggarrange(neg_control_plot, neg_control_plot_zoom, widths = c(2, 2), ncol = 2, nrow = 1, labels = c("A", "B"))
-neg_control_plot_zoom
-ggsave('results/graphs/simulants_psi_diff.pdf', plot = plot, width=12, height=7)
-ggsave('results/graphs/simulants_psi_diff.eps', plot = plot, width=12, height=7)
+# neg_control_plot <- get_neg_control_plot(NAS_data, neg_control, "PSI_no_PTC", "PSI_het_PTC")
+# neg_control_plot_zoom <- get_neg_control_plot(NAS_data, neg_control, "PSI_no_PTC", "PSI_het_PTC", limit = c(-3, 3))
+# plot <- ggarrange(neg_control_plot, neg_control_plot_zoom, widths = c(2, 2), ncol = 2, nrow = 1, labels = c("A", "B"))
+# neg_control_plot_zoom
+# ggsave('results/graphs/simulants_psi_diff.pdf', plot = plot, width=12, height=7)
+# ggsave('results/graphs/simulants_psi_diff.eps', plot = plot, width=12, height=7)
+psi_diff_plot <- get_psi_diff_plot(NAS_data, "PSI_no_PTC", "PSI_het_PTC")
+neg_control_plot <- get_neg_control_z_plot(NAS_data, neg_control, "PSI_no_PTC", "PSI_het_PTC")
+plot <- ggarrange(psi_diff_plot, neg_control_plot, widths = c(2, 2), ncol = 2, nrow = 1, labels = c("A", "B"))
+ggsave('results/graphs/psi_diffs_neg_control.pdf', plot = plot, width=12, height=7)
+# ggsave('results/graphs/simulants_psi_diff.eps', plot = plot, width=12, height=7)
 
 
 # plot showing the p values for each percentage cutoff
