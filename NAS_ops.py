@@ -256,7 +256,10 @@ def ptc_snp_simulation(out_prefix, simulation_output_folder, ptc_file, syn_nonsy
 
     #setup up simulation output folder
     if simulation_output_folder == "None":
-        simulation_output_folder = "{0}_simulate_ptc_snps".format(out_prefix)
+        if match_distance:
+            simulation_output_folder = "{0}_simulate_ptc_snps_match_distance".format(out_prefix)
+        else:
+            simulation_output_folder = "{0}_simulate_ptc_snps".format(out_prefix)
     if not use_old_sims:
         #if the simulation folder we are specifying already exists, delete and start again
         gen.create_strict_directory(simulation_output_folder)
