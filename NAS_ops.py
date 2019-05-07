@@ -277,23 +277,20 @@ def ptc_snp_simulation(out_prefix, simulation_output_folder, ptc_file, syn_nonsy
     else:
         gen.create_directory(simulation_bam_analysis_output_folder)
 
-    print("here")
-    print(simulation_bam_analysis_output_folder)
+    #get all nonsynonymous snps and put them in the simulation output folder
+    nonsynonymous_snps_file = "{0}/nonsynonymous_snps.txt".format(simulation_output_folder)
+    so.filter_by_snp_type(syn_nonsyn_file, nonsynonymous_snps_file, "non")
 
-    # #get all nonsynonymous snps and put them in the simulation output folder
-    # nonsynonymous_snps_file = "{0}/nonsynonymous_snps.txt".format(simulation_output_folder)
-    # so.filter_by_snp_type(syn_nonsyn_file, nonsynonymous_snps_file, "non")
-    #
-    # #create a list of simulations to iterate over
-    # simulations = list(range(1, required_simulations+1))
-    # #if you're only doing one simulation, don't parallelize the simulations
-    # #parallelize the processing of bams like for true data
-    # if required_simulations > 1:
-    #     processes = gen.run_in_parallel(simulations, ["foo", out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, nonsynonymous_snps_file, exon_junctions_file, bam_files, exon_junctions_bam_output_folder, True, use_old_sims, match_distance], run_ptc_simulation_instance)
-    #     for process in processes:
-    #         process.get()
-    # else:
-    #     run_ptc_simulation_instance([1], out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, nonsynonymous_snps_file, exon_junctions_file, bam_files, exon_junctions_bam_output_folder, False, use_old_sims, match_distance)
+    #create a list of simulations to iterate over
+    simulations = list(range(1, required_simulations+1))
+    #if you're only doing one simulation, don't parallelize the simulations
+    #parallelize the processing of bams like for true data
+    if required_simulations > 1:
+        processes = gen.run_in_parallel(simulations, ["foo", out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, nonsynonymous_snps_file, exon_junctions_file, bam_files, exon_junctions_bam_output_folder, True, use_old_sims, match_distance], run_ptc_simulation_instance)
+        for process in processes:
+            process.get()
+    else:
+        run_ptc_simulation_instance([1], out_prefix, simulation_output_folder, simulation_bam_analysis_output_folder, ptc_file, nonsynonymous_snps_file, exon_junctions_file, bam_files, exon_junctions_bam_output_folder, False, use_old_sims, match_distance)
 
 
 
