@@ -520,6 +520,7 @@ overlap_significance = function(overlap, pool_size, n1, n2, sim_number) {
 }
 
 perform_tests = function(NAS_data) {
+  print("")
   print("H: Heterozygotes have lower PSI than PTC- homozygotes")
   print(wilcox.test(NAS_data$PSI_het_PTC, NAS_data$PSI_no_PTC, alternative = "l", paired = TRUE)$p.value)
   print("H: PTC+ homozygotes have lower PSI than heterozygotes")
@@ -535,6 +536,11 @@ perform_tests = function(NAS_data) {
   print("H: PTC+ homozygotes have higher normalized read count than PTC- homozygotes")
   print(wilcox.test(NAS_data$norm_count_w_PTC, NAS_data$norm_count_no_PTC, alternative = "g", paired = TRUE)$p.value)
 }
+
+
+perform_tests(NAS_data)
+wilcox.test(NAS_data$PSI_no_PTC, NAS_data$PSI_het_PTC, paired = T)
+
 
 plot_diff_hist_het <- function(title=NULL, title_left=NULL) {
   library(ggplot2)
@@ -909,6 +915,17 @@ wilcox.test(NAS_data$PSI_het_PTC, NAS_data$PSI_no_PTC, paired=T)
 wilcox.test(NAS_data$PSI_het_PTC, NAS_data$PSI_no_PTC, paired=T, alternative = "less")
 wilcox.test(NAS_data$PSI_het_PTC, NAS_data$PSI_no_PTC, paired=T, alternative = "greater")
 
+# differences in PSI
+NAS_data$PSI_diff = NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC
+nrow(NAS_data[NAS_data$PSI_diff == 0,])
+nrow(NAS_data[NAS_data$PSI_diff == 0,]) / nrow(NAS_data)
+nrow(NAS_data[NAS_data$PSI_diff > 0,])
+
+median(NAS_data$PSI_diff[NAS_data$PSI_diff > 0])
+mean(NAS_data$PSI_diff[NAS_data$PSI_diff < 0])
+
+
+
 # ask whether there is a significant difference between RPMinclude for het PTC and homo no PTC
 wilcox.test(NAS_data$norm_count_het_PTC_incl, NAS_data$norm_count_no_PTC, paired=T, alternative = "greater")
 pdf('results/graphs/rpminclude_het_ptc_homo_no_ptc.pdf', width=10)
@@ -1005,6 +1022,7 @@ plot <- ggarrange(shiftptc_psi_changes, shiftptc_rpmskip_changes, ncol=2, labels
 ggsave("results/graphs/shiftptc_individual_changes.pdf", plot = plot, width=10, height=7)
 
 
+## Fig 1 ##
 
 # neg_control_plot <- get_neg_control_plot(NAS_data, neg_control, "PSI_no_PTC", "PSI_het_PTC")
 # neg_control_plot_zoom <- get_neg_control_plot(NAS_data, neg_control, "PSI_no_PTC", "PSI_het_PTC", limit = c(-3, 3))
@@ -1021,6 +1039,7 @@ ggsave('results/graphs/psi_diffs_neg_control.pdf', plot = plot, width=12, height
 
 # plot showing the p values for each percentage cutoff
 plot = individual_changes_pvals_plot(NAS_data)
+plot
 ggsave("results/graphs/psi_difference_binomial_test_p_values.eps", plot = plot, width=10, height=7)  
 
 
