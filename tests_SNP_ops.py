@@ -114,7 +114,7 @@ class Test_SNP_ops(unittest.TestCase):
         gen.remove_file(observed_remaining1)
         gen.remove_file(observed2)
         gen.remove_file(observed_remaining2)
-        generate_pseudo_ptc_snps(input_ptc_snps, input_nonsyn_snps, observed1, observed_remaining1, match_allele_frequency=True, match_allele_frequency_window=0.05, seed=3)
+        generate_pseudo_ptc_snps(input_ptc_snps, input_nonsyn_snps, observed1, observed_remaining1, match_allele_frequency=True, match_allele_frequency_window=0.05, seed=3, match_distance = True)
         generate_pseudo_ptc_snps(input_ptc_snps, input_nonsyn_snps, observed2, observed_remaining2, match_allele_frequency=True, match_allele_frequency_window=0.075, seed=3)
         expected1 = gen.read_many_fields(expected1, "\t")
         expected_remaining1 = gen.read_many_fields(expected_remaining1, "\t")

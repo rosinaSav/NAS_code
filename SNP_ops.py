@@ -220,7 +220,7 @@ def generate_pseudo_monomorphic_ptcs(ptc_file, index_fastas, exon_list, output_f
             output.write('{0}\n'.format("\t".join(pseudo_ptc)))
 
 
-def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, ptc_output_file, other_snps_file, without_replacement=None, match_allele_frequency=None, match_allele_frequency_window=None, group_by_gene=None, seed=None):
+def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, ptc_output_file, other_snps_file, without_replacement=None, match_allele_frequency=None, match_allele_frequency_window=None, group_by_gene=None, seed=None, match_distance = None):
     '''
     Generate a new file of pseudo PTC snps that are instead snps of different type.
     For each PTC snp in input_ptc_snps, take a random snp from the alternative file
@@ -229,6 +229,7 @@ def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, ptc_output_file, 
     replacement: random choice with/without replacement
     match_allele_frequency: match the allele frequencies (ptcs are likely rare whereas alternative snps may be more common)
     match_allele_frequency_window: the proporition size of the window around the allele frequency to match, e.g 0.05 for allele frequency of 0.2 is 0.15-0.25.
+    match_distance: if set, try to match distance to exon boundary
     seed: list of seeds (must be greater or equal to the number of simulations)
     '''
 
@@ -265,9 +266,9 @@ def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, ptc_output_file, 
 
             #if match allele frequency, calculate the allele frequency for each ptc snp
             if match_allele_frequency:
-                snp_index = [i, get_allele_frequency(snp)]
+                snp_index = [i, get_allele_frequency(snp), int(snp[11])]
             else:
-                snp_index = [i]
+                snp_index = [i, snp[11]]
 
             #add to dictionary: alternative_snp_indices[gene_id][ancestral_base][derived_base] = [[snp_index, allele_freqency], [snp_index, allele_freqency],...]
             #index 9 = ancestral base, #index 10 = mutation base
@@ -283,10 +284,11 @@ def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, ptc_output_file, 
     empty_counter = 0
     total_counter = 0
 
+
     #create an empty list to hold the alternative snps chosen
     pseudo_ptc_indices = {}
     #get the real ptc snps
-    ptc_snps = gen.read_many_fields(input_ptc_snps, "\t")
+    # ptc_snps = gen.read_many_fields(input_ptc_snps, "\t")
     #backwards logic but makes more sense in the flags
     replacement = not without_replacement
     for i, ptc in enumerate(ptc_snps):
@@ -309,14 +311,32 @@ def generate_pseudo_ptc_snps(input_ptc_snps, input_other_snps, ptc_output_file, 
             if match_allele_frequency:
                 #get the allele frequency of the ptc
                 ptc_allele_frequency = get_allele_frequency(ptc)
-                print(ptc_id, ptc_allele_frequency)
+                # print(ptc_id, ptc_allele_frequency)
                 #set the upper and lower bounds
                 alt_snp_allele_frequency_lower_limit = ptc_allele_frequency - match_allele_frequency_window
                 alt_snp_allele_frequency_upper_limit = ptc_allele_frequency + match_allele_frequency_window
                 #get all alternative snps with allele frequenecies within those bounds
-                alt_snp_choices = [i for i in alternative_snp_indices[gene_id][ptc[9]][ptc[10]] if alt_snp_allele_frequency_lower_limit <= i[1] and i[1] <= alt_snp_allele_frequency_upper_limit]
+                alt_snp_choices = [i for i in alternative_snp_indices[gene_id][ptc[9]][ptc[10]] if alt_snp_allele_frequency_lower_limit >= i[1] and i[1] <= alt_snp_allele_frequency_upper_limit]
             else:
                 alt_snp_choices = alternative_snp_indices[gene_id][ptc[9]][ptc[10]]
+
+            if match_distance:
+                ptc_rel_pos = int(ptc[11])
+                chosen = False
+                iteration = 0
+                while not chosen:
+                    if iteration < 10:
+                        lower_bound = ptc_rel_pos - 5 - iteration
+                        upper_bound = ptc_rel_pos + 6 + iteration
+                        choices = [i for i in alternative_snp_indices[gene_id][ptc[9]][ptc[10]] if lower_bound >= i[2] and i[2] <= upper_bound]
+                        if len(choices) > 0:
+                            alt_snp_choices = choices
+                            chosen = True
+                        else:
+                            iteration += 1
+                    else:
+                        # if we can't find one close to the real site
+                        alt_snp_choices = {}
 
             #check if there are any alternative snps
             empty_gene = False
