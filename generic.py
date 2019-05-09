@@ -497,6 +497,8 @@ def run_in_parallel(input_list, args, func, kwargs_dict = None, workers = None, 
         workers = int(os.cpu_count() - 2)
     elif workers == "all":
         workers = os.cpu_count()
+
+    print(workers)
     #in the list of arguments, I put in "foo" for the argument that corresponds to whatever is in the input_list because I couldn't be bothered to do something less stupid
     arg_to_parallelize = args.index("foo")
     if not onebyone:
