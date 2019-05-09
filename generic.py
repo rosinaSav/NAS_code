@@ -494,7 +494,7 @@ def run_in_parallel(input_list, args, func, kwargs_dict = None, workers = None, 
     if not workers:
         #divide by two to get the number of physical cores
         #subtract one to leave one core free
-        workers = int(os.cpu_count()/2 - 1)
+        workers = int(os.cpu_count() - 2)
     elif workers == "all":
         workers = os.cpu_count()
     #in the list of arguments, I put in "foo" for the argument that corresponds to whatever is in the input_list because I couldn't be bothered to do something less stupid
