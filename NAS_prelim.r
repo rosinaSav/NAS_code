@@ -896,6 +896,7 @@ chosen_colour = "RoyalBlue"
 NAS_data = prepare_dataset("results/clean_run_2/clean_run__analysis_final_output.txt")
 NAS_data_shift = prepare_dataset("results/clean_run_2/clean_run_out_of_frame__analysis_final_output.txt")
 neg_control = read_in_simulations("results/clean_run_2/simulation_output/final_output_simulation_", 100, NAS_data$id, colnames(NAS_data))
+neg_control = read_in_simulations("results/clean_run_2/clean_run__analysis_simulation_ptc_snps_bam_analysis_match_distance/final_output_simulation_", 19, NAS_data$id, colnames(NAS_data))
 
 # perform tests between genotypes
 perform_tests(NAS_data)
@@ -1036,7 +1037,7 @@ plot <- ggarrange(psi_diff_plot, neg_control_plot, widths = c(2, 2), ncol = 2, n
 ggsave('results/graphs/psi_diffs_neg_control.pdf', plot = plot, width=12, height=7)
 # ggsave('results/graphs/simulants_psi_diff.eps', plot = plot, width=12, height=7)
 
-
+neg_control_plot
 # plot showing the p values for each percentage cutoff
 plot = individual_changes_pvals_plot(NAS_data)
 plot
