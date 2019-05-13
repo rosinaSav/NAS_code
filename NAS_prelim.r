@@ -896,7 +896,7 @@ chosen_colour = "RoyalBlue"
 NAS_data = prepare_dataset("results/clean_run_2/clean_run__analysis_final_output.txt")
 NAS_data_shift = prepare_dataset("results/clean_run_2/clean_run_out_of_frame__analysis_final_output.txt")
 neg_control = read_in_simulations("results/clean_run_2/simulation_output/final_output_simulation_", 100, NAS_data$id, colnames(NAS_data))
-neg_control = read_in_simulations("results/clean_run_2/clean_run__analysis_simulation_ptc_snps_bam_analysis_match_distance/final_output_simulation_", 19, NAS_data$id, colnames(NAS_data))
+neg_control = read_in_simulations("results/clean_run_2/clean_run__analysis_simulation_ptc_snps_bam_analysis_match_distance/final_output_simulation_", 57, NAS_data$id, colnames(NAS_data))
 
 # perform tests between genotypes
 perform_tests(NAS_data)
