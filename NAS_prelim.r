@@ -252,10 +252,13 @@ neg_control_z_test <- function(NAS_data, neg_control, feature1, feature2, limit_
     zs = c(zs, z)
   }
   
-  print(sum(zs > 0))
+  print(zs)
+  
+  print(sum(zs > 0 & !is.na(zs)))
   print(length(zs))
-  print(binom.test(sum(zs > 0), length(zs), alternative = "g"))
+  print(binom.test(sum(zs > 0 & !is.na(zs)), length(zs), alternative = "g"))
 }
+
 
 get_psi_diff_plot <- function(NAS_data, feature1, feature2) {
   library(ggplot2)
@@ -896,7 +899,7 @@ chosen_colour = "RoyalBlue"
 NAS_data = prepare_dataset("results/clean_run_2/clean_run__analysis_final_output.txt")
 NAS_data_shift = prepare_dataset("results/clean_run_2/clean_run_out_of_frame__analysis_final_output.txt")
 neg_control = read_in_simulations("results/clean_run_2/simulation_output/final_output_simulation_", 100, NAS_data$id, colnames(NAS_data))
-neg_control = read_in_simulations("results/clean_run_2/clean_run__analysis_simulation_ptc_snps_bam_analysis_match_distance/final_output_simulation_", 57, NAS_data$id, colnames(NAS_data))
+neg_control_distance = read_in_simulations("results/clean_run_2/clean_run__analysis_simulation_ptc_snps_bam_analysis_match_distance/final_output_simulation_", 100, NAS_data$id, colnames(NAS_data))
 
 # perform tests between genotypes
 perform_tests(NAS_data)
@@ -950,8 +953,10 @@ ggsave("results/graphs/psi_diff.pdf", plot = psi_diff_plot, width=8, height = 5 
 
 # histogram of the simulants with psi difference less than real ptc-/- - ptc-/+
 simulants_less_real_ptc_no_minus_het <- get_n_t_plot("PSI_no_PTC", "PSI_het_PTC", neg_control, NAS_data, xlab="Proportion of simulants with PSI for pseudoPTC-/- - pseudoPTC-/+\nless than or equal to PTC-/- - PTC-/+", swap = FALSE, title="A", title_left=T)
+simulants_less_real_ptc_no_minus_het_match_distance <- get_n_t_plot("PSI_no_PTC", "PSI_het_PTC", neg_control_distance, NAS_data, xlab="Proportion of simulants with PSI for pseudoPTC-/- - pseudoPTC-/+\nless than or equal to PTC-/- - PTC-/+", swap = FALSE, title="A", title_left=T)
 # same for rpmskip
 simulants_less_real_ptc_no_minus_het_rpm_skip <- get_n_t_plot("norm_count_no_PTC", "norm_count_het_PTC", neg_control, NAS_data, xlab="Proportion of simulants with RPMskip for pseudoPTC-/- - pseudoPTC-/+\nless than or equal to PTC-/- - PTC-/+",  swap = T, title="B", title_left =T)
+simulants_less_real_ptc_no_minus_het_rpm_skip_match_distance <- get_n_t_plot("norm_count_no_PTC", "norm_count_het_PTC", neg_control_distance, NAS_data, xlab="Proportion of simulants with RPMskip for pseudoPTC-/- - pseudoPTC-/+\nless than or equal to PTC-/- - PTC-/+",  swap = T, title="B", title_left =T)
 
 
 p <- get_n_t_plot("PSI_no_PTC", "PSI_het_PTC", neg_control, NAS_data, xlab="Proportion of simulants with PSI for pseudoPTC-/- - pseudoPTC-/+\nless than or equal to PTC-/- - PTC-/+", swap = FALSE, title="A", title_left=T, return_plot = F, return_p)
@@ -977,7 +982,7 @@ individuals_large_effects
 
 big_changes_psi = plot_individual_change(NAS_data, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "", "", 5, 100, reverse = F, big_changes_binom_test = TRUE)
 big_changes_psi
-big_changes_psi = plot_individual_change(NAS_data, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "", "", 5, 100, reverse = T, big_changes_binom_test = F)
+big_changes_psi = plot_individual_change(NAS_data, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "", "", 5, 100, reverse = F, big_changes_binom_test = F)
 big_changes_RPMskip = plot_individual_change(NAS_data, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "Exons with >0.025 change between any two categories", "RPMskip", 0.025, 5, reverse = TRUE)
 
 
@@ -1016,10 +1021,20 @@ big_changes_RPMskip_shift = plot_individual_change(NAS_data_shift, "norm_count_w
 big_changes_psi_shift
 big_changes_RPMskip_shift
 
+
+big_changes_psi_shift = plot_individual_change(NAS_data_shift, "PSI_w_PTC", "PSI_het_PTC", "PSI_no_PTC", "", "", 5, 100, reverse = F, big_changes_binom_test = F)
+big_changes_RPMskip_shift = plot_individual_change(NAS_data_shift, "norm_count_w_PTC", "norm_count_het_PTC", "norm_count_no_PTC", "Exons with >0.025 change between any two categories", "RPMskip", 0.0375, 5, reverse = TRUE, big_changes_binom_test = F)
+big_changes_psi_shift
+big_changes_RPMskip_shift
+overlap = intersect(big_changes_psi_shift, big_changes_RPMskip_shift)
+length(overlap)
+overlap_significance(length(overlap), dim(NAS_data_shift)[1], length(big_changes_psi_shift), length(big_changes_RPMskip_shift), 10000)
+
 # show individual large cases
 shiftptc_psi_changes <- individual_changes_plot(NAS_data_shift, "PSI_no_PTC", "PSI_het_PTC", 5, "Genotype", "PSI", xlab1 = "shiftPTC-/-", xlab2="shiftPTC-/+")
 shiftptc_rpmskip_changes <- individual_changes_plot(NAS_data_shift, "norm_count_no_PTC", "norm_count_het_PTC", 0.0375, "Genotype", "RPMskip", xlab1 = "shiftPTC-/-", xlab2="shiftPTC-/+", col1="red", col2="RoyalBlue")
 plot <- ggarrange(shiftptc_psi_changes, shiftptc_rpmskip_changes, ncol=2, labels=c("A", "B"))
+
 ggsave("results/graphs/shiftptc_individual_changes.pdf", plot = plot, width=10, height=7)
 
 
@@ -1048,10 +1063,10 @@ ggsave("results/graphs/psi_difference_binomial_test_p_values.eps", plot = plot, 
 #analysis of the exons that show a big change
 #is the overlap between the ones that show a big change in RPMskip and those that show a big change
 #in PSI greater than you'd expect by chance?
-overlap = intersect(big_changes_PSI, big_changes_RPMskip)
-overlap
-overlap_significance(length(overlap), dim(NAS_data)[1], length(big_changes_PSI), length(big_changes_RPMskip), 10000)
+overlap = intersect(big_changes_psi, big_changes_RPMskip)
+overlap_significance(length(overlap), dim(NAS_data)[1], length(big_changes_psi), length(big_changes_RPMskip), 10000)
 print(sort(overlap))
+print(length(overlap))
 
 expression = read.csv("results/clean_run_2/clean_run_FANTOM_expression_per_transcript.txt", sep = "\t", header = TRUE, stringsAsFactors = FALSE)
 expression_analysis(overlap, NAS_data$exon, expression)

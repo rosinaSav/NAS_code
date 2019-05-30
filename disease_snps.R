@@ -26,27 +26,36 @@ get_region_hit_z <- function(data) {
   return(zs)
 }
 
+
 get_region_ps <- function(data, set) {
   real = data[data$simulation == "real",]
   sims = data[data$simulation != "real",]
-  z0_2 <- (real$X0.2 - mean(sims$X0.2)) / sd(sims$X0.2)
-  z3_69 <- (real$X3.69 - mean(sims$X3.69)) / sd(sims$X3.69)
-  z70 <- (real$X70. - mean(sims$X70.)) / sd(sims$X70.)
+  p0_2 <- (nrow(sims[sims$X0.2 >= real$X0.2,]) + 1)/(nrow(sims) + 1)
+  p3_69 <- (nrow(sims[sims$X3.69 >= real$X3.69,]) + 1)/(nrow(sims) + 1)
+  p70 <- (nrow(sims[sims$X70. >= real$X70.,]) + 1)/(nrow(sims) + 1)
+  # z0_2 <- (real$X0.2 - mean(sims$X0.2)) / sd(sims$X0.2)
+  # z3_69 <- (real$X3.69 - mean(sims$X3.69)) / sd(sims$X3.69)
+  # z70 <- (real$X70. - mean(sims$X70.)) / sd(sims$X70.)
   
-  ps <- data.frame(set, p_from_z(z0_2), p_from_z(z3_69), p_from_z(z70))
-  colnames(ps) <- c("set", "z_0_2","z_3_69", "z_70")
+  ps <- data.frame(set, p0_2, p3_69, p70)
+  colnames(ps) <- c("set", "p_0_2","p_3_69", "p_70")
   return(ps)
 }
 
 get_region_hit_p <- function(data) {
   real = data[data$simulation == "real",]
   sims = data[data$simulation != "real",]
-  z <- (real$ese_hit_count - mean(sims$ese_hit_count)) / sd(sims$ese_hit_count)
-  p <- data.frame(p_from_z(z))
-  colnames(p) <- c("region p")
+  # z <- (real$ese_hit_count - mean(sims$ese_hit_count)) / sd(sims$ese_hit_count)
+  # p <- data.frame(p_from_z(z))
+  
+  head(real)
+  p = (nrow(sims[sims$ese_hit_count >= real$ese_hit_count,]) + 1) / (nrow(sims) + 1)
+  print(p)
+  # colnames(p) <- c("region p")
+  # return(p)p = (nrow(sims[sims$ese_hit_count >= real$ese_hit_count,]) + 1) / (nrow(sims) + 1)
+  # colnames(p) <- c("region p")
   return(p)
 }
-
 
 ###
 
@@ -56,6 +65,9 @@ clinvar_regions_zs <- get_region_z(file, "ClinVar")
 clinvar_regions_ps <- get_region_ps(file, "ClinVar")
 clinvar_regions_zs
 clinvar_regions_ps
+
+real = file[file$simulation == "real",]
+sims = file[file$simulation != "real",]
 
 
 int3_file <- "results/clinvar2/clinvar_ptc_location_simulation_CaceresHurstESEs_INT3_ese_overlaps.csv"
@@ -70,7 +82,6 @@ z_int3 <- get_region_z(int3, "INT3")
 z_rescue <- get_region_z(rescue, "RESCUE")
 z_ke400 <- get_region_z(ke400, "Ke400")
 
-z_int3
 
 get_region_ps(int3, "INT3")
 get_region_ps(rescue, "RESCUE")
