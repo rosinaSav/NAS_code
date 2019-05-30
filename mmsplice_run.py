@@ -15,7 +15,7 @@ args = gen.parse_arguments(description, arguments, flags = [], ints=[])
 vcf, gtf, fasta, output_file = args.vcf, args.gtf, args.fasta, args.output_file
 
 # dataloader to load variants from vcf
-dl = SplicingVCFDataloader(gtf_chr, fasta, vcf, split_seq=False)
+dl = SplicingVCFDataloader(gtf, fasta, vcf, split_seq=False)
 
 entries = [i for i in gen.read_many_fields(vcf, "\t") if not i[0].startswith("#")]
 print("\n{0} PTCS to predict.\n".format(len(entries)))
