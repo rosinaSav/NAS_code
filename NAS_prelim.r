@@ -1078,15 +1078,11 @@ ggsave("results/graphs/shiftptc_individual_changes.pdf", plot = plot, width=10, 
 
 
 ## Fig 1 ##
-
 NAS_data$PSI_diff = NAS_data$PSI_no_PTC - NAS_data$PSI_het_PTC
 psi_pos_neg_plot = difference_boxplot(NAS_data, "PSI_diff", "PSIdiff", divider = 10)
 neg_control_plot <- get_neg_control_z_plot(NAS_data, neg_control, "PSI_no_PTC", "PSI_het_PTC")
 plot <- ggarrange(psi_pos_neg_plot, neg_control_plot, widths = c(1.5, 2), ncol = 2, nrow = 1, labels = c("A", "B"))
 ggsave('results/graphs/psi_pos_neg_sim_z.pdf', plot = plot, width=10, height=6)
-
-
-
 
 
 ## Fig 2 ##
