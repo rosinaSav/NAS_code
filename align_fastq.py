@@ -11,12 +11,10 @@ from generic import create_output_directories, run_process, remove_directory, pa
 args = parse_arguments(None, ["input_directory", "output_directory", "genome_prefix", "line_limit", "file_limit", "workers"], ints = [])
 input_directory, output_directory, genome_prefix, line_limit, file_limit, workers = args.input_directory, args.output_directory, args.genome_prefix, args.line_limit, args.file_limit, args.workers
 
-if line_limit:
-    line_limit = int(line_limit)
-if file_limit:
-    file_limit = int(file_limit)
-if workers:
-    workers = int(workers)
+line_limit = None if line_limit == "None" else int(line_limit)
+file_limit = None if file_limit == "None" else int(file_limit)
+workers = None if workers == "None" else int(workers)
+
 
 
 def align_fastq(id, input_fastq_files, output_directory, genome_prefix, line_limit = None, workers = None):
