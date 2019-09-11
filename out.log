@@ -1,0 +1,11 @@
+
+VCFtools - v0.1.13
+(C) Adam Auton and Anthony Marcketta 2009
+
+Parameters as interpreted:
+	--vcf ../../../../../Volumes/Macintosh-2TB-HD/liam/source_data/pgpuk/vcfs/merge1.cleaned.chr1.vcf
+	--stdout
+
+After filtering, kept 10 out of 10 Individuals
+After filtering, kept 784793 out of a possible 784793 Sites
+Run Time = 2.00 seconds
