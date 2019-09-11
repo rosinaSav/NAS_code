@@ -813,14 +813,14 @@ def get_snp_type(sequence, variant, snp_id, shift = False):
 
     return cds_codon, snp_codon, mutation_type
 
-def get_snps_in_cds(bed, full_bed, vcf_folder, panel_file, names, sample_file, intersect_file, out_prefix):
+def get_snps_in_cds(bed, full_bed, vcf_folder, panel_file, names, sample_file, intersect_file, out_prefix, vcf_chr = None, chr_prefix = True):
     '''
     Given a bed file of CDS regions (with the corresponding interval fasta), a .vcf file, a panel file and a set of sample identifiers from 1000Genomes,
     pick out SNPs that overlap with any of the bed intervals in any of the selected samples. full_bed is a bed_file that has all of the exons from the relevant transcripts,
     whereas the bed might only have some exons. Also write a filtered vcf to sample_file.
     '''
     # #get the relevant SNPs
-    tabix_samples(bed, sample_file, panel_file, vcf_folder, samples = names, chr_prefix = True, remove_empty = True, exclude_xy = True)
+    tabix_samples(bed, sample_file, panel_file, vcf_folder, samples = names, chr_prefix = chr_prefix, remove_empty = True, exclude_xy = True, vcf_chr = vcf_chr)
     # #the tabix_samples and the intersec-bed are kind of redundant
     # #however, this way we have a proper vcf as a result of tabix_samples that we can query using tabix
     # #and we have intersect_bed, which has both the SNP and the exon information in a nice format
@@ -1129,7 +1129,7 @@ def tabix_core(bed_files, vcf):
                         file2.write(output)
                         file2.write("\n")
 
-def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop = None, subpop = None, samples = None, downsample_by = None, exclude_xy = False, chr_prefix = False, remove_empty = False):
+def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop = None, subpop = None, samples = None, downsample_by = None, exclude_xy = False, chr_prefix = False, remove_empty = False, vcf_chr = False):
     '''
     Extract 1000Genomes SNPs for a subpopulation.
     bed_file: input bed file for the intervals you want
@@ -1215,12 +1215,14 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
         for line_no, line in enumerate(file):
             # use for debugging
             if line_no:
-            # if line_no < 2000:
+            # if line_no < 5:
                 #print out every 100th line number
                 counter = gen.update_counter(counter, 500, "Bed lines processed: ")
                 #parse line in bed file
                 line = line.split("\t")
                 chrom = line[0].lstrip("chr")
+                # chrom = line[0]
+
                 if chrom in sex_chromosomes and exclude_xy:
                     pass
                 else:
@@ -1243,11 +1245,19 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
                     #generate temporary output file for all SNPs in interval
                     temp_output_file = "temp_data/temp_vcf{0}.vcf".format(random.random())
                     #get ALL SNPs (that is to say, for all samples) for current interval
-                    gen.run_process(["tabix", "-h", current_vcf, "{0}:{1}-{2}".format(chrom, start, end)], file_for_output = temp_output_file)
+                    if vcf_chr:
+                        tabix_region = "chr{0}:{1}-{2}".format(chrom, start, end)
+                    else:
+                        tabix_region = "{0}:{1}-{2}".format(chrom, start, end)
+                    tabix_args = ["tabix", "-h", current_vcf, tabix_region]
+                    # print(" ".join(tabix_args))
+                    # print(temp_output_file)
+                    gen.run_process(tabix_args, file_for_output = temp_output_file)
                     #uncomment the following line for debug
                     # gen.run_process(["cp", temp_output_file, "temp_data/{0}:{1}-{2}_tabix_slice.txt".format(chrom, start, end)])
                     #generate temporary output file for SNPs from your seleceted samples
                     sample_output_file = "temp_data/temp_sample_tabix{0}.txt".format(random.random())
+                    # print(sample_output_file)
                     sample_files.append(sample_output_file)
                     #filter the file you made with all the SNPs to only leave the SNPs that appear in your samples
                     gen.run_process(["vcf-subset", "-c", samples, temp_output_file], file_for_output = sample_output_file)
@@ -1284,11 +1294,15 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
     sort_file = "{0}_uncompressed.txt".format(output_file_name)
     #once everything is concatenated, sort the SNPs, prefix "chr" if needed, make a compressed version of the file and make an index for tabix
     print('Sort SNPs, prefix and compress for tabix...')
-    gen.run_process(["vcf-sort", current_concat_file], file_for_output = sort_file)
+
+    sort_args = ["vcf-sort", current_concat_file]
+    gen.run_process(sort_args, file_for_output = sort_file)
+
 
     if chr_prefix or remove_empty:
-        allele_regex = re.compile("[0-9]+\|[0-9]+")
+        allele_regex = re.compile("[0-9]+[\|\/][0-9]+")
         temp_file = "temp_data/temp_sorted{0}.txt".format(random.random())
+        print(temp_file)
         with open(sort_file) as infile, open(temp_file, "w") as outfile:
             for line in infile:
                 dont_write = False
@@ -1297,8 +1311,8 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
                         line = "chr" + line
                     if remove_empty:
                         alleles = "".join(re.findall(allele_regex, line))
-                        alleles_ones = [i for i in alleles if i != "0" and i != "|"]
-                        alleles_zeroes = [i for i in alleles if i != "1" and i != "|"]
+                        alleles_ones = [i for i in alleles if i not in ["0", "|", "/"]]
+                        alleles_zeroes = [i for i in alleles if i not in ["1", "|", "/"]]
 
                         if not alleles_ones or not alleles_zeroes:
                             dont_write = True
@@ -1309,7 +1323,7 @@ def tabix_samples(bed_file, output_file_name, panel_file, vcf_folder, superpop =
     gen.run_process(["bgzip", "-c", sort_file], file_for_output = output_file_name)
     print('Run tabix...')
     gen.run_process(["tabix", "-f", "-p", "vcf", output_file_name])
-    #clean up
+    # clean up
     for sample_file in sample_file_list:
         gen.remove_file(sample_file)
     for concat_file in concat_files:

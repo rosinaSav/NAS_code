@@ -42,9 +42,10 @@ def main():
         "ignore_determine_snp_type",
         "ignore_psi_calculation",
         "ptc_location_analysis",
-        "sim_match_distance"
+        "sim_match_distance",
+        "clean_run"
     ]
-    flags = [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+    flags = [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]
     ints = [9]
 
     args = gen.parse_arguments(description, args, flags = flags, ints = ints)
@@ -74,7 +75,8 @@ def main():
     ignore_determine_snp_type, \
     ignore_psi_calculation, \
     ptc_location_analysis, \
-    sim_match_distance = \
+    sim_match_distance, \
+    clean_run = \
     args.gtf, \
     args.genome_fasta, \
     args.bams_folder, \
@@ -100,7 +102,8 @@ def main():
     args.ignore_determine_snp_type, \
     args.ignore_psi_calculation, \
     args.ptc_location_analysis, \
-    args.sim_match_distance
+    args.sim_match_distance, \
+    args.clean_run
 
     start = time.time()
 
@@ -166,7 +169,6 @@ def main():
     #I'm gonna have to get to the bottom of this at some point
     #but at the moment I'm just gonna filter them out
 
-
     with open(vcf_samples_file) as file:
         samples_in_vcf = file.readlines()
     samples_in_vcf = [i.rstrip("\n") for i in samples_in_vcf]
@@ -176,6 +178,7 @@ def main():
         vcf_links = {}
         for link in links:
             vcf_links[link[1]] = link[0]
+
         sample_names = [vcf_links[i] for i in sample_names if i in vcf_links]
 
     else:
@@ -184,15 +187,18 @@ def main():
     sample_file = "{0}_sample_file.txt".format(out_prefix)
 
 
+
+
     # create a fasta containing all sequences for exons with snp
     coding_exons_fasta = "{0}_coding_exons.fasta".format(out_prefix)
-    bo.fasta_from_intervals(coding_exon_bed, coding_exons_fasta, genome_fasta, names=True)
+    if not os.path.exists(coding_exons_fasta) or clean_run:
+        bo.fasta_from_intervals(coding_exon_bed, coding_exons_fasta, genome_fasta, names=True)
 
     if get_SNPs:
         #get SNPs for the sample
         intersect_file = "{0}_SNP_CDS_intersect.bed".format(out_prefix)
         print("Getting SNP data...")
-        so.get_snps_in_cds(coding_exon_bed, CDS_bed, vcf_folder, panel_file, sample_names, sample_file, intersect_file, out_prefix)
+        so.get_snps_in_cds(coding_exon_bed, CDS_bed, vcf_folder, panel_file, sample_names, sample_file, intersect_file, out_prefix, vcf_chr = True, chr_prefix = False)
         print("Calculating SNP positions...")
         so.get_snp_positions(sample_file, SNP_file, CDS_bed, intersect_file, out_prefix)
         gen.get_time(start)
