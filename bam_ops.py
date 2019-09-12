@@ -81,7 +81,7 @@ def bam_flag_filter(input_bam, output_bam, get_paired_reads=None, get_unpaired_r
     samtools_args.append(input_bam)
     gen.run_process(samtools_args, file_for_output=output_bam)
 
-def bam_nm_filter(input_bam, output, nm_less_equal_to=None):
+def bam_nm_filter(input_bam, output, nm_less_equal_to=None, nm_format = "NM"):
     '''
     Filters bam reads by NM value.
     nm_less_equal_to: the NM value you wish to filter by.
@@ -100,7 +100,7 @@ def bam_nm_filter(input_bam, output, nm_less_equal_to=None):
     grep_args = ["^@"]
     #for each nm less than equal to threshold, create grep arg
     for i in range(nm_less_equal_to+1):
-        grep_args.append("\|\tNM:i:{0}\t".format(i))
+        grep_args.append("\|\t{0}:i:{1}\t".format(nm_format, i))
     grep_args = "".join(grep_args)
     gen.run_process(["grep", grep_args], input_to_pipe=sam_output, file_for_output = output_file)
 
@@ -181,7 +181,7 @@ def bam_quality_filter(input_bam, output_bam, quality_greater_than_equal_to=None
         samtools_args.extend(["-q", upper_limit, input_bam, "-U", output_bam])
         gen.run_process(samtools_args)
 
-def compare_PSI(SNP_file, bam_folder, out_file, round_norm_count = None, sim_number = None):
+def compare_PSI(SNP_file, bam_folder, out_file, round_norm_count = None, sim_number = None, vcf_links = None):
     '''
     Given PTC-generating SNPs, as well as read counts at exon-exon junctions, compare exon skipping rates
     within samples that do or do not have a PTC within a given exon.
@@ -189,6 +189,10 @@ def compare_PSI(SNP_file, bam_folder, out_file, round_norm_count = None, sim_num
     that number of digits after the decimal point.
     If this is a simulation, specify the simulation number.
     '''
+
+    if vcf_links:
+        vcf_links_invert  = {v: k for k, v in vcf_links.items()}
+
     SNPs = gen.read_many_fields(SNP_file, "\t")
     samples = SNPs[0][15:-1]
     #note that if two SNPs appear in the same exon, the one that appears later
@@ -200,7 +204,10 @@ def compare_PSI(SNP_file, bam_folder, out_file, round_norm_count = None, sim_num
                    "norm_count_w_PTC_incl": [], "norm_count_het_PTC_incl": [], "norm_count_no_PTC_incl": [],
                    "ptc_count": 0, "sample_count": 0} for i in SNPs}
     for pos, sample in enumerate(samples):
-        file_name = "{0}/{1}.txt".format(bam_folder, sample)
+        if vcf_links:
+            file_name = "{0}/{1}.txt".format(bam_folder, vcf_links_invert[sample])
+        else:
+            file_name = "{0}/{1}.txt".format(bam_folder, sample)
         #in case you're analyzing simulation output
         if not os.path.isfile(file_name):
             file_name = "{0}/{1}_simulation_{2}.txt".format(bam_folder, sample, sim_number)

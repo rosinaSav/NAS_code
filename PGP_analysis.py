@@ -178,11 +178,15 @@ def main():
         vcf_links = {}
         for link in links:
             vcf_links[link[1]] = link[0]
+    else:
+        vcf_links = None
 
+
+    if vcf_links:
         sample_names = [vcf_links[i] for i in sample_names if i in vcf_links]
-
     else:
         sample_names = [i for i in sample_names if i in samples_in_vcf]
+
     print('{0} samples also in vcf...'.format(len(sample_names)))
     sample_file = "{0}_sample_file.txt".format(out_prefix)
 
@@ -206,8 +210,8 @@ def main():
     if ignore_determine_snp_type:
         pass
     else:
-        print("Determining SNP type...")
-        so.get_snp_change_status(SNP_file, CDS_fasta, PTC_file, syn_nonsyn_file, out_of_frame = out_of_frame, ref_check = True, headers=True)
+        print("Determining SNP type...\t{0}".format(SNP_file))
+        so.get_snp_change_status(SNP_file, CDS_fasta, PTC_file, syn_nonsyn_file, out_of_frame = out_of_frame, ref_check = False, headers=True)
         gen.get_time(start)
 
     #filter the exon junctions file to only leave those junctions that flank exons retained in the previous step.
@@ -215,8 +219,12 @@ def main():
     PTC_exon_junctions_file = "{0}_filtered_exon_junctions.bed".format(out_prefix)
     bo.filter_exon_junctions(exon_junctions_file, PTC_file, PTC_exon_junctions_file)
 
-    #make a list of all the .bam files and modify them to have the full path rather than just the file name
-    bam_files = ["{0}/{1}".format(bams_folder, i) for i in full_sample_names if (i.split("."))[0] in sample_names]
+    if vcf_links:
+        #make a list of all the .bam files and modify them to have the full path rather than just the file name
+        bam_files = ["{0}/{1}".format(bams_folder, i) for i in full_sample_names if (i.split("."))[0] in vcf_links]
+    else:
+        bam_files = ["{0}/{1}".format(bams_folder, i) for i in full_sample_names if (i.split("."))[0] in sample_names]
+
 
     #in parallel, do the processing on individual .bam files
     exon_junctions_bam_output_folder = "{0}__analysis_exon_junction_bams".format(out_prefix)
@@ -231,8 +239,8 @@ def main():
             exon_junctions_bam_output_folder = "/".join(splits)
         gen.create_directory(exon_junctions_bam_output_folder)
         #we have to do it like this because you can't pass flags into run_in_parallel
-        keyword_dict = {"overwrite_intersect": overwrite_intersect}
-        processes = gen.run_in_parallel(bam_files, ["foo", exon_junctions_file, PTC_exon_junctions_file, bam_analysis_folder, PTC_file, syn_nonsyn_file, out_prefix, exon_junctions_bam_output_folder, keyword_dict], nao.process_bam_per_individual, workers = 36)
+        keyword_dict = {"overwrite_intersect": overwrite_intersect, "mapq_intervals": [[100, 300]], "exclude_xt_filter": True, "nm_format": "nM"}
+        processes = gen.run_in_parallel(bam_files, ["foo", exon_junctions_file, PTC_exon_junctions_file, bam_analysis_folder, PTC_file, syn_nonsyn_file, out_prefix, exon_junctions_bam_output_folder, keyword_dict], nao.process_bam_per_individual, workers = int(os.cpu_count()) - 2)
         for process in processes:
             process.get()
         gen.get_time(start)
@@ -255,7 +263,7 @@ def main():
         pass
     else:
         print("Calculating PSI...")
-        bmo.compare_PSI(PTC_file, bam_analysis_folder, final_file)
+        bmo.compare_PSI(PTC_file, bam_analysis_folder, final_file, vcf_links = vcf_links)
 
     #run the simulation that swaps ptcs for nonsynonymous snps
     if simulate_ptc_snps:
