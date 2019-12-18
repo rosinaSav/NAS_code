@@ -18,9 +18,9 @@ import random
 def main():
 
     description = "Look at disease snps."
-    arguments = ["disease_snps_file", "output_directory", "results_prefix", "simulations", "ese_file", "intersect_snps", "get_relative_positions", "get_snp_status", "get_info", "simulate_ptc_location", "get_possible_ptc_locations", "required_simulations", "get_overlaps", "intersect_ptcs", "compare_ptcs" ,"get_introns", "compare_distances", "clinvar_ptc_locations", "location_simulation", "exclude_cpg", "ese_hit_simulation", "only_disease", "only_kgenomes", "only_ese", "get_unique_ptcs", "get_unique_rel_pos", "excess_test", "disease_locations_chisquare"]
-    args = gen.parse_arguments(description, arguments, flags = [5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20, 21, 22, 23,24,25,26,27], ints=[3])
-    disease_snps_file, output_directory, results_prefix, simulations, ese_file, intersect_snps, get_relative_positions, get_snp_status, get_info, simulate_ptc_location, get_possible_ptc_locations, required_simulations, get_overlaps, intersect_ptcs, compare_ptcs, get_introns, compare_distances, clinvar_ptc_locations, location_simulation, exclude_cpg, ese_hit_simulation, only_disease, only_kgenomes, only_ese, get_unique_ptcs, get_unique_rel_pos, excess_test, disease_locations_chisquare = args.disease_snps_file, args.output_directory, args.results_prefix, args.simulations, args.ese_file, args.intersect_snps, args.get_relative_positions, args.get_snp_status, args.get_info, args.simulate_ptc_location, args.get_possible_ptc_locations, args.required_simulations, args.get_overlaps, args.intersect_ptcs, args.compare_ptcs, args.get_introns, args.compare_distances, args.clinvar_ptc_locations, args.location_simulation, args.exclude_cpg, args.ese_hit_simulation, args.only_disease, args.only_kgenomes, args.only_ese, args.get_unique_ptcs, args.get_unique_rel_pos, args.excess_test, args.disease_locations_chisquare
+    arguments = ["disease_snps_file", "output_directory", "results_prefix", "simulations", "ese_file", "pathogenic_file", "likely_pathogenic_file", "intersect_snps", "get_relative_positions", "get_snp_status", "get_info", "simulate_ptc_location", "get_possible_ptc_locations", "required_simulations", "get_overlaps", "intersect_ptcs", "compare_ptcs" ,"get_introns", "compare_distances", "clinvar_ptc_locations", "location_simulation", "exclude_cpg", "ese_hit_simulation", "only_disease", "only_kgenomes", "only_ese", "get_unique_ptcs", "get_unique_rel_pos", "excess_test", "disease_locations_chisquare"]
+    args = gen.parse_arguments(description, arguments, flags = [7,8,9,10,11,12,13,14,15,16,17,18,19,20, 21, 22, 23,24,25,26,27,28,29], ints=[3])
+    disease_snps_file, output_directory, results_prefix, simulations, ese_file, pathogenic_file, likely_pathogenic_file, intersect_snps, get_relative_positions, get_snp_status, get_info, simulate_ptc_location, get_possible_ptc_locations, required_simulations, get_overlaps, intersect_ptcs, compare_ptcs, get_introns, compare_distances, clinvar_ptc_locations, location_simulation, exclude_cpg, ese_hit_simulation, only_disease, only_kgenomes, only_ese, get_unique_ptcs, get_unique_rel_pos, excess_test, disease_locations_chisquare = args.disease_snps_file, args.output_directory, args.results_prefix, args.simulations, args.ese_file, args.pathogenic_file, args.likely_pathogenic_file, args.intersect_snps, args.get_relative_positions, args.get_snp_status, args.get_info, args.simulate_ptc_location, args.get_possible_ptc_locations, args.required_simulations, args.get_overlaps, args.intersect_ptcs, args.compare_ptcs, args.get_introns, args.compare_distances, args.clinvar_ptc_locations, args.location_simulation, args.exclude_cpg, args.ese_hit_simulation, args.only_disease, args.only_kgenomes, args.only_ese, args.get_unique_ptcs, args.get_unique_rel_pos, args.excess_test, args.disease_locations_chisquare
 
     if simulations and not isinstance(simulations, int):
         print("\nERROR: Please provide the correct number for simulations.\n")
@@ -32,9 +32,9 @@ def main():
     # disease_snps_file = "./source_data/clinvar_20180429.vcf.gz"
     disease_snps_index_file = "{0}.tbi".format(disease_snps_file)
 
-    if not os.path.isfile(disease_snps_file) or not os.path.isfile(disease_snps_index_file):
-        print("\nERROR: Please provide the required disease SNPs file(s).\n")
-        raise Exception
+    # if not os.path.isfile(disease_snps_file) or not os.path.isfile(disease_snps_index_file):
+    #     print("\nERROR: Please provide the required disease SNPs file(s).\n")
+    #     raise Exception
 
     # intersect the coding exons with the disease snps
     exon_bed = "{0}_coding_exons.bed".format(results_prefix)
@@ -90,6 +90,10 @@ def main():
         dso.get_unique_rel_pos(unique_ptcs, disease_snps_relative_exon_positions, unique_ptcs_kgenomes, kgenomes_relative_positions, unique_ptcs_rel_pos_file, kgenomes_unique_ptcs_rel_pos_file)
 
 
+    # uncomment to manually choose this file
+    kgenomes_unique_ptcs_rel_pos_file = "{0}/kgenomes_ptcs_no_intersect_rel_pos_transcript_check.bed".format(output_directory)
+
+
     # get the ese file name
     ese_file_name = ese_file.split('/')[-1].split('.')[0]
     # get the coding exons fasta file path
@@ -103,10 +107,19 @@ def main():
     kgenomes_location_simulation_file = "{0}/1000_genomes_simulations.csv".format(output_directory)
     kgenomes_location_simulation_ese_overlap_file = "{0}/1000_genomes_simulations_ese_overlaps.csv".format(output_directory)
 
+    if pathogenic_file != "None":
+        unique_ptcs_rel_pos_file = pathogenic_file
+        clinvar_location_simulation_file = "{0}_pathogenic_new.csv".format(clinvar_location_simulation_file[:-4])
+        clinvar_location_simulation_ese_overlap_file = "{0}_pathogenic.csv".format(clinvar_location_simulation_ese_overlap_file[:-4])
+    if likely_pathogenic_file != "None":
+        unique_ptcs_rel_pos_file = likely_pathogenic_file
+        clinvar_location_simulation_file = "{0}_likely_pathogenic.csv".format(clinvar_location_simulation_file[:-4])
+        clinvar_location_simulation_ese_overlap_file = "{0}_likely_pathogenic.csv".format(clinvar_location_simulation_ese_overlap_file[:-4])
+
     if location_simulation:
         if not only_kgenomes:
             print('Running ptc location simulation on disease PTCs...')
-            dso.ptc_location_simulation(unique_ptcs_rel_pos_file, coding_exons_fasta, simulations, clinvar_location_simulation_file, clinvar_location_simulation_ese_overlap_file, ese_file, only_ese, exclude_cpg)
+            dso.ptc_location_simulation(unique_ptcs_rel_pos_file, disease_other_file, coding_exons_fasta, simulations, clinvar_location_simulation_file, clinvar_location_simulation_ese_overlap_file, ese_file, only_ese, exclude_cpg)
         if not only_disease:
             print('Running ptc location simulation on 1000 genomes PTCs...')
             dso.ptc_location_simulation(kgenomes_unique_ptcs_rel_pos_file, coding_exons_fasta, simulations, kgenomes_location_simulation_file, kgenomes_location_simulation_ese_overlap_file, ese_file, only_ese, exclude_cpg)
@@ -117,6 +130,10 @@ def main():
     clinvar_ese_hit_simulation_file = "{0}/clinvar_ese_hit_simulation_{1}_{2}_{3}.csv".format(output_directory, window_start, window_end, ese_file_name)
     kgenomes_ese_hit_simulation_file = "{0}/1000_genomes_ese_hit_simulation_{1}_{2}_{3}.csv".format(output_directory, window_start, window_end, ese_file_name)
 
+    if pathogenic_file != "None":
+        clinvar_ese_hit_simulation_file = "{0}_pathogenic.csv".format(clinvar_ese_hit_simulation_file[:-4])
+    if likely_pathogenic_file != "None":
+        clinvar_ese_hit_simulation_file = "{0}_likely_pathogenic.csv".format(clinvar_ese_hit_simulation_file[:-4])
     # do a simulation picking only sites from within the region
     if ese_hit_simulation:
         if not only_kgenomes:
@@ -128,6 +145,11 @@ def main():
 
 
     excess_test_file = "{0}/clinvar_ptc_{1}_{2}_excesses.csv".format(output_directory, window_start, window_end)
+    if pathogenic_file != "None":
+        excess_test_file = "{0}_pathogenic.csv".format(excess_test_file[:-4])
+    if likely_pathogenic_file != "None":
+        excess_test_file = "{0}_likely_pathogenic.csv".format(excess_test_file[:-4])
+
     if excess_test:
         dso.excess_test(unique_ptcs_rel_pos_file, coding_exons_fasta, excess_test_file)
 

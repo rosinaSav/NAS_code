@@ -51,7 +51,7 @@ def disease_ptc_location_test(rel_pos_file, coding_exons_fasta, output_file):
     relative_positions = get_relative_position_list(rel_pos_file)
 
     ptc_locations = get_ptc_positions(relative_positions, coding_exons)
-    exon_nts = get_exon_nts(relative_positions, coding_exons)
+    exon_nts, number_exons = get_exon_nts(relative_positions, coding_exons)
 
     expected = []
     for i in exon_nts:
@@ -121,13 +121,16 @@ def excess_test(unique_ptcs_rel_pos_file, coding_exons_fasta, output_file):
     compared with the exon cores
     '''
 
+    threshold = 205
+
     # get coding exons
     coding_exons = get_coding_exons(coding_exons_fasta)
     # get relative positions
     relative_positions = get_relative_position_list(unique_ptcs_rel_pos_file)
 
     # keep only those with exons longer than 138
-    long_exons = get_long_exons(relative_positions, coding_exons, 138)
+    long_exons = get_long_exons(relative_positions, coding_exons, threshold)
+    print(len(long_exons))
     short_exons = {}
     for name in relative_positions:
         if name not in long_exons:
@@ -135,9 +138,9 @@ def excess_test(unique_ptcs_rel_pos_file, coding_exons_fasta, output_file):
 
     # get the ptc locations and exon nts for both long and short exons
     long_ptc_locations = get_ptc_positions(long_exons, coding_exons)
-    long_exon_nts = get_exon_nts(long_exons, coding_exons)
+    long_exon_nts, long_exon_count = get_exon_nts(long_exons, coding_exons)
     short_ptc_locations = get_ptc_positions(short_exons, coding_exons)
-    short_exon_nts = get_exon_nts(short_exons, coding_exons)
+    short_exon_nts, short_exon_count = get_exon_nts(short_exons, coding_exons)
 
     exon_cores_ptc_per_nt = np.divide(long_ptc_locations[2], long_exon_nts[2])
 
@@ -161,17 +164,17 @@ def excess_test(unique_ptcs_rel_pos_file, coding_exons_fasta, output_file):
     excess_large_percentage_3_69 = np.divide(excess_large_3_69, sum(long_ptc_locations))*100
 
     with open(output_file, "w") as outfile:
-        outfile.write("nts in exons > 138 nt\n")
+        outfile.write("nts in exons > {0} nt (n = {0})\n".format(threshold, long_exon_count))
         outfile.write("0.2,{0}\n".format(long_exon_nts[0]))
         outfile.write("3.69,{0}\n".format(long_exon_nts[1]))
         outfile.write("70+,{0}\n".format(long_exon_nts[2]))
         outfile.write("\n")
-        outfile.write("\nnts in exons <= 138\n")
+        outfile.write("\nnts in exons <= {0} (n = {0})\n".format(threshold, short_exon_count))
         outfile.write("0.2,{0}\n".format(short_exon_nts[0]))
         outfile.write("3.69,{0}\n".format(short_exon_nts[1]))
         outfile.write("70+,{0}\n".format(short_exon_nts[2]))
         outfile.write("\n")
-        outfile.write("\nTotal nts in exons\n")
+        outfile.write("\nTotal nts in exons (n = {0})\n".format(long_exon_count + short_exon_count))
         outfile.write("0.2,{0}\n".format(total_nts[0]))
         outfile.write("3.69,{0}\n".format(total_nts[1]))
         outfile.write("70+,{0}\n".format(total_nts[2]))
@@ -425,7 +428,7 @@ def get_coding_exons(coding_exons_fasta):
     return coding_exons
 
 
-def get_coding_exons_indices_no_ptcs(coding_exons, relative_positions_list, exclude_cpg=None):
+def get_coding_exons_indices_no_ptcs(coding_exons, relative_positions_list, other_snp_list, exclude_cpg=None):
     '''
     Get the index of each nt in each coding exon that isnt in the ptc list
     '''
@@ -449,12 +452,21 @@ def get_coding_exons_indices_no_ptcs(coding_exons, relative_positions_list, excl
             exon_seq = list(coding_exons[transcript][exon])
             for i, nt in enumerate(exon_seq):
                 if i not in relative_ptc_locations[transcript][exon][nt]:
-                    # if we want to exclude cpg regions
-                    if exclude_cpg and i < len(exon_seq)-1:
-                        if nt == "G" and exon_seq[i+1] != "C" or nt == "C" and exon_seq[i+1] != "G":
+
+                    # check if the position is another snp
+                    passed = True
+                    if transcript in other_snp_list:
+                        if exon in other_snp_list[transcript]:
+                            if i in other_snp_list[transcript][exon]:
+                                passed = False
+
+                    if passed:
+                        # if we want to exclude cpg regions
+                        if exclude_cpg and i < len(exon_seq)-1:
+                            if nt == "G" and exon_seq[i+1] != "C" or nt == "C" and exon_seq[i+1] != "G":
+                                coding_exon_nt_positions_no_ptc[transcript][exon][nt].append(i)
+                        else:
                             coding_exon_nt_positions_no_ptc[transcript][exon][nt].append(i)
-                    else:
-                        coding_exon_nt_positions_no_ptc[transcript][exon][nt].append(i)
 
     return coding_exon_nt_positions_no_ptc
 
@@ -498,24 +510,29 @@ def get_exon_nts(exon_list, coding_exons):
     '''
     Get the count of nts in each window
     '''
+
+    seen = []
+
     nts = [0,0,0]
     for id in exon_list:
         transcript = exon_list[id][0]
         exon_id = exon_list[id][1]
-        exon_seq = coding_exons[transcript][exon_id]
-        exon_length = len(exon_seq)
+        if "{0}.{1}".format(transcript, exon_id) not in seen:
+            seen.append("{0}.{1}".format(transcript, exon_id))
+            exon_seq = coding_exons[transcript][exon_id]
+            exon_length = len(exon_seq)
 
-        if exon_length <= 4:
-            nts[0] += 4
-        elif exon_length > 4 and exon_length <= 138:
-            nts[0] += 4
-            nts[1] += 134
-        else:
-            nts[0] += 4
-            nts[1] += 134
-            nts[2] += (exon_length - 138)
+            if exon_length <= 4:
+                nts[0] += 4
+            elif exon_length > 4 and exon_length <= 138:
+                nts[0] += 4
+                nts[1] += (exon_length - 4)
+            else:
+                nts[0] += 4
+                nts[1] += 134
+                nts[2] += (exon_length - 138)
 
-    return nts
+    return nts, len(seen)
 
 def get_introns(exon_bed, output_file):
     '''
@@ -1103,8 +1120,30 @@ def get_unique_rel_pos(unique_ptcs, disease_snps_relative_exon_positions, kgenom
             outfile.write("{0}\n".format("\t".join(gen.stringify(ptc))))
 
 
+def get_snp_positions(rel_pos_file):
 
-def ptc_location_simulation(rel_pos_file, coding_exons_fasta, simulations, output_file, ese_overlap_output_file, ese_file=None, only_ese=None, exclude_cpg=None):
+    other_positions = collections.defaultdict(lambda: collections.defaultdict(lambda: []))
+
+    entries = gen.read_many_fields(rel_pos_file, "\t")
+    for entry in entries:
+        transcript = entry[3].split(".")[0]
+        exon_id = int(entry[3].split(".")[1])
+        rel_pos = int(entry[11])
+        other_positions[transcript][exon_id].append(rel_pos)
+
+    # unpickle
+    temp_positions = {}
+    for transcript in other_positions:
+        temp_positions[transcript] = {}
+        for exon_id in other_positions[transcript]:
+            temp_positions[transcript][exon_id] = other_positions[transcript][exon_id]
+
+    other_positions = temp_positions
+
+    return other_positions
+
+
+def ptc_location_simulation(rel_pos_file, other_pos_file, coding_exons_fasta, simulations, output_file, ese_overlap_output_file, ese_file=None, only_ese=None, exclude_cpg=None):
     '''
     Simulation mutation locations of PTCs.
     Take the exon in which each PTC is location and randomly pick a site with the
@@ -1124,9 +1163,13 @@ def ptc_location_simulation(rel_pos_file, coding_exons_fasta, simulations, outpu
     # get the number of ptcs with ese overlaps
     real_ese_overlap = get_ptc_ese_overlap(relative_positions_list, coding_exons, ese_list)
 
+
+    other_snp_list = get_snp_positions(other_pos_file)
+
+
     # now do the simulations
     simulant_list = list(range(1, simulations+1))
-    processes = gen.run_in_parallel(simulant_list, ["foo", simulations, relative_positions_list, coding_exons_fasta, ese_list, exclude_cpg], simulate_mutation_locations)
+    processes = gen.run_in_parallel(simulant_list, ["foo", simulations, relative_positions_list, other_snp_list, coding_exons_fasta, ese_list, exclude_cpg], simulate_mutation_locations)
 
     position_list = {}
     ese_overlap_list = {}
@@ -1151,33 +1194,33 @@ def ptc_location_simulation(rel_pos_file, coding_exons_fasta, simulations, outpu
 
 
 # def ptc_location_simulation(snp_file, full_bed, cds_fasta, possible_positions_dir, output_directory, required_simulations, coding_exons_file):
-    '''
-    Simulate the snp location.
-    For each snp, pick another site that has the same reference allele and that would generate a ptc with the mutated allele.
-    Repeat n times.
-    '''
-
-    # return all the possible_locations
-    possible_locations = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: [])))
-    nts = ["A", "C", "G", "T"]
-    for nt in nts:
-        location_file = "{0}/possible_ptc_locations_{1}.fasta".format(possible_positions_dir, nt)
-        entry_names, entry_locations = gen.read_fasta(location_file)
-        for i, name in enumerate(entry_names):
-            exon = name.split(':')[0]
-            aa = name.split(':')[1][0]
-            ma = name.split(':')[1][-1]
-            possible_locations[exon][aa][ma].append(entry_locations[i])
-
-    # get a list of exons and their lengths
-    exons = gen.read_many_fields(coding_exons_file, "\t")
-    exon_list = {}
-    for exon in exons:
-        exon_list[exon[3]] = int(exon[2]) - int(exon[1])
-
-    # create a list of required simulations
-    simulations = list(range(1, int(required_simulations) + 1))
-    run_location_simulations(simulations, snp_file, possible_locations, exon_list, output_directory)
+#     '''
+#     Simulate the snp location.
+#     For each snp, pick another site that has the same reference allele and that would generate a ptc with the mutated allele.
+#     Repeat n times.
+#     '''
+#
+#     # return all the possible_locations
+#     possible_locations = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: [])))
+#     nts = ["A", "C", "G", "T"]
+#     for nt in nts:
+#         location_file = "{0}/possible_ptc_locations_{1}.fasta".format(possible_positions_dir, nt)
+#         entry_names, entry_locations = gen.read_fasta(location_file)
+#         for i, name in enumerate(entry_names):
+#             exon = name.split(':')[0]
+#             aa = name.split(':')[1][0]
+#             ma = name.split(':')[1][-1]
+#             possible_locations[exon][aa][ma].append(entry_locations[i])
+#
+#     # get a list of exons and their lengths
+#     exons = gen.read_many_fields(coding_exons_file, "\t")
+#     exon_list = {}
+#     for exon in exons:
+#         exon_list[exon[3]] = int(exon[2]) - int(exon[1])
+#
+#     # create a list of required simulations
+#     simulations = list(range(1, int(required_simulations) + 1))
+#     run_location_simulations(simulations, snp_file, possible_locations, exon_list, output_directory)
 
 def refactor_ptc_file(input_file, output_file, header=None):
     '''
@@ -1236,7 +1279,7 @@ def simulate_ese_hits(simulation_list, simulations, ptc_list, coding_exons_fasta
     return hit_counts
 
 
-def simulate_mutation_locations(simulant_list, simulations, relative_positions_list, coding_exons_fasta, ese_list, exclude_cpg):
+def simulate_mutation_locations(simulant_list, simulations, relative_positions_list, other_snp_list, coding_exons_fasta, ese_list, exclude_cpg):
     '''
     Run the simulations for nonsense mutation locations
     '''
@@ -1245,7 +1288,7 @@ def simulate_mutation_locations(simulant_list, simulations, relative_positions_l
     coding_exons = get_coding_exons(coding_exons_fasta)
 
     # get a list of all exon indices without a ptc
-    coding_exons_indices_no_ptcs = get_coding_exons_indices_no_ptcs(coding_exons, relative_positions_list, exclude_cpg)
+    coding_exons_indices_no_ptcs = get_coding_exons_indices_no_ptcs(coding_exons, relative_positions_list, other_snp_list, exclude_cpg)
 
     location_outputs = {}
     ese_overlap_outputs = {}

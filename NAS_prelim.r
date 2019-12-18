@@ -1225,9 +1225,10 @@ shift_overlap = intersect(big_changes_psi_shift_ids, big_changes_RPMskip_shift_i
 overlap_significance(length(overlap), dim(NAS_data_shift)[1], length(big_changes_psi_shift), length(big_changes_RPMskip_shift), 10000)
 
 # show individual large cases
-# shiftptc_psi_changes <- individual_changes_plot(NAS_data_shift, "PSI_no_PTC", "PSI_het_PTC", 5, "Genotype", "PSI", xlab1 = "shiftPTC-/-", xlab2="shiftPTC-/+")
-# shiftptc_rpmskip_changes <- individual_changes_plot(NAS_data_shift, "norm_count_no_PTC", "norm_count_het_PTC", 0.0375, "Genotype", "RPMskip", xlab1 = "shiftPTC-/-", xlab2="shiftPTC-/+", col1="red", col2="RoyalBlue")
+shiftptc_psi_changes <- individual_changes_plot(NAS_data_shift, "PSI_no_PTC", "PSI_het_PTC", 5, "Genotype", "PSI", xlab1 = "shiftPTC-/-", xlab2="shiftPTC-/+", col1=blue_colour, col2=red_colour)
+shiftptc_rpmskip_changes <- individual_changes_plot(NAS_data_shift, "norm_count_no_PTC", "norm_count_het_PTC", 0.0375, "Genotype", "RPMskip", xlab1 = "shiftPTC-/-", xlab2="shiftPTC-/+", col1=red_colour, col2=blue_colour)
 plot <- ggarrange(shiftptc_psi_changes, shiftptc_rpmskip_changes, ncol=2, labels=c("A", "B"))
+plot
 
 ggsave("results/graphs/shiftptc_individual_changes.pdf", plot = plot, width=10, height=7)
 
@@ -1301,13 +1302,13 @@ wilcox.test(all_exons_NMD, overlap_NMD, alt = "g")
 
 # PSIdiff rank plot
 NAS_data$PSIdiff = NAS_data$PSI_het_PTC - NAS_data$PSI_no_PTC
-psidiff_rank_plot = rank_plot(NAS_data, "PSIdiff", "PSIdiff", pos_col = red_colour, neg_col = blue_colour)
+psidiff_rank_plot = rank_plot(NAS_data, "PSIdiff", substitute(paste(Delta, "PSI", sep="")), pos_col = red_colour, neg_col = blue_colour)
 wilcox_rank_sums(NAS_data, "PSIdiff")
 
 # RPMskipDiff rank plot
 NAS_data$RPMskipDiff = NAS_data$norm_count_het_PTC - NAS_data$norm_count_no_PTC
 wilcox_rank_sums(NAS_data, "RPMskipDiff")
-rpmskipdiff_rank_plot = rank_plot(NAS_data, "RPMskipDiff", "RPMskipDiff", pos_col = blue_colour, neg_col = red_colour)
+rpmskipdiff_rank_plot = rank_plot(NAS_data, "RPMskipDiff", substitute(paste(Delta, "RPMskip", sep="")), pos_col = blue_colour, neg_col = red_colour)
 
 rank_plots = ggarrange(
   psidiff_rank_plot,

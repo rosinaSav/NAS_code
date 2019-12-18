@@ -505,6 +505,7 @@ def run_in_parallel(input_list, args, func, kwargs_dict = None, workers = None, 
     else:
         #each element in the input list will constitute a chunk of its own.
         chunk_list = input_list
+
     pool = multiprocessing.Pool(workers)
     results = []
     #go over the chunks you made and laucnh a process for each
@@ -519,6 +520,67 @@ def run_in_parallel(input_list, args, func, kwargs_dict = None, workers = None, 
     pool.close()
     pool.join()
     return(results)
+
+
+def run_simulation_function(required_simulations, sim_args, function_to_run, kwargs_dict = None, parallel = True, workers=None, sim_run=True):
+    """
+    Wrapper to run simulation function
+
+    Args:
+        required_simulations (int): the number of times to run simulation
+        sim_args (list): list of arguments for the simulation function
+        function_to_run (func): simulation_function
+        parallel (bool): if true, run in parallel
+        sim_run (bool): if true, running a simulation, else running over another list
+
+    Returns:
+        outputs (list): list containing the result of the simulation
+    """
+
+    if sim_run:
+        # get a list of simulations to iterate over
+        simulations = list(range(required_simulations))
+    else:
+        simulations = required_simulations
+    # run the simulations
+    if parallel:
+        # add foo to argument list for parallelisation
+        sim_args.insert(0, "foo")
+        if not workers:
+            workers = os.cpu_count() - 2
+        processes = run_in_parallel(simulations, sim_args, function_to_run, kwargs_dict = kwargs_dict, workers = workers)
+        results = []
+        for process in processes:
+            results.append(process.get())
+        # now merge into one
+        if isinstance(results[0],list):
+            flattened_outputs = []
+            [flattened_outputs.extend(i) for i in results]
+            outputs = flattened_outputs
+        elif isinstance(results[0], dict):
+            keys = list(results[0].keys())
+            if len(keys):
+                if isinstance(results[0][keys[0]], list):
+                    flattened_outputs = collections.defaultdict(lambda: [])
+                    for result in results:
+                        for key in result:
+                            flattened_outputs[key].extend(result[key])
+                    #unpickle
+                    outputs = {i: flattened_outputs[i] for i in flattened_outputs}
+                else:
+                    flattened_outputs = {}
+                    [flattened_outputs.update(i) for i in results]
+                    outputs = flattened_outputs
+            else:
+                outputs = {}
+
+    else:
+        if kwargs_dict:
+            outputs = function_to_run(simulations, *sim_args, **kwargs_dict)
+        else:
+            outputs = function_to_run(simulations, *sim_args)
+
+    return outputs
 
 
 def run_process(arguments, return_string = True, input_to_pipe = None, return_error = False, file_for_input = None, file_for_output = None, univ_nl = True, shell = False):

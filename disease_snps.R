@@ -59,20 +59,24 @@ get_region_hit_p <- function(data) {
 
 ###
 
-locations_file <- "results/clinvar2/clinvar_ptc_location_simulation.csv"
+locations_file <- "results/clinvar3/clinvar_ptc_location_simulation_pathogenic.csv"
+locations_file <- "results/clinvar3/clinvar_ptc_location_simulation_likely_pathogenic.csv"
+locations_file <- "results/clinvar3/1000_genomes_simulations.csv"
 file <- read.csv(locations_file, head=T)
 clinvar_regions_zs <- get_region_z(file, "ClinVar")
 clinvar_regions_ps <- get_region_ps(file, "ClinVar")
 clinvar_regions_zs
 clinvar_regions_ps
 
+
 real = file[file$simulation == "real",]
 sims = file[file$simulation != "real",]
 
 
-int3_file <- "results/clinvar2/clinvar_ptc_location_simulation_CaceresHurstESEs_INT3_ese_overlaps.csv"
-rescue_file <- "results/clinvar2/clinvar_ptc_location_simulation_RESCUE_eses_ese_overlaps.csv"
-ke400_file <- "results/clinvar2/clinvar_ptc_location_simulation_Ke400_eses_ese_overlaps.csv"
+int3_file <- "results/clinvar3/clinvar_ptc_location_simulation_CaceresHurstESEs_INT3_ese_overlaps_pathogenic.csv"
+int3_file <- "results/clinvar3/clinvar_ptc_location_simulation_CaceresHurstESEs_INT3_ese_overlaps_likely_pathogenic.csv"
+rescue_file <- "results/clinvar3/clinvar_ptc_location_simulation_RESCUE_eses_ese_overlaps.csv"
+ke400_file <- "results/clinvar3/clinvar_ptc_location_simulation_Ke400_eses_ese_overlaps.csv"
 
 int3 <- read.csv(int3_file, head=T)
 rescue <- read.csv(rescue_file, head=T)
@@ -87,8 +91,10 @@ get_region_ps(int3, "INT3")
 get_region_ps(rescue, "RESCUE")
 get_region_ps(ke400, "Ke400")
 
+z_int3
 
-ese_hits_int3_file <- "results/clinvar2/clinvar_ese_hit_simulation_3_69_CaceresHurstESEs_INT3.csv"
+
+ese_hits_int3_file <- "results/clinvar3/clinvar_ese_hit_simulation_3_69_CaceresHurstESEs_INT3_likely_pathogenic.csv"
 ese_hits_rescue_file <- "results/clinvar2/clinvar_ese_hit_simulation_3_69_RESCUE_eses.csv"
 ese_hits_ke400_file <- "results/clinvar2/clinvar_ese_hit_simulation_3_69_Ke400_eses.csv"
 ese_hits_int3 <- read.csv(ese_hits_int3_file, head=T)
@@ -119,8 +125,9 @@ plot
 ggsave('results/graphs/nonsense_mutations_ese_hits_locations_simulations.eps', plot=plot, width=10, height=7)
 
 
-kgenomes_location_file <- read.csv('results/clinvar2/1000_genomes_simulations.csv', head=T)
+kgenomes_location_file <- read.csv('results/clinvar3/1000_genomes_simulations.csv', head=T)
 kgenomes_regions_zs <- get_region_z(kgenomes_location_file, "1000 Genomes")
+kgenomes_regions_zs
 
 nonsense_mutation_regions <- rbind(kgenomes_regions_zs, clinvar_regions_zs)
 nonsense_mutation_regions_melt <- melt(nonsense_mutation_regions)
@@ -137,5 +144,59 @@ plot <- ggplot(nonsense_mutation_regions_melt, aes(x=variable, fill=set, y=value
 
 ggsave('results/graphs/nonsense_mutations_locations_simulations.eps', plot=plot, width=10, height=7)
 
+
+pathogenic_mmsplice = read.csv("_mmsplice_dir/splice_predictions_pathogenic.csv", head = T)
+likely_pathogenic_mmsplice = read.csv("_mmsplice_dir/splice_predictions_likely_pathogenic.csv", head = T)
+
+all_neg = nrow(pathogenic_mmsplice[pathogenic_mmsplice$mmsplice_dlogitPsi < 0,])
+all_not_neg = nrow(pathogenic_mmsplice[pathogenic_mmsplice$mmsplice_dlogitPsi >= 0,])
+all = nrow(pathogenic_mmsplice)
+
+binom.test(all_neg, all)
+
+flanks_neg = nrow(pathogenic_mmsplice[pathogenic_mmsplice$mmsplice_dlogitPsi < 0 & pathogenic_mmsplice$min_dist > 2 & pathogenic_mmsplice$min_dist <= 69,])
+flanks_not_neg = nrow(pathogenic_mmsplice[pathogenic_mmsplice$mmsplice_dlogitPsi > 0 & pathogenic_mmsplice$min_dist > 2 & pathogenic_mmsplice$min_dist <= 69,])
+flanks = nrow(pathogenic_mmsplice[pathogenic_mmsplice$min_dist > 2 & pathogenic_mmsplice$min_dist <= 69,])
+
+binom.test(flanks_neg, flanks)
+
+compare = matrix(c(all_neg, all_not_neg, flanks_neg, flanks_not_neg), ncol = 2, byrow = TRUE)
+compare
+chisq.test(compare)
+
+
+neg_flanks_large = nrow(pathogenic_mmsplice[pathogenic_mmsplice$mmsplice_dlogitPsi < 0 & pathogenic_mmsplice$min_dist > 2 & pathogenic_mmsplice$min_dist <= 69 & pathogenic_mmsplice$exon_length >= 205,])
+non_neg_flanks_large = nrow(pathogenic_mmsplice[pathogenic_mmsplice$mmsplice_dlogitPsi >= 0 & pathogenic_mmsplice$min_dist > 2 & pathogenic_mmsplice$min_dist <= 69 & pathogenic_mmsplice$exon_length >= 205,])
+binom.test(neg_flanks_large, neg_flanks_large + non_neg_flanks_large)
+
+neg_cores_large = nrow(pathogenic_mmsplice[pathogenic_mmsplice$mmsplice_dlogitPsi < 0 & pathogenic_mmsplice$min_dist >  69 & pathogenic_mmsplice$exon_length >= 205,])
+non_neg_cores_large = nrow(pathogenic_mmsplice[pathogenic_mmsplice$mmsplice_dlogitPsi >= 0 & pathogenic_mmsplice$min_dist > 69 & pathogenic_mmsplice$exon_length >= 205,])
+binom.test(neg_cores_large, neg_cores_large + non_neg_cores_large)
+
+compare2 = matrix(c(neg_flanks_large, non_neg_flanks_large, neg_cores_large, non_neg_cores_large), ncol = 2, byrow = TRUE)
+compare2
+chisq.test(compare2)
+
+
+
+binom.test(nrow(likely_pathogenic_mmsplice[likely_pathogenic_mmsplice$mmsplice_dlogitPsi < 0,]), nrow(likely_pathogenic_mmsplice))
+
+normal_mmsplice = read.csv("_mmsplice_dir/kgenomes_pred.csv", head = T)
+nrow(normal_mmsplice)
+normal_mmsplice
+
+
+boxplot(pathogenic_mmsplice$mmsplice_dlogitPsi~(pathogenic_mmsplice$exon_length %% 3))
+kruskal.test(pathogenic_mmsplice$mmsplice_dlogitPsi~(pathogenic_mmsplice$exon_length %% 3))
+
+install.packages("FSA")
+library(FSA)
+
+pathogenic_mmsplice$length_factor = as.factor(pathogenic_mmsplice$exon_length %% 3)
+dunnTest(pathogenic_mmsplice$mmsplice_dlogitPsi~pathogenic_mmsplice$length_factor, method = "bh")
+
+median(pathogenic_mmsplice$mmsplice_dlogitPsi[pathogenic_mmsplice$length_factor == 0])
+median(pathogenic_mmsplice$mmsplice_dlogitPsi[pathogenic_mmsplice$length_factor == 1])
+median(pathogenic_mmsplice$mmsplice_dlogitPsi[pathogenic_mmsplice$length_factor == 2])
 
 

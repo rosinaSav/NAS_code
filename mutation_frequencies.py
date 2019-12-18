@@ -10,36 +10,36 @@ ptc_file = "results/clean_run_2/clean_run_ptc_file.txt"
 others_file = "results/clean_run_2/clean_run_syn_nonsyn_file.txt"
 final_outputs = "results/clean_run_2/clean_run__analysis_final_output_filtered.txt"
 
-final_ptc_file = "results/clean_run_2/clean_run__final_ptc_list.txt"
-final_other_mutations = "results/clean_run_2/clean_run__final_others_same_exons_list.txt"
+final_ptc_file = "results/clean_run_2/clean_run__final_ptc_list_transcript_filter.txt"
+final_other_mutations = "results/clean_run_2/clean_run__final_others_same_exons_list_transcript_filter.txt"
 
-ptcs = gen.read_many_fields(ptc_file, "\t")[1:]
-print(len(ptcs))
-exons = [i[0] for i in gen.read_many_fields(final_outputs, "\t")[1:]]
-exons = gen.read_many_fields(final_outputs, "\t")
-others = gen.read_many_fields(others_file, "\t")[1:]
-max_sample_count = max([float(i[2]) for i in exons])
-exons = [i for i in exons if float(i[1]) != 0 and float(i[2]) > 0.5*max_sample_count]
-
-exon_list = [i[0] for i in exons]
-
-kept = []
-kept_ptcs = []
-for i in ptcs:
-    if i[3] not in kept and i[3] in exon_list:
-        kept.append(i[3])
-        kept_ptcs.append(i)
-
-with open(final_ptc_file, "w") as outfile:
-    [outfile.write("{0}\n".format("\t".join(i))) for i in kept_ptcs]
-
-exon_ids = [i[3] for i in ptc_list]
-
-other_mutations = gen.read_many_fields(others_file, "\t")[1:]
-other_mutations_list = [i for i in other_mutations if i[3] in exon_ids]
-
-with open(final_other_mutations, "w") as outfile:
-    [outfile.write("{0}\n".format("\t".join(i))) for i in other_mutations_list]
+# ptcs = gen.read_many_fields(ptc_file, "\t")[1:]
+# print(len(ptcs))
+# exons = [i[0] for i in gen.read_many_fields(final_outputs, "\t")[1:]]
+# exons = gen.read_many_fields(final_outputs, "\t")
+# others = gen.read_many_fields(others_file, "\t")[1:]
+# max_sample_count = max([float(i[2]) for i in exons])
+# exons = [i for i in exons if float(i[1]) != 0 and float(i[2]) > 0.5*max_sample_count]
+#
+# exon_list = [i[0] for i in exons]
+#
+# kept = []
+# kept_ptcs = []
+# for i in ptcs:
+#     if i[3] not in kept and i[3] in exon_list:
+#         kept.append(i[3])
+#         kept_ptcs.append(i)
+#
+# with open(final_ptc_file, "w") as outfile:
+#     [outfile.write("{0}\n".format("\t".join(i))) for i in kept_ptcs]
+#
+# exon_ids = [i[3] for i in ptc_list]
+#
+# other_mutations = gen.read_many_fields(others_file, "\t")[1:]
+# other_mutations_list = [i for i in other_mutations if i[3] in exon_ids]
+#
+# with open(final_other_mutations, "w") as outfile:
+#     [outfile.write("{0}\n".format("\t".join(i))) for i in other_mutations_list]
 
 
 ptc_list = gen.read_many_fields(final_ptc_file, "\t")
